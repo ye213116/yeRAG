@@ -1,0 +1,100 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.VSCodeCounter
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+hs_err_pid*
+replay_pid*
+
+# Java / Maven
+target/
+*.class
+*.ctxt
+.mtj.tmp/
+
+# Packaged artifacts
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Node / frontend builds
+node_modules/
+dist/
+dist-ssr/
+coverage/
+.vite-ssg-dist/
+.vite-ssg-temp/
+
+# Package-manager files this project does not use
+package-lock.json
+yarn.lock
+
+# Generated frontend files
+frontend/src/typings/components.d.ts
+frontend/src/typings/auto-imports.d.ts
+frontend/public/languages/
+frontend/public/themes/
+frontend/cypress/videos/
+frontend/cypress/screenshots/
+
+# Local AI/tooling caches
+.qoder/
+.agents/
+.codex/
+
+# Runtime configuration and secrets
+.env
+.env.*
+*.local
+*.secret
+*.secrets
+*.key
+*.pem
+*.p12
+*.jks
+
+# Keep shareable environment templates
+!.env.example
+!.env.*.example
+
+# Spring Boot runtime configuration
+src/main/resources/application.yml
+src/main/resources/application.yaml
+src/main/resources/application-*.yml
+src/main/resources/application-*.yaml
+src/main/resources/*.properties
+
+# Deployment / server configuration
+docker-compose.yml
+docker-compose.yaml
+docker-compose.*.yml
+docker-compose.*.yaml
+docs/docker-compose.yml
+docs/docker-compose.yaml
+docs/nginx.conf
+nginx.conf
+*.conf
+
+# Backups
+*~
+*.bak
+*.tmp
