@@ -129,6 +129,18 @@ frontend/
 - 可以根据用户的查询检索相关文档
 - 为 LLM 提供完整的上下文，从而生成更准确、基于文档的响应内容
 
+### Tool Calling Agent
+
+聊天入口支持 OpenAI-compatible 的原生 `tools/tool_calls` 协议。模型会先判断是否需要知识库：通用问题可以直接回答，涉及企业资料或用户文档时调用 `search_knowledge_base`，该工具复用原有混合检索和权限过滤能力。
+
+- 工具参数仅包含 `query` 和 `topK`，用户身份由服务端注入，模型无法改变权限范围
+- 默认最多调用工具 3 次，`topK` 限制为 1～10
+- 检索正文按不可信数据处理，文档中的提示不会覆盖系统规则
+- WebSocket 保持原有 `chunk` 和 `completion` 消息，并新增可选的 `agent_status` 状态事件
+- 模型端点不支持工具协议时，可自动降级到原固定 RAG 流程
+
+相关配置位于 `ai.agent`：可通过 `enabled` 关闭 Agent，通过 `fallback-enabled` 控制是否降级。使用前请确认当前 `deepseek.api` 指向的模型和兼容端点支持 Chat Completions `tool_calls`。
+
 ### 企业级多租户
 
 派聪明通过组织标签支持多租户架构。每个用户可以创建或加入一个或多个组织，每个组织可以拥有独立的知识库和文档管理。这样，企业可以在同一系统中管理多个团队或部门的知识库，而无需担心数据混淆或权限问题。

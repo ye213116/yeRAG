@@ -1,0 +1,64 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:smartpai;MODE=MySQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  kafka:
+    bootstrap-servers: localhost:9092
+    listener:
+      auto-startup: false
+    consumer:
+      group-id: smartpai-test
+      auto-offset-reset: earliest
+      properties:
+        spring.json.trusted.packages: com.yizhaoqi.smartpai.model
+    topic:
+      file-processing: file-processing-test
+      dlt: file-processing-dlt-test
+
+jwt:
+  secret-key: dGVzdC1zZWNyZXQta2V5LWZvci1qd3QtdG9rZW4tZ2VuZXJhdGlvbi1hbmQtdmVyaWZpY2F0aW9u
+
+deepseek:
+  api:
+    url: http://localhost
+    key: test
+    model: test
+
+embedding:
+  api:
+    url: http://localhost
+    key: test
+    model: test
+
+elasticsearch:
+  host: localhost
+  port: 9200
+  scheme: http
+
+minio:
+  endpoint: http://localhost:9000
+  accessKey: test
+  secretKey: test-secret
+  publicUrl: http://localhost:9000
+
+file:
+  parsing:
+    chunk-size: 1000
+
+ai:
+  agent:
+    enabled: true
+    fallback-enabled: true
+    max-tool-calls: 3
+    max-query-length: 500
+    default-top-k: 5
+    max-top-k: 10
+    max-tool-result-characters: 6000
+    llm-timeout: 30s
+    tool-timeout: 10s
+    total-timeout: 60s

@@ -100,6 +100,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         logger.info("WebSocket连接已关闭，用户ID: {}，会话ID: {}，状态: {}",
                     userId, session.getId(), status);
 
+        chatHandler.cancelSession(session.getId());
         // 清理会话的引用映射
         chatHandler.clearSessionReferenceMapping(session.getId());
     }
@@ -136,4 +137,4 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     public static String getInternalCmdToken() {
         return INTERNAL_CMD_TOKEN;
     }
-} 
+}
