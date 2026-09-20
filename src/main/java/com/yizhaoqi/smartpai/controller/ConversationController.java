@@ -25,6 +25,9 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/users/conversation")
 public class ConversationController {
+    @Autowired private com.yizhaoqi.smartpai.memory.MemoryProperties memoryConfig;
+    @Autowired private com.yizhaoqi.smartpai.memory.MemoryStore memoryStore;
+    @Autowired private com.yizhaoqi.smartpai.memory.MemoryLegacyImporter memoryImporter;
 
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
@@ -63,6 +66,19 @@ public class ConversationController {
             // 获取用户信息
             User user = userRepository.findByUsername(username)
                     .orElseThrow(() -> new CustomException("用户不存在", HttpStatus.NOT_FOUND));
+            if (memoryConfig.isEnabled()) {
+                memoryImporter.importIfNeeded(user.getId());
+                String id=memoryStore.current(user.getId(),false);
+                List<Map<String,Object>> messages=new ArrayList<>();
+                for (var t:memoryStore.history(user.getId(),id)) {
+                    var date=t.createdAt().atZone(java.time.ZoneOffset.UTC).toLocalDate();
+                    if (start_date!=null && !start_date.isBlank() && date.isBefore(java.time.LocalDate.parse(start_date.substring(0,10)))) continue;
+                    if (end_date!=null && !end_date.isBlank() && date.isAfter(java.time.LocalDate.parse(end_date.substring(0,10)))) continue;
+                    messages.add(Map.of("role","user","content",t.question(),"timestamp",t.createdAt().toString()));
+                    messages.add(Map.of("role","assistant","content",t.answer(),"timestamp",t.createdAt().toString()));
+                }
+                return ResponseEntity.ok(Map.of("code",200,"message","success","data",messages));
+            }
             
             // 尝试不同格式的用户ID来查询Redis
             List<String> possibleUserIds = new ArrayList<>();

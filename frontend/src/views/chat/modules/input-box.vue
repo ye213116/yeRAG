@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const chatStore = useChatStore();
-const { input, list, wsStatus, wsData } = storeToRefs(chatStore);
+const { input, list, wsStatus, wsData, memoryEnabled, memoryReady, activeRequestId } = storeToRefs(chatStore);
 
 const latestMessage = computed(() => {
   return list.value[list.value.length - 1] ?? {};
@@ -13,12 +13,27 @@ const isSending = computed(() => {
 });
 
 const sendable = computed(
-  () => (!input.value.message && !isSending) || ['CLOSED', 'CONNECTING'].includes(wsStatus.value)
+  () =>
+    (!input.value.message && !isSending.value) ||
+    ['CLOSED', 'CONNECTING'].includes(wsStatus.value) ||
+    (memoryEnabled.value && (!memoryReady.value || chatStore.historyReadOnly))
 );
 
 watch(wsData, val => {
-  const data = JSON.parse(val);
+  if (!val) return;
+  let data;
+  try {
+    data = JSON.parse(val);
+  } catch {
+    return;
+  }
+  if (memoryEnabled.value && data.requestId && data.requestId !== activeRequestId.value) return;
   const assistant = list.value[list.value.length - 1];
+  if (!assistant || assistant.role !== 'assistant') return;
+  if (data.type === 'request_rejected') {
+    assistant.status = 'error';
+    return;
+  }
 
   if (data.type === 'completion' && data.status === 'finished' && assistant.status !== 'error')
     assistant.status = 'finished';
@@ -30,12 +45,14 @@ watch(wsData, val => {
 });
 
 const handleSend = async () => {
+  if (sendable.value) return;
   //  判断是否正在发送, 如果发送中，则停止ai继续响应
   if (isSending.value) {
     const { error, data } = await request<Api.Chat.Token>({ url: 'chat/websocket-token', baseURL: 'proxy-api' });
     if (error) return;
 
     chatStore.wsSend(JSON.stringify({ type: 'stop', _internal_cmd_token: data.cmdToken }));
+    activeRequestId.value = '';
 
     list.value[list.value.length - 1].status = 'finished';
     if (!latestMessage.value.content) list.value.pop();
@@ -46,7 +63,17 @@ const handleSend = async () => {
     content: input.value.message,
     role: 'user'
   });
-  chatStore.wsSend(input.value.message);
+  if (memoryEnabled.value) {
+    activeRequestId.value = crypto.randomUUID();
+    chatStore.wsSend(
+      JSON.stringify({
+        type: 'chat',
+        message: input.value.message,
+        conversationId: chatStore.conversationId,
+        requestId: activeRequestId.value
+      })
+    );
+  } else chatStore.wsSend(input.value.message);
   list.value.push({
     content: '',
     role: 'assistant',

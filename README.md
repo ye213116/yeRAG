@@ -141,6 +141,12 @@ frontend/
 
 相关配置位于 `ai.agent`：可通过 `enabled` 关闭 Agent，通过 `fallback-enabled` 控制是否降级。使用前请确认当前 `deepseek.api` 指向的模型和兼容端点支持 Chat Completions `tool_calls`。
 
+### 会话与个人记忆（V2）
+
+执行 V1、V2 迁移后，可通过 Spring 配置 `ai.memory.enabled=true` 或根目录 `.env` 中的 `AI_MEMORY_ENABLED=true` 启用会话级短期摘要和 MySQL 个人长期记忆；默认关闭，不自动修改现有数据库。前端支持新建对话和查看历史会话。设置 `ai.memory.storage-mode=document` 后，长期记忆由用户当前的 `profile.md`、`preferences.md` 保存，异步任务从用户原始提问提取受控的 Markdown section，召回时动态生成不落库的 `MEMORY.md` 索引。个人记忆不使用 ES，现有知识库权限检索保持独立。
+
+部署、配置和回滚方法见 [V1 库表说明](docs/databases/2026-09-09-memory-v1-update.md)与 [V2 文档记忆说明](docs/databases/2026-09-17-markdown-memory-v2-update.md)；SQL 见 [V1 迁移](docs/databases/migrations/2026-09-09-memory-v1.sql)和 [V2 迁移](docs/databases/migrations/2026-09-17-markdown-memory-v2.sql)。
+
 ### 企业级多租户
 
 派聪明通过组织标签支持多租户架构。每个用户可以创建或加入一个或多个组织，每个组织可以拥有独立的知识库和文档管理。这样，企业可以在同一系统中管理多个团队或部门的知识库，而无需担心数据混淆或权限问题。

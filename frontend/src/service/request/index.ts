@@ -13,10 +13,7 @@ const { baseURL } = getServiceBaseURL(import.meta.env, isHttpProxy);
 function getFlatRequest(options: Partial<RequestOption<App.Service.Response>> = {}) {
   const request = createFlatRequest<App.Service.Response, RequestInstanceState>(
     {
-      baseURL,
-      headers: {
-        apifoxToken: 'FY65Vng88xra_BveQ5E_4'
-      }
+      baseURL
     },
     {
       async onRequest(config) {
@@ -29,7 +26,6 @@ function getFlatRequest(options: Partial<RequestOption<App.Service.Response>> = 
         // 无感知token刷新：自动更新本地存储的token
         const authStore = useAuthStore();
         authStore.setToken(newToken);
-        console.log('🔄 Token automatically refreshed');
       },
       isBackendSuccess(response) {
         // when the backend response code is "0000"(default), it means the request is success
@@ -37,7 +33,6 @@ function getFlatRequest(options: Partial<RequestOption<App.Service.Response>> = 
         return String(response.data.code) === import.meta.env.VITE_SERVICE_SUCCESS_CODE;
       },
       async onBackendFail(response, instance) {
-        console.log('%c [ 👉 onBackendFail 👈 ]-35', 'font-size:16px; background:#3cd735; color:#80ff79;', response);
         const authStore = useAuthStore();
         const responseCode = String(response.data.code);
 

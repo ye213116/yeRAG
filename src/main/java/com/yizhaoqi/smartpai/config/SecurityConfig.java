@@ -19,6 +19,20 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 public class SecurityConfig {
 
+    @Bean
+    public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource(
+            @org.springframework.beans.factory.annotation.Value("${security.allowed-origins:http://localhost:*,http://127.0.0.1:*}") String origins) {
+        var cors = new org.springframework.web.cors.CorsConfiguration();
+        cors.setAllowedOriginPatterns(java.util.Arrays.stream(origins.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList());
+        cors.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        cors.setAllowedHeaders(java.util.List.of("Authorization", "Content-Type", "Accept", "X-Request-Id"));
+        cors.setExposedHeaders(java.util.List.of("Authorization", "New-Token"));
+        cors.setMaxAge(3600L);
+        var source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", cors);
+        return source;
+    }
+
     // 日志记录器，用于记录安全配置的相关信息
     private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
@@ -40,7 +54,8 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         try {
             // 禁用CSRF保护
-            http.csrf(csrf -> csrf.disable())
+            http.cors(org.springframework.security.config.Customizer.withDefaults())
+                    .csrf(csrf -> csrf.disable())
                     // 配置请求的授权规则
                     .authorizeHttpRequests(authorize -> authorize
                             // 允许静态资源访问
@@ -86,4 +101,3 @@ public class SecurityConfig {
         }
     }
 }
-

@@ -16,6 +16,11 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import reactor.core.Disposable;
 import reactor.core.Disposables;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
+import com.yizhaoqi.smartpai.memory.*;
+import com.yizhaoqi.smartpai.memory.MemoryTypes.Turn;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -25,6 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -38,6 +44,24 @@ public class ChatHandler {
     private final ObjectMapper objectMapper;
     private final Map<String, Disposable.Composite> activeRuns = new ConcurrentHashMap<>();
     private final Map<String, Map<Integer, String>> sessionReferenceMappings = new ConcurrentHashMap<>();
+    private final Map<String, Turn> memoryTurns = new ConcurrentHashMap<>();
+    private MemoryStore memoryStore;
+    private MemoryContextService memoryContext;
+    private MemoryProperties memoryConfig;
+    @Autowired private MemoryLegacyImporter memoryImporter;
+
+    @Autowired
+    public void configureMemory(MemoryStore store, MemoryContextService context, MemoryProperties config) {
+        memoryStore=store; memoryContext=context; memoryConfig=config;
+    }
+    public boolean memoryEnabled() { return memoryConfig != null && memoryConfig.isEnabled(); }
+    public void cancelClosedMemoryRuns(long userId) {
+        memoryTurns.forEach((socket,turn) -> {
+            if (turn.userId()!=userId) return;
+            try { if (!memoryStore.running(turn)) cancelActiveRun(socket); }
+            catch (Exception unavailable) { logger.warn("Cannot inspect memory turn={}",turn.id()); }
+        });
+    }
 
     public ChatHandler(RedisTemplate<String, String> redisTemplate, KnowledgeAgentService agentService,
                        RagFallbackService fallbackService, AiProperties properties, ObjectMapper objectMapper) {
@@ -49,6 +73,7 @@ public class ChatHandler {
     }
 
     public void processMessage(String userId, String userMessage, WebSocketSession session) {
+        if (memoryEnabled()) { processMessage(userId, userMessage, null, UUID.randomUUID().toString(), session); return; }
         cancelActiveRun(session.getId());
         Disposable.Composite runGroup = Disposables.composite();
         activeRuns.put(session.getId(), runGroup);
@@ -78,6 +103,95 @@ public class ChatHandler {
                             } else { activeRuns.remove(session.getId()); handleError(session, error); sendCompletionNotification(session); }
                         });
         runGroup.add(run);
+    }
+
+    public void processMessage(String userId, String userMessage, String conversationId, String requestId, WebSocketSession session) {
+        if (!memoryEnabled()) { processMessage(userId, userMessage, session); return; }
+        String socketId = session.getId();
+        cancelClosedMemoryRuns(Long.parseLong(userId));
+        Disposable.Composite group = Disposables.composite();
+        if (activeRuns.putIfAbsent(socketId, group) != null) {
+            sendJson(session, Map.of("type","request_rejected","requestId",requestId,"message","请先停止当前回答")); return;
+        }
+        AtomicBoolean emitted = new AtomicBoolean();
+        var turnRef = new java.util.concurrent.atomic.AtomicReference<Turn>();
+        Disposable run = Mono.fromCallable(() -> {
+                if (memoryImporter!=null) memoryImporter.importIfNeeded(Long.parseLong(userId));
+                return memoryStore.begin(Long.parseLong(userId), conversationId, requestId, userMessage);
+            })
+            .subscribeOn(Schedulers.boundedElastic())
+            .flatMap(begin -> {
+                Turn t = begin.turn(); turnRef.set(t);
+                if (!begin.fresh()) {
+                    if ("COMPLETED".equals(t.status())) {
+                        sendMemory(session,t,Map.of("chunk", t.answer()==null ? "" : t.answer()));
+                        sendMemory(session,t,Map.of("type","completion","status","finished"));
+                    } else sendMemory(session,t,Map.of("type","request_rejected","message","该请求已处理，状态：" + t.status()));
+                    return Mono.<AgentRunResult>empty();
+                }
+                memoryTurns.put(socketId, t);
+                if (group.isDisposed()) { memoryStore.cancel(t,"CANCELLED"); return Mono.empty(); }
+                memoryContext.cacheCurrent(t.userId(),t.sessionId());
+                sendMemory(session,t,Map.of("type","conversation","switched",begin.switched()));
+                var context = memoryContext.build(t);
+                if (context.reduced()) sendMemory(session,t,Map.of("type","context_reduced","message","上下文已缩减，较早约束可能未完整保留"));
+                AgentEventListener listener = new AgentEventListener() {
+                    public void onStatus(String status, String message, Map<String,Object> details) {
+                        if (!group.isDisposed()) sendMemory(session,t,Map.of("type","agent_status","status",status,"message",message));
+                    }
+                    public void onChunk(String chunk) {
+                        if (group.isDisposed()) return;
+                        emitted.set(true); sendMemory(session,t,Map.of("chunk",chunk));
+                    }
+                };
+                Mono<AgentRunResult> answer = agentConfig.isEnabled()
+                        ? agentService.run(userId,userMessage,context.messages(),listener)
+                        : memoryFallback(userId,userMessage,context.messages(),listener);
+                return answer.onErrorResume(error -> {
+                    if (agentConfig.isEnabled() && agentConfig.isFallbackEnabled() && !emitted.get())
+                        return memoryFallback(userId,userMessage,context.messages(),listener);
+                    return Mono.error(error);
+                }).timeout(agentConfig.getTotalTimeout());
+            })
+            .publishOn(Schedulers.boundedElastic())
+            .doFinally(signal -> {
+                activeRuns.remove(socketId,group);
+                Turn t = turnRef.get(); if (t != null) memoryTurns.remove(socketId,t);
+            })
+            .subscribe(result -> {
+                Turn t=turnRef.get();
+                try {
+                    if (!group.isDisposed() && memoryStore.complete(t,result.answer())) {
+                        sessionReferenceMappings.put(socketId,result.references());
+                        sendMemory(session,t,Map.of("type","completion","status","finished"));
+                    }
+                } catch (Exception failedSave) { sendMemory(session,t,Map.of("error","回答保存失败，请勿重复发送同一问题；本轮未确认持久化")); }
+            }, error -> {
+                Turn t=turnRef.get();
+                if (t!=null) {
+                    try { memoryStore.cancel(t,"FAILED"); } catch (Exception ignored) { logger.warn("Cannot mark failed memory turn={}",t.id()); }
+                    sendMemory(session,t,Map.of("error","本轮未完成，可能是上下文过长或服务暂不可用","type","error"));
+                } else sendJson(session,Map.of("type","request_rejected","requestId",requestId,"message",
+                        error instanceof org.springframework.web.server.ResponseStatusException r ? Objects.toString(r.getReason(),"请求被拒绝") : "无法开始本轮问答"));
+            });
+        group.add(run);
+    }
+
+    private Mono<AgentRunResult> memoryFallback(String user, String question, List<AgentMessage> history, AgentEventListener listener) {
+        return Mono.<AgentRunResult>create(sink -> {
+            StringBuilder answer = new StringBuilder();
+            Map<Integer,String> references = new HashMap<>();
+            List<Map<String,String>> legacy = history.stream().map(m -> Map.of("role",m.role(),"content",m.content())).toList();
+            Disposable d = fallbackService.stream(user,question,legacy,
+                    chunk -> { answer.append(chunk); listener.onChunk(chunk); },references::putAll,sink::error,
+                    () -> sink.success(new AgentRunResult(answer.toString(),Map.copyOf(references))));
+            sink.onCancel(d);
+        }).subscribeOn(Schedulers.boundedElastic());
+    }
+    private void sendMemory(WebSocketSession session, Turn t, Map<String,?> payload) {
+        Map<String,Object> tagged = new HashMap<>(payload);
+        tagged.put("conversationId",t.sessionId()); tagged.put("turnId",Long.toString(t.id())); tagged.put("requestId",t.requestId());
+        sendJson(session,tagged);
     }
 
     private void completeAgent(WebSocketSession session, String conversationId, String userMessage, AgentRunResult result) {
@@ -156,7 +270,7 @@ public class ChatHandler {
         logger.error("AI服务错误", error); sendJson(session, Map.of("error", "AI服务暂时不可用，请稍后重试"));
     }
     private void sendJson(WebSocketSession session, Map<String, ?> payload) {
-        try { if (session.isOpen()) session.sendMessage(new TextMessage(objectMapper.writeValueAsString(payload))); }
+        try { synchronized (session) { if (session.isOpen()) session.sendMessage(new TextMessage(objectMapper.writeValueAsString(payload))); } }
         catch (Exception e) { logger.warn("发送WebSocket消息失败: {}", e.getMessage()); }
     }
 
@@ -166,7 +280,11 @@ public class ChatHandler {
                 "date", java.time.Instant.now().toString()));
     }
     public void cancelSession(String sessionId) { cancelActiveRun(sessionId); }
-    private void cancelActiveRun(String sessionId) { Disposable.Composite run = activeRuns.remove(sessionId); if (run != null) run.dispose(); }
+    private void cancelActiveRun(String sessionId) {
+        Turn t=memoryTurns.remove(sessionId);
+        Disposable.Composite run = activeRuns.remove(sessionId); if (run != null) run.dispose();
+        if(t!=null) try { memoryStore.cancel(t,"CANCELLED"); } catch(Exception e) { logger.warn("Cannot cancel memory turn={}",t.id()); }
+    }
     public String getReferenceMd5(String sessionId, int referenceNumber) {
         Map<Integer, String> mapping = sessionReferenceMappings.get(sessionId); return mapping == null ? null : mapping.get(referenceNumber);
     }

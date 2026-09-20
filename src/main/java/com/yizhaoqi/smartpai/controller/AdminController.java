@@ -28,6 +28,8 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/v1/admin")
 public class AdminController {
+    @Autowired private com.yizhaoqi.smartpai.memory.MemoryProperties memoryConfig;
+    @Autowired private com.yizhaoqi.smartpai.memory.MemoryStore memoryStore;
 
     @Autowired
     private UserRepository userRepository;
@@ -456,6 +458,10 @@ public class AdminController {
                 }
             }
             
+            if (memoryConfig.isEnabled()) {
+                return ResponseEntity.ok(Map.of("code",200,"message","success","data",
+                        memoryStore.adminHistory(userid==null || userid.isBlank() ? null : Long.valueOf(userid), start_date, end_date)));
+            }
             // 获取所有Redis键中以"user:"开头的键
             Set<String> userKeys = redisTemplate.keys("user:*:current_conversation");
             
@@ -775,4 +781,4 @@ record OrgTagRequest(String tagId, String name, String description, String paren
 record AssignOrgTagsRequest(List<String> orgTags) {}
 
 // 添加组织标签更新请求记录类
-record OrgTagUpdateRequest(String name, String description, String parentTag) {} 
+record OrgTagUpdateRequest(String name, String description, String parentTag) {}

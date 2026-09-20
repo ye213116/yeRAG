@@ -29,6 +29,8 @@ public class DeepSeekClient implements AgentLlmClient {
     private final String model;
     private final AiProperties aiProperties;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    private com.yizhaoqi.smartpai.memory.MemoryProperties memoryProperties;
     private static final Logger logger = LoggerFactory.getLogger(DeepSeekClient.class);
     
     public DeepSeekClient(@Value("${deepseek.api.url}") String apiUrl,
@@ -50,8 +52,8 @@ public class DeepSeekClient implements AgentLlmClient {
     @Override
     public Mono<AgentDecision> decide(List<AgentMessage> messages, List<Map<String, Object>> tools) {
         Map<String, Object> request = buildAgentRequest(messages, false);
-        request.put("tools", tools);
-        request.put("tool_choice", "auto");
+        if (!tools.isEmpty()) { request.put("tools", tools); request.put("tool_choice", "auto"); }
+        checkMemoryBudget(request);
         return webClient.post()
                 .uri("/chat/completions")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -67,6 +69,7 @@ public class DeepSeekClient implements AgentLlmClient {
     @Override
     public Flux<String> streamFinal(List<AgentMessage> messages) {
         Map<String, Object> request = buildAgentRequest(messages, true);
+        checkMemoryBudget(request);
         return webClient.post()
                 .uri("/chat/completions")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -162,6 +165,7 @@ public class DeepSeekClient implements AgentLlmClient {
                              Runnable onComplete) {
         
         Map<String, Object> request = buildRequest(userMessage, context, history);
+        checkMemoryBudget(request);
         
         return webClient.post()
                 .uri("/chat/completions")
@@ -176,11 +180,19 @@ public class DeepSeekClient implements AgentLlmClient {
                 );
     }
     
-    private Map<String, Object> buildRequest(String userMessage, 
+    private void checkMemoryBudget(Map<String,Object> request) {
+        if (memoryProperties == null || !memoryProperties.isEnabled()) return;
+        try {
+            if (objectMapper.writeValueAsBytes(request).length > memoryProperties.getMaxInputBytes())
+                throw new IllegalArgumentException("Model input budget exceeded");
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) { throw new IllegalArgumentException("Cannot encode model input",e); }
+    }
+
+    private Map<String, Object> buildRequest(String userMessage,
                                            String context,
                                            List<Map<String, String>> history) {
-        logger.info("构建请求，用户消息：{}，上下文长度：{}，历史消息数：{}", 
-                   userMessage, 
+        logger.info("构建请求，用户消息长度：{}，上下文长度：{}，历史消息数：{}",
+                   userMessage == null ? 0 : userMessage.length(),
                    context != null ? context.length() : 0, 
                    history != null ? history.size() : 0);
         

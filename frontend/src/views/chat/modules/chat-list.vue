@@ -34,7 +34,7 @@ const params = computed(() => {
 });
 
 watchEffect(() => {
-  getList();
+  if (!chatStore.memoryEnabled) getList();
 });
 
 async function getList() {
@@ -44,7 +44,7 @@ async function getList() {
     params: params.value
   });
   if (!error) {
-    list.value = data;
+    if (!chatStore.memoryEnabled) list.value = data;
   }
   loading.value = false;
 }
