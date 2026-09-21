@@ -2,6 +2,7 @@ package com.yizhaoqi.smartpai.service;
 
 import com.yizhaoqi.smartpai.exception.CustomException;
 import com.yizhaoqi.smartpai.model.User;
+import com.yizhaoqi.smartpai.repository.OrganizationTagRepository;
 import com.yizhaoqi.smartpai.repository.UserRepository;
 import com.yizhaoqi.smartpai.utils.PasswordUtil;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +26,12 @@ class UserServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private OrganizationTagRepository organizationTagRepository;
+
+    @Mock
+    private OrgTagCacheService orgTagCacheService;
+
     // 注入模拟的 UserService 实例
     @InjectMocks
     private UserService userService;
@@ -44,6 +51,8 @@ class UserServiceTest {
     void testRegisterUser_Success() {
         // 假设用户名 "testuser" 在数据库中不存在
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.empty());
+        when(organizationTagRepository.existsByTagId("DEFAULT")).thenReturn(true);
+        when(organizationTagRepository.existsByTagId("PRIVATE_testuser")).thenReturn(true);
 
         // 调用 userService 的 registerUser 方法进行用户注册
         userService.registerUser("testuser", "password123");
@@ -51,13 +60,15 @@ class UserServiceTest {
         // 创建 ArgumentCaptor 来捕获 save 方法的参数
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
 
-        // 验证 userRepository.save 被调用了一次，并捕获参数
-        verify(userRepository, times(1)).save(userCaptor.capture());
+        // 注册流程会先保存用户生成 ID，再保存组织标签字段
+        verify(userRepository, times(2)).save(userCaptor.capture());
 
         // 获取捕获的 User 对象并进行断言
-        User savedUser = userCaptor.getValue();
+        User savedUser = userCaptor.getAllValues().get(1);
         assertNotNull(savedUser);
         assertEquals("testuser", savedUser.getUsername());
+        assertEquals("PRIVATE_testuser", savedUser.getOrgTags());
+        assertEquals("PRIVATE_testuser", savedUser.getPrimaryOrg());
     }
 
     /**

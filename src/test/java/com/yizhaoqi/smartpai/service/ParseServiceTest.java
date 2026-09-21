@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.lang.reflect.Method;
@@ -18,7 +17,6 @@ import static org.junit.jupiter.api.Assertions.*;
  * ParseService 的测试类
  * 主要测试 splitLongSentence 方法的功能
  */
-@SpringBootTest
 class ParseServiceTest {
 
     @Mock

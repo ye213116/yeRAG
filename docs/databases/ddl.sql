@@ -1,57 +1,213 @@
-CREATE TABLE users (
-                       id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '用户唯一标识',
-                       username VARCHAR(255) NOT NULL UNIQUE COMMENT '用户名，唯一',
-                       password VARCHAR(255) NOT NULL COMMENT '加密后的密码',
-                       role ENUM('USER', 'ADMIN') NOT NULL DEFAULT 'USER' COMMENT '用户角色',
-                       org_tags VARCHAR(255) DEFAULT NULL COMMENT '用户所属组织标签，多个用逗号分隔',
-                       primary_org VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '用户主组织标签',
-                       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-                       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-                       INDEX idx_username (username) COMMENT '用户名索引'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
-CREATE TABLE organization_tags (
-                                   tag_id VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin PRIMARY KEY COMMENT '标签唯一标识',
-                                   name VARCHAR(100) NOT NULL COMMENT '标签名称',
-                                   description TEXT COMMENT '描述',
-                                   parent_tag VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL COMMENT '父标签ID',
-                                   created_by BIGINT NOT NULL COMMENT '创建者ID',
-                                   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-                                   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-                                   FOREIGN KEY (parent_tag) REFERENCES organization_tags(tag_id) ON DELETE SET NULL,
-                                   FOREIGN KEY (created_by) REFERENCES users(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='组织标签表';
+-- yeRAG complete MySQL 8.0 schema
+--
+-- Usage:
+--   1. Create and select an empty database encoded as utf8mb4.
+--   2. Execute this file once.
+--   3. Start the application only after the schema has been created.
+--
+-- This file is the single source of truth for the MySQL relational schema.
+-- Redis, Elasticsearch and MinIO data structures are not created here.
 
+SET NAMES utf8mb4;
+
+-- ---------------------------------------------------------------------------
+-- Identity and organization
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE users (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT 'User primary key',
+    username VARCHAR(255) NOT NULL COMMENT 'Unique login name',
+    password VARCHAR(255) NOT NULL COMMENT 'Encoded password hash',
+    role ENUM('USER', 'ADMIN') NOT NULL DEFAULT 'USER' COMMENT 'Application role',
+    org_tags VARCHAR(255) NULL COMMENT 'Comma-separated organization tags',
+    primary_org VARCHAR(255) NULL COMMENT 'Primary organization tag',
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT 'Creation time',
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+        ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Last update time',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_users_username (username)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Application users';
+
+CREATE TABLE organization_tags (
+    tag_id VARCHAR(255) NOT NULL COMMENT 'Organization tag identifier',
+    name VARCHAR(255) NOT NULL COMMENT 'Display name',
+    description TEXT NULL COMMENT 'Tag description',
+    parent_tag VARCHAR(255) NULL COMMENT 'Parent organization tag',
+    created_by BIGINT NOT NULL COMMENT 'Creator user ID',
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT 'Creation time',
+    updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+        ON UPDATE CURRENT_TIMESTAMP(6) COMMENT 'Last update time',
+    PRIMARY KEY (tag_id),
+    KEY ix_organization_tags_parent (parent_tag),
+    KEY ix_organization_tags_creator (created_by),
+    CONSTRAINT fk_organization_tags_parent
+        FOREIGN KEY (parent_tag) REFERENCES organization_tags(tag_id) ON DELETE SET NULL,
+    CONSTRAINT fk_organization_tags_creator
+        FOREIGN KEY (created_by) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Hierarchical organization tags';
+
+-- ---------------------------------------------------------------------------
+-- File upload and document metadata
+-- ---------------------------------------------------------------------------
 
 CREATE TABLE file_upload (
-                             id           BIGINT           NOT NULL AUTO_INCREMENT COMMENT '主键',
-                             file_md5     VARCHAR(32)      NOT NULL COMMENT '文件 MD5',
-                             file_name    VARCHAR(255)     NOT NULL COMMENT '文件名称',
-                             total_size   BIGINT           NOT NULL COMMENT '文件大小',
-                             status       TINYINT          NOT NULL DEFAULT 0 COMMENT '上传状态',
-                             user_id      VARCHAR(64)      NOT NULL COMMENT '用户 ID',
-                             org_tag      VARCHAR(50)      DEFAULT NULL COMMENT '组织标签',
-                             is_public    BOOLEAN          NOT NULL DEFAULT FALSE COMMENT '是否公开',                             created_at   TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-                             merged_at    TIMESTAMP        NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '合并时间',
-                             PRIMARY KEY (id),
-                             UNIQUE KEY uk_md5_user (file_md5, user_id),
-                             INDEX idx_user (user_id),
-                             INDEX idx_org_tag (org_tag)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='文件上传记录';
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT 'Upload record primary key',
+    file_md5 VARCHAR(32) NOT NULL COMMENT 'MD5 of the complete file',
+    file_name VARCHAR(255) NOT NULL COMMENT 'Original file name',
+    total_size BIGINT NOT NULL COMMENT 'File size in bytes',
+    status TINYINT NOT NULL DEFAULT 0 COMMENT '0 uploading, 1 completed',
+    user_id VARCHAR(64) NOT NULL COMMENT 'Uploader application identity',
+    org_tag VARCHAR(255) NULL COMMENT 'Owning organization tag',
+    is_public TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Whether the file is public',
+    created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT 'Upload creation time',
+    merged_at DATETIME(6) NULL COMMENT 'Chunk merge completion time',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_file_upload_md5_user (file_md5, user_id),
+    KEY ix_file_upload_user (user_id),
+    KEY ix_file_upload_org (org_tag),
+    KEY ix_file_upload_visibility (is_public)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='File upload records';
+
 CREATE TABLE chunk_info (
-                            id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '分块记录唯一标识',
-                            file_md5 VARCHAR(32) NOT NULL COMMENT '关联的文件MD5值',
-                            chunk_index INT NOT NULL COMMENT '分块序号',
-                            chunk_md5 VARCHAR(32) NOT NULL COMMENT '分块的MD5值',
-                            storage_path VARCHAR(255) NOT NULL COMMENT '分块在存储系统中的路径'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='文件分块信息表';
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT 'Chunk metadata primary key',
+    file_md5 VARCHAR(32) NOT NULL COMMENT 'MD5 of the complete file',
+    chunk_index INT NOT NULL COMMENT 'Zero-based chunk order',
+    chunk_md5 VARCHAR(32) NOT NULL COMMENT 'MD5 of this chunk',
+    storage_path VARCHAR(255) NOT NULL COMMENT 'Chunk object path in MinIO',
+    PRIMARY KEY (id),
+    KEY ix_chunk_info_file_order (file_md5, chunk_index)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Temporary upload chunk metadata';
 
 CREATE TABLE document_vectors (
-                                  vector_id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '向量记录唯一标识',
-                                  file_md5 VARCHAR(32) NOT NULL COMMENT '关联的文件MD5值',
-                                  chunk_id INT NOT NULL COMMENT '文本分块序号',
-                                  text_content TEXT COMMENT '文本内容',
-                                  model_version VARCHAR(32) COMMENT '向量模型版本',
-                                  user_id VARCHAR(64) NOT NULL COMMENT '上传用户ID',
-                                  org_tag VARCHAR(50) COMMENT '文件所属组织标签',
-                                  is_public BOOLEAN NOT NULL DEFAULT FALSE COMMENT '文件是否公开'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='文档向量存储表';
+    vector_id BIGINT NOT NULL AUTO_INCREMENT COMMENT 'Document chunk primary key',
+    file_md5 VARCHAR(32) NOT NULL COMMENT 'MD5 of the source file',
+    chunk_id INT NOT NULL COMMENT 'Parsed text chunk order',
+    text_content LONGTEXT NULL COMMENT 'Parsed chunk text',
+    model_version VARCHAR(32) NULL COMMENT 'Embedding model version',
+    user_id VARCHAR(64) NOT NULL COMMENT 'Uploader application identity',
+    org_tag VARCHAR(50) NULL COMMENT 'Owning organization tag',
+    is_public TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Whether the chunk is public',
+    PRIMARY KEY (vector_id),
+    KEY ix_document_vectors_file (file_md5),
+    KEY ix_document_vectors_owner (user_id),
+    KEY ix_document_vectors_access (org_tag, is_public)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Parsed document chunks and search metadata';
+
+-- ---------------------------------------------------------------------------
+-- Conversation history used when the memory subsystem is disabled
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE conversations (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT 'Conversation record primary key',
+    user_id BIGINT NOT NULL COMMENT 'Owner user ID',
+    question TEXT NOT NULL COMMENT 'User question',
+    answer TEXT NOT NULL COMMENT 'Assistant answer',
+    timestamp DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT 'Conversation time',
+    PRIMARY KEY (id),
+    KEY idx_user_id (user_id),
+    KEY idx_timestamp (timestamp),
+    CONSTRAINT fk_conversations_user FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Non-memory conversation history';
+
+-- ---------------------------------------------------------------------------
+-- Memory v2: sessions and durable turns
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE chat_session (
+    id CHAR(36) NOT NULL COMMENT 'Session UUID',
+    user_id BIGINT NOT NULL COMMENT 'Session owner',
+    status VARCHAR(20) NOT NULL COMMENT 'OPEN or CLOSED',
+    last_activity_at DATETIME(6) NOT NULL COMMENT 'Last accepted activity',
+    context_expires_at DATETIME(6) NOT NULL COMMENT 'Short-term context expiration',
+    created_at DATETIME(6) NOT NULL COMMENT 'Creation time',
+    closed_at DATETIME(6) NULL COMMENT 'Close time',
+    revision BIGINT NOT NULL DEFAULT 0 COMMENT 'Optimistic context revision',
+    active_turn_id BIGINT NULL COMMENT 'Currently running turn; guarded by user lock',
+    PRIMARY KEY (id),
+    KEY ix_chat_session_user (user_id, status, last_activity_at),
+    CONSTRAINT fk_chat_session_user FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT ck_chat_session_status CHECK (status IN ('OPEN', 'CLOSED'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Memory-aware chat sessions';
+
+CREATE TABLE chat_turn (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT 'Turn primary key',
+    session_id CHAR(36) NOT NULL COMMENT 'Owning session UUID',
+    user_id BIGINT NOT NULL COMMENT 'Turn owner',
+    user_turn_seq BIGINT NULL COMMENT 'Per-user ordering barrier; set to the generated turn ID',
+    request_id VARCHAR(80) NOT NULL COMMENT 'Client idempotency key',
+    request_hash CHAR(64) NOT NULL COMMENT 'SHA-256 of the original question',
+    question MEDIUMTEXT NULL COMMENT 'Original user question; cleared after retention',
+    answer MEDIUMTEXT NULL COMMENT 'Assistant answer; cleared after retention',
+    status VARCHAR(20) NOT NULL COMMENT 'RUNNING, COMPLETED, CANCELLED or FAILED',
+    context_sync_status VARCHAR(20) NOT NULL DEFAULT 'NONE'
+        COMMENT 'NONE, PENDING, SYNCED or EXPIRED',
+    context_sync_attempts INT NOT NULL DEFAULT 0 COMMENT 'Context synchronization attempts',
+    context_next_attempt_at DATETIME(6) NULL COMMENT 'Next context synchronization time',
+    created_at DATETIME(6) NOT NULL COMMENT 'Creation time',
+    completed_at DATETIME(6) NULL COMMENT 'Completion time',
+    content_expires_at DATETIME(6) NOT NULL COMMENT 'Question and answer retention deadline',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_chat_turn_request (user_id, request_id),
+    UNIQUE KEY uk_chat_turn_sequence (user_id, user_turn_seq),
+    KEY ix_chat_turn_session (session_id, user_turn_seq),
+    KEY ix_chat_turn_sync (context_sync_status, context_next_attempt_at),
+    CONSTRAINT fk_chat_turn_user FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_chat_turn_session FOREIGN KEY (session_id) REFERENCES chat_session(id),
+    CONSTRAINT ck_chat_turn_status
+        CHECK (status IN ('RUNNING', 'COMPLETED', 'CANCELLED', 'FAILED')),
+    CONSTRAINT ck_chat_turn_context_sync
+        CHECK (context_sync_status IN ('NONE', 'PENDING', 'SYNCED', 'EXPIRED'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Durable chat turns and context synchronization state';
+
+-- ---------------------------------------------------------------------------
+-- Memory v2: extraction queue and Markdown documents
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE memory_extraction_task (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT 'Extraction task primary key',
+    turn_id BIGINT NOT NULL COMMENT 'Source completed turn',
+    status VARCHAR(20) NOT NULL COMMENT 'PENDING, RUNNING, DONE, FAILED or EXPIRED',
+    attempts INT NOT NULL DEFAULT 0 COMMENT 'Claim attempts',
+    next_attempt_at DATETIME(6) NOT NULL COMMENT 'Earliest next claim time',
+    lease_until DATETIME(6) NULL COMMENT 'Current worker lease deadline',
+    lease_token CHAR(36) NULL COMMENT 'Current worker lease token',
+    last_error_code VARCHAR(80) NULL COMMENT 'Last bounded error code',
+    created_at DATETIME(6) NOT NULL COMMENT 'Creation time',
+    updated_at DATETIME(6) NOT NULL COMMENT 'Last update time',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_memory_task_turn (turn_id),
+    KEY ix_memory_task_due (status, next_attempt_at),
+    KEY ix_memory_task_lease (status, lease_until),
+    CONSTRAINT fk_memory_task_turn FOREIGN KEY (turn_id) REFERENCES chat_turn(id),
+    CONSTRAINT ck_memory_task_status
+        CHECK (status IN ('PENDING', 'RUNNING', 'DONE', 'FAILED', 'EXPIRED'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Asynchronous long-term-memory extraction tasks';
+
+CREATE TABLE memory_document (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT 'Memory document primary key',
+    user_id BIGINT NOT NULL COMMENT 'Document owner',
+    memory_type VARCHAR(20) NOT NULL COMMENT 'PROFILE or PREFERENCE',
+    content MEDIUMTEXT NOT NULL COMMENT 'Current Markdown document body',
+    created_at DATETIME(6) NOT NULL COMMENT 'Creation time',
+    updated_at DATETIME(6) NOT NULL COMMENT 'Last content update time',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_memory_document_type (user_id, memory_type),
+    CONSTRAINT fk_memory_document_user FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT ck_memory_document_type CHECK (memory_type IN ('PROFILE', 'PREFERENCE'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Current profile and preference Markdown documents';
+
+CREATE TABLE memory_document_section (
+    id CHAR(36) NOT NULL COMMENT 'Stable section UUID',
+    document_id BIGINT NOT NULL COMMENT 'Owning memory document',
+    heading VARCHAR(120) NOT NULL COMMENT 'Markdown level-two heading',
+    last_applied_turn_seq BIGINT NOT NULL DEFAULT 0 COMMENT 'Latest applied user turn barrier',
+    deleted TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Logical deletion marker',
+    created_at DATETIME(6) NOT NULL COMMENT 'Creation time',
+    updated_at DATETIME(6) NOT NULL COMMENT 'Last update time',
+    PRIMARY KEY (id),
+    KEY ix_memory_section_recall (document_id, deleted),
+    KEY ix_memory_section_turn (document_id, last_applied_turn_seq),
+    CONSTRAINT fk_memory_section_document
+        FOREIGN KEY (document_id) REFERENCES memory_document(id),
+    CONSTRAINT ck_memory_section_deleted CHECK (deleted IN (0, 1))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Stable metadata for Markdown memory sections';

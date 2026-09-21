@@ -32,16 +32,23 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
-        String userId = extractUserId(session);
+        String userId;
+        try { userId = extractUserId(session); }
+        catch (RuntimeException invalid) {
+            try { session.close(CloseStatus.POLICY_VIOLATION); } catch (Exception ignored) { }
+            return;
+        }
         sessions.put(userId, session);
+        session.getAttributes().put("authenticatedChatUser", userId);
         logger.info("WebSocket连接已建立，用户ID: {}，会话ID: {}，URI路径: {}",
                     userId, session.getId(), session.getUri().getPath());
 
         // 发送会话ID到前端
         try {
-            Map<String, String> connectionMessage = Map.of(
+            Map<String, Object> connectionMessage = Map.of(
                 "type", "connection",
                 "sessionId", session.getId(),
+                "memoryEnabled", chatHandler.memoryEnabled(),
                 "message", "WebSocket连接已建立"
             );
             String jsonMessage = objectMapper.writeValueAsString(connectionMessage);
@@ -66,6 +73,15 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                     Map<String, Object> jsonMessage = objectMapper.readValue(payload, Map.class);
                     String messageType = (String) jsonMessage.get("type");
                     String internalToken = (String) jsonMessage.get("_internal_cmd_token");
+
+                    if ("chat".equals(messageType) && chatHandler.memoryEnabled()) {
+                        String question = (String) jsonMessage.get("message");
+                        String conversationId = (String) jsonMessage.get("conversationId");
+                        String requestId = (String) jsonMessage.get("requestId");
+                        if (requestId == null) { sendErrorMessage(session,"缺少requestId"); return; }
+                        chatHandler.processMessage(userId,question,conversationId,requestId,session);
+                        return;
+                    }
                     
                     // 只有包含正确内部令牌的停止指令才处理
                     if ("stop".equals(messageType) && INTERNAL_CMD_TOKEN.equals(internalToken)) {
@@ -95,11 +111,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-        String userId = extractUserId(session);
-        sessions.remove(userId);
+        String userId = (String)session.getAttributes().get("authenticatedChatUser");
+        if (userId != null) sessions.remove(userId, session);
         logger.info("WebSocket连接已关闭，用户ID: {}，会话ID: {}，状态: {}",
                     userId, session.getId(), status);
 
+        chatHandler.cancelSession(session.getId());
         // 清理会话的引用映射
         chatHandler.clearSessionReferenceMapping(session.getId());
     }
@@ -108,12 +125,17 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         String path = session.getUri().getPath();
         String[] segments = path.split("/");
         String jwtToken = segments[segments.length - 1];
+        if (!jwtUtils.validateToken(jwtToken)) throw new IllegalArgumentException("Invalid token");
+        if (chatHandler.memoryEnabled()) {
+            String id=jwtUtils.extractUserIdFromToken(jwtToken);
+            if (id == null || !id.matches("[0-9]+")) throw new IllegalArgumentException("Missing user ID; sign in again");
+            return id;
+        }
         
         // 从JWT令牌中提取用户名
         String username = jwtUtils.extractUsernameFromToken(jwtToken);
         if (username == null) {
-            logger.warn("无法从JWT令牌中提取用户名，使用令牌作为用户ID: {}", jwtToken);
-            return jwtToken;
+            throw new IllegalArgumentException("Missing username");
         }
         
         logger.debug("从JWT令牌中提取的用户名: {}", username);
@@ -136,4 +158,4 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     public static String getInternalCmdToken() {
         return INTERNAL_CMD_TOKEN;
     }
-} 
+}

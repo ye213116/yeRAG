@@ -108,6 +108,7 @@ export const useKnowledgeBaseStore = defineStore(SetupStoreId.KnowledgeBase, () 
       fileMd5: md5,
       fileName: file.name,
       totalSize: file.size,
+      public: form.isPublic,
       isPublic: form.isPublic,
       uploadedChunks: [],
       progress: 0,
