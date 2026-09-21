@@ -1,271 +1,236 @@
-派聪明（PaiSmart）是一个企业级的 AI 知识库管理系统，采用检索增强生成（RAG）技术，提供智能文档处理和检索能力。
+# yeRAG
 
-核心技术栈包括 ElasticSearch、Kafka、WebSocket、Spring Security、Docker、MySQL 和 Redis。
+yeRAG 是一个面向企业知识库的 Agentic RAG 应用。它把文档处理、权限感知检索、原生 Tool Calling、实时对话和可选的用户记忆组合在一起：模型可以根据问题自主决定是否检索知识库，同时保留传统 RAG fallback，保证不支持工具协议的模型也能工作。
 
-它的目标是帮助企业和个人更高效地管理和利用知识库中的信息，支持多租户架构，允许用户通过自然语言查询知识库，并获得基于自身文档的 AI 生成响应。
+当前项目的 Java 包路径仍为 `com.yizhaoqi.smartpai`，这是代码兼容性命名；产品和文档主体统一使用 **yeRAG**。
 
-![派聪明多模块架构](https://cdn.tobebetterjavaer.com/stutymore/README-20250730102133.png)
+## 当前能力
 
-系统允许用户：
+- 文档分片上传、断点续传、MinIO 文件存储和 Apache Tika 解析
+- Kafka 驱动的异步文档处理、切分与向量化
+- Elasticsearch 向量检索、BM25 文本检索和混合检索
+- 结合公开文档、用户文档和组织标签的权限过滤
+- 基于 WebSocket 的流式 AI 对话
+- 原生 OpenAI-compatible `tools/tool_calls` 知识库 Agent
+- 可选的会话上下文、长期用户记忆和 Markdown 记忆文档
+- JWT 认证、Spring Security、组织标签隔离和管理能力
 
-- 上传和管理各种类型的文档
-- 自动处理和索引文档内容
-- 使用自然语言查询知识库
-- 接收基于自身文档的 AI 生成响应
+## 架构概览
 
-用到的技术栈包括，先说后端的：
+```text
+文档上传
+  -> MinIO
+  -> Kafka
+  -> Tika 解析 / 文本切分
+  -> Embedding
+  -> Elasticsearch knowledge_base
 
-+ 框架 : Spring Boot 3.4.2 (Java 17)
-+ 数据库 : MySQL 8.0
-+ ORM : Spring Data JPA
-+ 缓存 : Redis
-+ 搜索引擎 : Elasticsearch 8.10.0
-+ 消息队列 : Apache Kafka
-+ 文件存储 : MinIO
-+ 文档解析 : Apache Tika
-+ 安全认证 : Spring Security + JWT
-+ AI集成 : DeepSeek API/本地 Ollama+豆包 Embedding
-+ 实时通信 : WebSocket
-+ 依赖管理 : Maven
-+ 响应式编程 : WebFlux
+用户问题
+  -> WebSocket / ChatHandler
+  -> MemoryContextService（启用记忆时）
+  -> KnowledgeAgentService
+       -> LLM 判断是否调用工具
+       -> AgentToolRegistry
+       -> search_knowledge_base
+       -> HybridSearchService（向量 + BM25 + 权限过滤）
+  -> 流式回答与引用
+```
 
-后端的整体项目结构：
+未启用记忆时，对话历史使用兼容旧版本的 Redis 会话结构；启用记忆后，业务会话和完整回合以 MySQL 为准，Redis 保存有 TTL 的短期上下文缓存。
+
+## Agent 与 Tool Calling
+
+Agent 入口是 `KnowledgeAgentService`，模型客户端通过 `AgentLlmClient` 抽象接入。当前工具由 `AgentToolRegistry` 注册，内置工具为：
+
+| 工具 | 用途 | 参数 |
+| --- | --- | --- |
+| `search_knowledge_base` | 检索当前用户有权限访问的企业知识库 | 必填 `query`，可选 `topK` |
+
+运行规则：
+
+- 闲聊和通用知识可以直接回答；涉及企业资料、用户文档或需要知识库证据的问题必须检索。
+- `userId` 由服务端从认证上下文传入，模型不能通过工具参数改变权限范围。
+- `query` 默认最多 500 个字符，`topK` 限制在 1～10，单次 Agent 默认最多调用工具 3 次。
+- 工具结果会限制正文长度，并显式标记为不可信参考数据；文档内容不能覆盖系统规则，也不能诱导模型执行命令。
+- WebSocket 保留 `chunk`、`completion` 消息，并发送 `agent_status` 的 `thinking`、`tool_started`、`tool_finished` 等状态。
+- Agent 失败且尚未输出答案时，可以按 `ai.agent.fallback-enabled` 自动切换到固定的 RAG 流程。
+
+相关实现：
+
+```text
+agent/KnowledgeAgentService.java
+agent/AgentLlmClient.java
+agent/AgentToolRegistry.java
+agent/tool/KnowledgeSearchTool.java
+agent/model/ToolCall.java
+service/ChatHandler.java
+service/RagFallbackService.java
+```
+
+## Memory：会话上下文与用户长期记忆
+
+记忆功能默认关闭，启用前必须先初始化完整数据库结构。它不是知识库检索的替代品：个人记忆不能改变权限、工具规则，也不能代替企业知识库证据。
+
+### 短期会话上下文
+
+- MySQL 保存业务会话、完整问答回合、请求幂等信息和异步任务状态。
+- Redis 保存滚动摘要、最近完整问答和压缩进度，默认上下文 TTL 为 7 天。
+- 使用 token/字节预算构建模型上下文；摘要失败时保留可用的近期完整问答，并通过 `context_reduced` 通知前端。
+- 业务 `conversationId` 与 WebSocket `sessionId` 分离；新建会话、空闲超时切换、重连和迟到事件都有边界处理。
+- 前端支持新建会话、历史会话只读查看和 `requestId` 事件隔离。
+
+### Markdown 长期记忆
+
+yeRAG 只保留 Markdown document memory：每个用户维护 `profile.md` 和 `preferences.md` 两类受控文档。`MemoryWorker` 根据用户原始问题生成 section patch，服务端校验 section 所有权和证据后事务更新文档；召回时动态生成不落库的 `MEMORY.md` 索引。
+
+长期记忆使用持久化提取任务、租约、重试和幂等处理，不使用 Elasticsearch 向量召回。
+
+启用示例：
+
+```yaml
+ai:
+  agent:
+    enabled: true
+    fallback-enabled: true
+  memory:
+    enabled: true
+```
+
+也可以使用环境变量：
 
 ```bash
+export AI_MEMORY_ENABLED=true
+```
+
+记忆接口包括：
+
+```text
+GET  /api/v1/memory/sessions/current
+POST /api/v1/memory/sessions
+GET  /api/v1/memory/sessions
+GET  /api/v1/memory/sessions/{id}/messages
+GET  /api/v1/memory/documents
+```
+
+数据库初始化和设计说明：
+
+- [完整 MySQL DDL（包含 Memory v2）](docs/databases/ddl.sql)
+- [完整数据库表设计](docs/databases/database-design.md)
+
+`ddl.sql` 是当前关系型数据库结构的唯一初始化入口。启用记忆前必须完成初始化；启动检查会在 memory 表结构缺失时阻止应用启动。
+
+## 技术栈
+
+### 后端
+
+- Java 17、Spring Boot 3.4.2、Maven
+- Spring Web、WebFlux、WebSocket、Spring Security、Spring Data JPA
+- MySQL 8、Redis 7、Elasticsearch 8.10
+- Apache Kafka 3.2、MinIO 8.5.12、Apache Tika 2.9.1
+- DeepSeek 或其他 OpenAI-compatible Chat Completions 服务
+- Embedding API（地址、模型和向量维度由配置指定）
+
+### 前端
+
+- Vue 3、TypeScript、Vite、Vue Router、Pinia
+- Naive UI、UnoCSS、Markdown 渲染
+- pnpm workspace
+
+## 代码结构
+
+```text
 src/main/java/com/yizhaoqi/smartpai/
-├── SmartPaiApplication.java      # 主应用程序入口
-├── client/                       # 外部API客户端
-├── config/                       # 配置类
-├── consumer/                     # Kafka消费者
-├── controller/                   # REST API端点
-├── entity/                       # 数据实体
-├── exception/                    # 自定义异常
-├── handler/                      # WebSocket处理器
-├── model/                        # 领域模型
-├── repository/                   # 数据访问层
-├── service/                      # 业务逻辑
-└── utils/                        # 工具类
+├── agent/          # Agent loop、tool registry、tool call 模型
+├── client/         # LLM 与 Embedding 客户端
+├── config/         # AI、认证、ES、Kafka、MinIO、WebSocket 配置
+├── consumer/       # Kafka 文档处理消费者
+├── controller/     # REST API
+├── handler/        # WebSocket 连接与聊天处理
+├── memory/         # 会话、上下文、长期记忆与 worker
+├── model/          # JPA 领域模型
+├── repository/     # 数据访问
+├── service/        # 上传、解析、检索、RAG fallback 等业务服务
+└── utils/          # 通用工具
+
+frontend/src/
+├── store/modules/chat/       # WebSocket、会话和记忆状态
+├── views/chat/               # Agent 对话与会话切换
+├── views/knowledge-base/     # 知识库管理
+├── service/                  # API 请求
+└── router/                   # 页面路由
 ```
 
-再说前端的，包括：
+## 本地开发
 
-+ 框架 : Vue 3 + TypeScript
-+ 构建工具 : Vite
-+ UI组件 : Naive UI
-+ 状态管理 : Pinia
-+ 路由 : Vue Router
-+ 样式 : UnoCSS + SCSS
-+ 图标 : Iconify
-+ 包管理 : pnpm
-
-前端的整体项目结构：
-
-```bash
-frontend/
-├── packages/           # 可重用模块
-├── public/             # 静态资源
-├── src/                # 主应用程序代码
-│   ├── assets/         # SVG图标，图片
-│   ├── components/     # Vue组件
-│   ├── layouts/        # 页面布局
-│   ├── router/         # 路由配置
-│   ├── service/        # API集成
-│   ├── store/          # 状态管理
-│   ├── views/          # 页面组件
-│   └── ...            # 其他工具和配置
-└── ...               # 构建配置文件
-```
-
-## 派聪明的成绩
-
-派聪明是 9 月份上线的，截止到目前，已经取得了非常瞩目的成绩，我这里晒一下哈。
-
-
-![面渣逆袭+派聪明 拿下招银网络+科大讯飞](https://cdn.tobebetterjavaer.com/paicoding/fb5db62ab92092e2d74a4916b6a45710.png)
-
-
-![派聪明拿到的日常实习](https://cdn.tobebetterjavaer.com/paicoding/da01a535b091c5ebeed70bf9a08a90c6.png)
-
-
-![派聪明拿下合合信息](https://cdn.tobebetterjavaer.com/paicoding/3518a76f439c325de8df763482cbebc4.png)
-
-
-![派聪明拿下小红书](https://cdn.tobebetterjavaer.com/paicoding/7bed4d34460749d68db9c0fcbc4621a8.png)
-
-
-![派聪明拿下网易](https://cdn.tobebetterjavaer.com/paicoding/5f227edcb38ffe41aea8fc0880f64cad.png)
-
-说句真心话，看到这，就可以无脑冲这个项目了，因为这些，还只是冰山一角。扫下面的优惠券（或者长按自动识别）解锁派聪明源码和教程吧，[星球](https://javabetter.cn/zhishixingqiu/)目前定价 159 元/年，优惠完只需要 129 元，每天不到 0.35 元，绝对的超值。
-
-![派聪明优惠券](https://cdn.tobebetterjavaer.com/paicoding/97601d7a337d7d944b02bb4a79cd6430.png)
-
->派聪明如何写到简历上：[https://paicoding.com/column/10/2](https://paicoding.com/column/10/2)
-
-
-
-## 核心功能
-
-这里我先带大家了解一下什么是派聪明，我为什么要做派聪明这个企业级的 RAG 知识库？派聪明这个 AI 项目能让大家学到什么？以及如何解锁派聪明的源码仓库和教程？
-
-![派聪明的聊天助手：会依据知识库进行问答](https://cdn.tobebetterjavaer.com/paicoding/2550c873a349d8bee29d46400f12ce76.png)
-
-![派聪明的架构概览](https://cdn.tobebetterjavaer.com/stutymore/README-20250730101618.png)
-
-### 知识库管理
-
-派聪明提供了完整的文档上传与解析功能，支持文件分片上传和断点续传，并支持标签进行组织管理。文档可以是公开的，也可以是私有的，并且可以与特定的组织标签关联，以便更好地进行权限分类。
-
-![派聪明文档处理](https://cdn.tobebetterjavaer.com/stutymore/README-20250730102808.png)
-
-### AI驱动的RAG实现
-
-派聪明的核心是 RAG 实现：
-
-![派聪明聊天交互](https://cdn.tobebetterjavaer.com/stutymore/README-20250730102837.png)
-
-- 将上传的文档进行语义分块
-- 调用豆包 Embedding 模型为每个文本块生成高维向量
-- 将向量存储到 ElasticSearch 以支持语义搜索和关键词搜索
-- 可以根据用户的查询检索相关文档
-- 为 LLM 提供完整的上下文，从而生成更准确、基于文档的响应内容
-
-### Tool Calling Agent
-
-聊天入口支持 OpenAI-compatible 的原生 `tools/tool_calls` 协议。模型会先判断是否需要知识库：通用问题可以直接回答，涉及企业资料或用户文档时调用 `search_knowledge_base`，该工具复用原有混合检索和权限过滤能力。
-
-- 工具参数仅包含 `query` 和 `topK`，用户身份由服务端注入，模型无法改变权限范围
-- 默认最多调用工具 3 次，`topK` 限制为 1～10
-- 检索正文按不可信数据处理，文档中的提示不会覆盖系统规则
-- WebSocket 保持原有 `chunk` 和 `completion` 消息，并新增可选的 `agent_status` 状态事件
-- 模型端点不支持工具协议时，可自动降级到原固定 RAG 流程
-
-相关配置位于 `ai.agent`：可通过 `enabled` 关闭 Agent，通过 `fallback-enabled` 控制是否降级。使用前请确认当前 `deepseek.api` 指向的模型和兼容端点支持 Chat Completions `tool_calls`。
-
-### 会话与个人记忆（V2）
-
-执行 V1、V2 迁移后，可通过 Spring 配置 `ai.memory.enabled=true` 或根目录 `.env` 中的 `AI_MEMORY_ENABLED=true` 启用会话级短期摘要和 MySQL 个人长期记忆；默认关闭，不自动修改现有数据库。前端支持新建对话和查看历史会话。设置 `ai.memory.storage-mode=document` 后，长期记忆由用户当前的 `profile.md`、`preferences.md` 保存，异步任务从用户原始提问提取受控的 Markdown section，召回时动态生成不落库的 `MEMORY.md` 索引。个人记忆不使用 ES，现有知识库权限检索保持独立。
-
-部署、配置和回滚方法见 [V1 库表说明](docs/databases/2026-09-09-memory-v1-update.md)与 [V2 文档记忆说明](docs/databases/2026-09-17-markdown-memory-v2-update.md)；SQL 见 [V1 迁移](docs/databases/migrations/2026-09-09-memory-v1.sql)和 [V2 迁移](docs/databases/migrations/2026-09-17-markdown-memory-v2.sql)。
-
-### 企业级多租户
-
-派聪明通过组织标签支持多租户架构。每个用户可以创建或加入一个或多个组织，每个组织可以拥有独立的知识库和文档管理。这样，企业可以在同一系统中管理多个团队或部门的知识库，而无需担心数据混淆或权限问题。
-
-![派聪明的安全架构](https://cdn.tobebetterjavaer.com/stutymore/README-20250730103118.png)
-
-### 实时通信
-
-系统采用 WebSocket 技术，提供用户与 AI 系统之间的实时交互，支持响应式聊天界面，便于知识检索和 AI 互动。
-
-## 前置环境
-
-在开始之前，请确保已安装以下软件：
+### 前置依赖
 
 - Java 17
-- Maven 3.8.6 或更高版本
-- Node.js 18.20.0 或更高版本
-- pnpm 8.7.0 或更高版本
-- MySQL 8.0
-- Elasticsearch 8.10.0
-- MinIO 8.5.12
-- Kafka 3.2.1
-- Redis 7.0.11
-- Docker（可选，用于运行 Redis、MinIO、Elasticsearch 和 Kafka 等服务）
+- Maven 3.8.6+
+- Node.js 18.20+
+- pnpm 8.7+
+- MySQL 8、Redis 7、Elasticsearch 8.10、Kafka 3.2、MinIO 8.5
 
-## 架构设计
+Docker 可用于运行这些基础设施，但当前仓库没有提交 `docker-compose.yml`；请按部署环境自行启动并在 Spring 配置中填写连接信息。
 
-派聪明的架构具备一个现代化的、云原生应用程序的特点，具有清晰的关注点分离、可扩展的组件和与 AI 技术的集成。模块化设计允许随着技术的发展，特别是快速变化的 AI 集成领域，未来可以扩展和替换单个组件。
+### 后端
 
-![派聪明的系统概述](https://cdn.tobebetterjavaer.com/stutymore/README-20250730102655.png)
+仓库没有提交生产环境 `application.yml`，请在本地配置 Spring Boot 所需的数据源、Redis、Kafka、ES、MinIO、JWT、LLM 和 Embedding 参数。测试配置位于 `src/test/resources/application.yml`。
 
-控制层用于处理 HTTP 请求，验证输入，管理请求/响应格式化，并将业务逻辑委托给服务层。控制器按领域功能组织。遵循 RESTful 设计原则，集成了性能监控和日志记录，用于跟踪 API 使用和故障排除。
-
-```java
-@RestController
-@RequestMapping("/api/v1/documents")
-public class DocumentController {
-    @Autowired
-    private DocumentService documentService;
-    
-    @DeleteMapping("/{fileMd5}")
-    public ResponseEntity<?> deleteDocument(
-            @PathVariable String fileMd5,
-            @RequestAttribute("userId") String userId,
-            @RequestAttribute("role") String role) {
-        // 参数验证和委托给服务
-        documentService.deleteDocument(fileMd5);
-        // 响应处理
-    }
-}
-```
-
-服务层主要用来处理应用的业务逻辑，具有事务感知能力，能够处理跨越多个数据源的操作。
-
-```java
-@Service
-public class DocumentService {
-    @Autowired
-    private FileUploadRepository fileUploadRepository;
-    
-    @Autowired
-    private MinioClient minioClient;
-    
-    @Autowired
-    private ElasticsearchService elasticsearchService;
-    
-    @Transactional
-    public void deleteDocument(String fileMd5) {
-        // 文档删除的业务逻辑
-        // 协调多个仓储和系统
-    }
-}
-```
-
-数据访问层使用 Spring Data JPA 进行数据库操作，提供了对 MySQL 的 CRUD 操作。
-
-```java
-@Repository
-public interface FileUploadRepository extends JpaRepository<FileUpload, Long> {
-    Optional<FileUpload> findByFileMd5(String fileMd5);
-    
-    @Query("SELECT f FROM FileUpload f WHERE f.userId = :userId OR f.isPublic = true OR (f.orgTag IN :orgTagList AND f.isPublic = false)")
-    List<FileUpload> findAccessibleFilesWithTags(@Param("userId") String userId, @Param("orgTagList") List<String> orgTagList);
-}
-```
-
-实体层由映射到数据库表的 JPA 实体以及用于 API 请求和响应的 DTO（数据传输对象）组成。
-
-```java
-@Entity
-public class FileUpload {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
-    private String fileMd5;
-    private String fileName;
-    private String userId;
-    private boolean isPublic;
-    private String orgTag;
-    // 其他字段和方法
-}
-```
-
-## 前端启动
+首次启动前创建空数据库并执行完整 DDL：
 
 ```bash
-# 进入前端项目目录
-cd frontend
-
-# 安装依赖
-pnpm install
-
-# 启动项目
-pnpm run dev
+mysql -u root -p -e "CREATE DATABASE yerag CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci"
+mysql -u root -p yerag < docs/databases/ddl.sql
 ```
 
-## 后端启动
+常用命令：
 
 ```bash
+# 启动
 mvn spring-boot:run
+
+# 打包
+mvn clean package
+
+# 测试
+mvn test
+
+# 运行指定测试
+mvn -Dtest=KnowledgeAgentServiceTest test
 ```
+
+真实 MySQL 记忆并发测试是 opt-in 的，设置 `MEMORY_MYSQL_TEST_URL`、`MEMORY_MYSQL_TEST_USER` 和 `MEMORY_MYSQL_TEST_PASSWORD` 后才会执行；测试会创建并删除随机数据库。
+
+### 前端
+
+```bash
+cd frontend
+pnpm install
+pnpm dev
+```
+
+常用命令：
+
+```bash
+pnpm typecheck
+pnpm lint
+pnpm build
+pnpm preview
+```
+
+前端本地后端地址可在 `frontend/.env` 或对应 mode 的环境文件中配置，默认 API 为 `http://localhost:8081/api/v1`，WebSocket 为 `ws://localhost:8081`。
+
+## 安全边界
+
+- 知识库搜索必须经过用户、公开文档和组织标签权限过滤。
+- Agent 工具只接收 `query` 和 `topK`；身份、组织和权限由服务端决定。
+- 工具结果、历史记忆和 Markdown section 都按不可信数据注入模型上下文。
+- 长期记忆只接受受控分类和可在用户原文中定位的证据，不接受模型任意创建 key。
+- 生产环境应限制 WebSocket allowed origins，并使用强 JWT secret、真实服务凭据和非默认管理员密码。
+
+## 相关文档
+
+- [Knowledge Agent 设计](docs/superpowers/specs/2026-08-27-knowledge-agent-design.md)
+- [Knowledge Agent 实现计划](docs/superpowers/plans/2026-08-27-knowledge-agent.md)
+- [数据库 DDL](docs/databases/ddl.sql)
+- [数据库表设计](docs/databases/database-design.md)

@@ -27,7 +27,6 @@ import java.util.Map;
 public class ConversationController {
     @Autowired private com.yizhaoqi.smartpai.memory.MemoryProperties memoryConfig;
     @Autowired private com.yizhaoqi.smartpai.memory.MemoryStore memoryStore;
-    @Autowired private com.yizhaoqi.smartpai.memory.MemoryLegacyImporter memoryImporter;
 
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
@@ -67,7 +66,6 @@ public class ConversationController {
             User user = userRepository.findByUsername(username)
                     .orElseThrow(() -> new CustomException("用户不存在", HttpStatus.NOT_FOUND));
             if (memoryConfig.isEnabled()) {
-                memoryImporter.importIfNeeded(user.getId());
                 String id=memoryStore.current(user.getId(),false);
                 List<Map<String,Object>> messages=new ArrayList<>();
                 for (var t:memoryStore.history(user.getId(),id)) {

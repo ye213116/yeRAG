@@ -12,7 +12,7 @@ public class MemoryStartupCheck implements ApplicationRunner {
     @Override public void run(ApplicationArguments args) {
         if(config.isEnabled()) {
             try { store.verifySchema(); }
-            catch (Exception e) { throw new IllegalStateException("Apply Memory V1 schema and the migration for ai.memory.storage-mode=" + config.getStorageMode() + " before enabling ai.memory.enabled",e); }
+            catch (Exception e) { throw new IllegalStateException("Apply the yeRAG Markdown memory migration before enabling ai.memory.enabled", e); }
         }
     }
 }

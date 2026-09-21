@@ -1,7 +1,5 @@
 package com.yizhaoqi.smartpai.memory;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Repository;
@@ -25,23 +23,17 @@ public class MemoryStore {
     private final JdbcTemplate db;
     private final TransactionTemplate tx;
     private final MemoryProperties config;
-    private final ObjectMapper json;
 
     public MemoryStore(JdbcTemplate db, org.springframework.transaction.PlatformTransactionManager manager,
-                       MemoryProperties config, ObjectMapper json) {
-        this.db = db; this.tx = new TransactionTemplate(manager); this.config = config; this.json = json;
+                       MemoryProperties config) {
+        this.db = db; this.tx = new TransactionTemplate(manager); this.config = config;
     }
     public void verifySchema() {
         db.queryForList("SELECT active_turn_id,context_expires_at FROM chat_session WHERE 1=0");
         db.queryForList("SELECT user_turn_seq,request_hash,context_sync_status FROM chat_turn WHERE 1=0");
         db.queryForList("SELECT lease_token,lease_until FROM memory_extraction_task WHERE 1=0");
-        if ("document".equals(config.getStorageMode())) {
-            db.queryForList("SELECT user_id,memory_type,content,created_at,updated_at FROM memory_document WHERE 1=0");
-            db.queryForList("SELECT id,document_id,heading,last_applied_turn_seq,deleted,created_at,updated_at FROM memory_document_section WHERE 1=0");
-        } else {
-            db.queryForList("SELECT current_version_id,last_applied_turn_seq FROM memory_slot WHERE 1=0");
-            db.queryForList("SELECT value_json,operation,evidence FROM memory_version WHERE 1=0");
-        }
+        db.queryForList("SELECT user_id,memory_type,content,created_at,updated_at FROM memory_document WHERE 1=0");
+        db.queryForList("SELECT id,document_id,heading,last_applied_turn_seq,deleted,created_at,updated_at FROM memory_document_section WHERE 1=0");
     }
     private Timestamp time(Instant t) { return t == null ? null : Timestamp.from(t); }
     /**
@@ -81,30 +73,6 @@ public class MemoryStore {
     }
     public List<Map<String, Object>> sessions(long user) {
         return db.queryForList("SELECT id,status,last_activity_at FROM chat_session WHERE user_id=? ORDER BY created_at DESC LIMIT 100", user);
-    }
-    public void importLegacy(long user, String legacyId, List<Map<String,String>> messages) {
-        importLegacy(user,legacyId,messages,null);
-    }
-    public void importLegacy(long user, String legacyId, List<Map<String,String>> messages, java.time.Duration remaining) {
-        tx.executeWithoutResult(s -> {
-            lockUser(user);
-            if (!sessions(user).isEmpty()) return;
-            Instant now=Instant.now(); String sid=currentLocked(user,false,now);
-            java.time.Duration retention=remaining==null || remaining.compareTo(config.getContextTtl())>0 ? config.getContextTtl() : remaining;
-            db.update("UPDATE chat_session SET context_expires_at=? WHERE id=?",time(now.plus(retention)),sid);
-            for(int i=0;i+1<Math.min(messages.size(),20);i++) {
-                var q=messages.get(i); var a=messages.get(i+1);
-                if (!"user".equals(q.get("role")) || !"assistant".equals(a.get("role")) || q.get("content")==null || a.get("content")==null) continue;
-                String request="legacy-"+hash(legacyId+":"+i);
-                Instant created=now;
-                try {
-                    if(q.get("timestamp")!=null) created=java.time.LocalDateTime.parse(q.get("timestamp")).atZone(java.time.ZoneId.systemDefault()).toInstant();
-                } catch(java.time.format.DateTimeParseException ignored) { }
-                long id=insert("INSERT INTO chat_turn(session_id,user_id,request_id,request_hash,question,answer,status,context_sync_status,context_next_attempt_at,created_at,completed_at,content_expires_at) VALUES (?,?,?,?,?,?,'COMPLETED','PENDING',?,?,?,?)",
-                        sid,user,request,hash(q.get("content")),q.get("content"),a.get("content"),time(now),time(created),time(created),time(now.plus(retention.compareTo(config.getContentRetention())<0 ? retention : config.getContentRetention())));
-                db.update("UPDATE chat_turn SET user_turn_seq=? WHERE id=?",id,id); i++;
-            }
-        });
     }
     public String current(long user, boolean forceNew) {
         return tx.execute(s -> { lockUser(user); return currentLocked(user, forceNew, Instant.now()); });
@@ -191,10 +159,6 @@ public class MemoryStore {
         // Bounded DB reads; older completed turns can be requested separately for history display.
         var rows = db.queryForList("SELECT * FROM chat_turn WHERE user_id=? AND session_id=? AND status='COMPLETED' AND content_expires_at>? ORDER BY id DESC LIMIT 200", user, session, time(Instant.now()));
         List<Turn> turns = new ArrayList<>(); rows.forEach(r -> turns.add(turn(r))); Collections.reverse(turns); return turns;
-    }
-    public List<Map<String, Object>> memories(long user) {
-        return db.queryForList("SELECT s.memory_key,v.* FROM memory_slot s JOIN memory_version v ON v.id=s.current_version_id AND v.slot_id=s.id WHERE s.user_id=? AND v.status='ACTIVE' AND (v.expires_at IS NULL OR v.expires_at>?) ORDER BY CASE WHEN v.category='preference' THEN 0 ELSE 1 END,v.created_at DESC,s.id LIMIT ?",
-                user, time(Instant.now()), Math.max(1, config.getMaxMemories()));
     }
     /** One joined statement gives recall a consistent snapshot of current documents and metadata. */
     public List<MemoryDocument> documents(long user) {
@@ -326,7 +290,7 @@ public class MemoryStore {
         return tx.execute(s -> {
             Instant now = Instant.now();
             db.update("UPDATE memory_extraction_task SET status='FAILED',last_error_code='attempts_exhausted',lease_token=NULL,lease_until=NULL WHERE attempts>=? AND (status='PENDING' OR (status='RUNNING' AND lease_until<?))", config.getMaxAttempts(), time(now));
-            String claimSql = "document".equals(config.getStorageMode()) ? """
+            String claimSql = """
                 SELECT task.* FROM memory_extraction_task task
                 JOIN chat_turn turn_row ON turn_row.id=task.turn_id
                 WHERE task.attempts<? AND ((task.status='PENDING' AND task.next_attempt_at<=?)
@@ -338,7 +302,7 @@ public class MemoryStore {
                     AND earlier_turn.user_turn_seq<turn_row.user_turn_seq
                     AND earlier_task.status IN ('PENDING','RUNNING'))
                 ORDER BY task.next_attempt_at,turn_row.user_turn_seq LIMIT 1 FOR UPDATE SKIP LOCKED
-                """ : "SELECT * FROM memory_extraction_task WHERE attempts<? AND ((status='PENDING' AND next_attempt_at<=?) OR (status='RUNNING' AND lease_until<?)) ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED";
+                """;
             var rows = db.queryForList(claimSql, config.getMaxAttempts(), time(now), time(now));
             if (rows.isEmpty()) return Optional.empty();
             var r = rows.get(0); long id = ((Number) r.get("id")).longValue(); String token = UUID.randomUUID().toString();
@@ -352,57 +316,8 @@ public class MemoryStore {
                 t.attempts() >= config.getMaxAttempts() ? "FAILED" : "PENDING",
                 time(Instant.now().plusSeconds(Math.min(3600, 5L << Math.min(t.attempts(), 9)))), code, time(Instant.now()), t.id(), t.token(), time(Instant.now()));
     }
-    public void apply(Task task, List<Change> changes) {
-        Turn source = turn(task.turnId());
-        tx.executeWithoutResult(s -> {
-            lockUser(source.userId());
-            var lease = db.queryForMap("SELECT * FROM memory_extraction_task WHERE id=? FOR UPDATE", task.id());
-            if (!"RUNNING".equals(lease.get("status")) || !task.token().equals(lease.get("lease_token"))
-                    || !instant(lease.get("lease_until")).isAfter(Instant.now())) return;
-            var row = db.queryForMap("SELECT * FROM chat_turn WHERE id=?", source.id());
-            if (row.get("question") == null || !instant(row.get("content_expires_at")).isAfter(Instant.now())) {
-                db.update("UPDATE memory_extraction_task SET status='EXPIRED',last_error_code='source_expired' WHERE id=?", task.id()); return;
-            }
-            for (Change change : changes.stream().sorted(Comparator.comparing(Change::key)).toList()) write(source, change);
-            db.update("UPDATE memory_extraction_task SET status='DONE',updated_at=?,lease_token=NULL,lease_until=NULL WHERE id=?", time(Instant.now()), task.id());
-        });
-    }
-    private void write(Turn source, Change c) {
-        var slots = db.queryForList("SELECT * FROM memory_slot WHERE user_id=? AND memory_key=?", source.userId(), c.key());
-        long slot;
-        if (slots.isEmpty()) {
-            slot = insert("INSERT INTO memory_slot(user_id,memory_key,revision,last_applied_turn_seq) VALUES (?,?,0,0)", source.userId(), c.key());
-        } else slot = ((Number) slots.get(0).get("id")).longValue();
-        var state = db.queryForMap("SELECT * FROM memory_slot WHERE id=? FOR UPDATE", slot);
-        if (((Number) state.get("last_applied_turn_seq")).longValue() >= source.id()) return;
-        Instant now = Instant.now();
-        Long oldId = state.get("current_version_id") == null ? null : ((Number) state.get("current_version_id")).longValue();
-        String value;
-        try { value = json.writeValueAsString(Map.of("value", c.value())); } catch (JsonProcessingException e) { throw new IllegalArgumentException(e); }
-        if (oldId != null && !"DELETE".equals(c.operation())) {
-            var old = db.queryForMap("SELECT * FROM memory_version WHERE id=? AND slot_id=?", oldId, slot);
-            try {
-                boolean same = json.readTree((String) old.get("value_json")).path("value").asText().equals(c.value());
-                Instant expiry = old.get("expires_at") == null ? null : instant(old.get("expires_at"));
-                if (same && Objects.equals(expiry, c.expiresAt()) && "ACTIVE".equals(old.get("status"))) {
-                    db.update("UPDATE memory_slot SET last_applied_turn_seq=? WHERE id=?", source.id(), slot); return;
-                }
-            } catch (JsonProcessingException e) { throw new IllegalStateException("invalid stored memory", e); }
-        }
-        if (oldId != null) db.update("UPDATE memory_version SET status='SUPERSEDED',invalidated_at=? WHERE id=? AND status='ACTIVE'", time(now), oldId);
-        long revision = ((Number) state.get("revision")).longValue() + 1;
-        boolean deleted="DELETE".equals(c.operation());
-        long audit = insert("INSERT INTO memory_version(slot_id,version,category,attribute,operation,value_json,status,expires_at,source_turn_id,evidence,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-                slot, revision, c.category(), c.attribute(), c.operation(), value, deleted ? "DELETED" : "ACTIVE", time(c.expiresAt()), source.id(), c.evidence(), time(now));
-        Long next = deleted ? null : audit;
-        db.update("UPDATE memory_slot SET current_version_id=?,revision=?,last_applied_turn_seq=? WHERE id=?", next, revision, source.id(), slot);
-    }
     public void maintain() {
         for (var r : db.queryForList("SELECT * FROM chat_turn WHERE status='RUNNING' AND created_at<? LIMIT 50", time(Instant.now().minus(config.getRunTimeout())))) cancel(turn(r), "FAILED");
         db.update("UPDATE chat_turn SET question=NULL,answer=NULL,context_sync_status='EXPIRED' WHERE content_expires_at<? AND question IS NOT NULL AND status<>'RUNNING'", time(Instant.now()));
-        if (!"document".equals(config.getStorageMode())) {
-        db.update("UPDATE memory_version SET status='EXPIRED',invalidated_at=? WHERE status='ACTIVE' AND expires_at<?", time(Instant.now()), time(Instant.now()));
-        db.update("UPDATE memory_version SET evidence=NULL WHERE evidence IS NOT NULL AND created_at<?",time(Instant.now().minus(config.getAuditEvidenceRetention())));
-        }
     }
 }

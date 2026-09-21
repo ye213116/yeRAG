@@ -16,8 +16,6 @@ import java.util.Map;
  */
 public final class MemoryEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
     private static final Map<String, String> ALIASES = Map.ofEntries(
-            Map.entry("ai.memory.storage-mode", "AI_MEMORY_STORAGE_MODE"),
-            Map.entry("ai.memory.legacy-slot-recall", "AI_MEMORY_LEGACY_SLOT_RECALL"),
             Map.entry("ai.memory.worker-concurrency", "AI_MEMORY_WORKER_CONCURRENCY"),
             Map.entry("ai.memory.max-heading-code-points", "AI_MEMORY_MAX_HEADING_CODE_POINTS"),
             Map.entry("ai.memory.max-section-bytes", "AI_MEMORY_MAX_SECTION_BYTES"),
@@ -38,13 +36,10 @@ public final class MemoryEnvironmentPostProcessor implements EnvironmentPostProc
             Map.entry("ai.memory.run-timeout", "AI_MEMORY_RUN_TIMEOUT"),
             Map.entry("ai.memory.max-attempts", "AI_MEMORY_MAX_ATTEMPTS"),
             Map.entry("ai.memory.max-recent-turns", "AI_MEMORY_MAX_RECENT_TURNS"),
-            Map.entry("ai.memory.max-memories", "AI_MEMORY_MAX_MEMORIES"),
             Map.entry("ai.memory.max-input-bytes", "AI_MEMORY_MAX_INPUT_BYTES"),
             Map.entry("ai.memory.summary-bytes", "AI_MEMORY_SUMMARY_BYTES"),
             Map.entry("ai.memory.memory-bytes", "AI_MEMORY_MEMORY_BYTES"),
             Map.entry("ai.memory.max-question-bytes", "AI_MEMORY_MAX_QUESTION_BYTES"),
-            Map.entry("ai.memory.min-confidence", "AI_MEMORY_MIN_CONFIDENCE"),
-            Map.entry("ai.memory.audit-evidence-retention", "AI_MEMORY_AUDIT_EVIDENCE_RETENTION"),
             Map.entry("ai.memory.worker-delay-ms", "AI_MEMORY_WORKER_DELAY_MS")
     );
 

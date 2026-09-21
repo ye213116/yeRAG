@@ -48,7 +48,6 @@ public class ChatHandler {
     private MemoryStore memoryStore;
     private MemoryContextService memoryContext;
     private MemoryProperties memoryConfig;
-    @Autowired private MemoryLegacyImporter memoryImporter;
 
     @Autowired
     public void configureMemory(MemoryStore store, MemoryContextService context, MemoryProperties config) {
@@ -116,7 +115,6 @@ public class ChatHandler {
         AtomicBoolean emitted = new AtomicBoolean();
         var turnRef = new java.util.concurrent.atomic.AtomicReference<Turn>();
         Disposable run = Mono.fromCallable(() -> {
-                if (memoryImporter!=null) memoryImporter.importIfNeeded(Long.parseLong(userId));
                 return memoryStore.begin(Long.parseLong(userId), conversationId, requestId, userMessage);
             })
             .subscribeOn(Schedulers.boundedElastic())

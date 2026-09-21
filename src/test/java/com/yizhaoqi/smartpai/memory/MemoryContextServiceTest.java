@@ -30,10 +30,11 @@ class MemoryContextServiceTest {
         when(redis.execute(any(RedisScript.class),anyList(),any(Object[].class))).thenReturn(1L);
         config=new MemoryProperties(); config.setMaxRecentTurns(1);
         when(store.session(1,"sid")).thenReturn(Map.of("context_expires_at",Timestamp.from(Instant.now().plusSeconds(3600))));
-        when(store.memories(1)).thenReturn(List.of(Map.of("memory_key","preference.response.verbosity","value_json","{\"value\":\"concise\"}")));
         when(store.history(1,"sid")).thenReturn(List.of(
                 new Turn(1,1,"sid","r1","我只用Java17","了解","COMPLETED",Instant.now()),
                 new Turn(2,1,"sid","r2","解释线程池","第二个回答","COMPLETED",Instant.now())));
+        when(store.documents(1)).thenReturn(List.of(
+                document(MemoryType.PREFERENCE,"回答偏好","concise")));
         service=new MemoryContextService(redis,store,config,llm,new ObjectMapper().findAndRegisterModules());
     }
     @Test void summaryAndRecentPairsRemainSeparateFromUserMemory() {
@@ -64,7 +65,7 @@ class MemoryContextServiceTest {
     }
     private String memory(Context c) { return c.messages().get(1).content(); }
     @Test void documentRecallBuildsIndexAndPrioritizesMatchingWholeSections() {
-        config.setStorageMode("document"); config.setLegacySlotRecall(false); config.setMemoryBytes(400);
+        config.setMemoryBytes(400);
         when(store.history(1,"sid")).thenReturn(List.of());
         when(store.documents(1)).thenReturn(List.of(document(MemoryType.PROFILE,"背景","Java developer"),
                 document(MemoryType.PREFERENCE,"算法","先提示，再提供完整实现")));
@@ -74,22 +75,23 @@ class MemoryContextServiceTest {
         assertTrue(data.indexOf("MEMORY.md")<data.indexOf("preferences.md"));
         assertTrue(data.contains("## 算法"));
         assertTrue(c.messages().get(0).content().contains("不可信"));
-        verifyNoInteractions(llm); verify(store,never()).memories(anyLong());
+        verifyNoInteractions(llm);
     }
     @Test void indexSurvivesWhenBodyDoesNotFitAndSignalsReduction() {
-        config.setStorageMode("document"); config.setLegacySlotRecall(false); config.setMemoryBytes(200);
+        config.setMemoryBytes(200);
         when(store.history(1,"sid")).thenReturn(List.of());
         when(store.documents(1)).thenReturn(List.of(document(MemoryType.PROFILE,"背景","Short paragraph.\n\n"+"X".repeat(500))));
         Context c=service.build(current);
         assertTrue(memory(c).contains("Short paragraph.")); assertFalse(memory(c).contains("XXX")); assertTrue(c.reduced());
     }
     @Test void existingDocumentSuppressesOnlyItsOwnLegacyType() {
-        config.setStorageMode("document"); when(store.history(1,"sid")).thenReturn(List.of());
+        when(store.history(1,"sid")).thenReturn(List.of());
         when(store.documents(1)).thenReturn(List.of(new MemoryDocument(20,1,MemoryType.PROFILE,"# Profile Memory\n",List.of())));
-        when(store.memories(1)).thenReturn(List.of(Map.of("memory_key","profile.occupation","value_json","{\"value\":\"old-job\"}"),
-                Map.of("memory_key","preference.response.verbosity","value_json","{\"value\":\"concise\"}"),
-                Map.of("memory_key","goal.interview","value_json","{\"value\":\"old-goal\"}")));
+        when(store.documents(1)).thenReturn(List.of(
+                document(MemoryType.PROFILE,"职业","old-job"),
+                document(MemoryType.PREFERENCE,"回答风格","concise")));
         String data=memory(service.build(current));
-        assertTrue(data.contains("concise")); assertFalse(data.contains("old-job")); assertFalse(data.contains("old-goal"));
+        assertTrue(data.contains("concise")); assertTrue(data.contains("old-job"));
+        verifyNoInteractions(llm);
     }
 }

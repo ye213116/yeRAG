@@ -2,8 +2,12 @@ package com.yizhaoqi.smartpai.memory;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.h2.jdbcx.JdbcDataSource;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.core.io.FileSystemResource;
+import java.util.UUID;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static com.yizhaoqi.smartpai.memory.MemoryTypes.*;
@@ -17,12 +21,15 @@ class MemoryDocumentStoreTest {
         assertTrue(store.complete(t,"answer")); return t;
     }
     @BeforeEach void documentsSchema() throws Exception {
-        MemoryStoreTest fixture = new MemoryStoreTest(); fixture.setup();
-        db=fixture.db; store=fixture.store; config=fixture.config;
-        config.setStorageMode("document");
+        JdbcDataSource ds = new JdbcDataSource();
+        ds.setURL("jdbc:h2:mem:memory" + UUID.randomUUID() + ";MODE=MySQL;DB_CLOSE_DELAY=-1");
+        db = new JdbcTemplate(ds);
         try (var c = db.getDataSource().getConnection()) {
-            ScriptUtils.executeSqlScript(c, new FileSystemResource("docs/databases/migrations/2026-09-17-markdown-memory-v2.sql"));
+            ScriptUtils.executeSqlScript(c, new FileSystemResource("docs/databases/ddl.sql"));
         }
+        db.update("INSERT INTO users(id,username,password,role) VALUES(1,'123','test','USER'),(123,'another','test','USER')");
+        config = new MemoryProperties(); config.setEnabled(true);
+        store = new MemoryStore(db, new DataSourceTransactionManager(ds), config);
     }
     MemoryPatch patch(UUID id, String heading, String content) {
         return new MemoryPatch(MemoryType.PROFILE, id, heading, MemoryPatchOperation.UPSERT_SECTION, content, "我是工程师");
@@ -46,7 +53,7 @@ class MemoryDocumentStoreTest {
         assertTrue(store.documents(1).get(0).sections().get(0).deleted());
         assertFalse(store.documents(1).get(0).content().contains("工程师"));
         assertTrue(store.documents(123).isEmpty());
-        assertEquals(0,db.queryForObject("SELECT COUNT(*) FROM memory_version",Integer.class));
+        assertEquals(1,db.queryForObject("SELECT COUNT(*) FROM memory_document_section",Integer.class));
     }
     @Test void invalidSecondDocumentRollsBackFirstDocumentAndTask() {
         completed("我是工程师"); Task task = store.claim().orElseThrow();

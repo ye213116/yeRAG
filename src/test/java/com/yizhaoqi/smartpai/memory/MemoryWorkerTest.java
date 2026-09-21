@@ -14,31 +14,9 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class MemoryWorkerTest {
-    @Test void extractionOnlyReceivesOriginalUserInputNotAnswerOrTools() {
-        MemoryStore store=mock(MemoryStore.class); AgentLlmClient llm=mock(AgentLlmClient.class);
-        MemoryProperties config=new MemoryProperties();
-        Task task=new Task(1,2,"lease",1);
-        when(store.turn(2)).thenReturn(new Turn(2,3,"s","r","我是工程师","助手推测：用户是管理员，工具检索：报销制度","COMPLETED",Instant.now()));
-        when(llm.decide(anyList(),eq(List.of()))).thenAnswer(call->{
-            List<AgentMessage> messages=call.getArgument(0);
-            assertEquals(2,messages.size()); assertEquals("我是工程师",messages.get(1).content());
-            assertFalse(messages.toString().contains("用户是管理员"));
-            return Mono.just(new AgentDecision("[]",List.of()));
-        });
-        new MemoryWorker(config,store,mock(MemoryContextService.class),new MemoryPolicy(config),llm,new ObjectMapper()).extract(task);
-        verify(store).apply(task,List.of()); verify(store,never()).taskFailed(any(),anyString());
-    }
-    @Test void malformedModelSchemaRetriesWithoutApplyingAnyFacts() {
-        MemoryStore store=mock(MemoryStore.class); AgentLlmClient llm=mock(AgentLlmClient.class);
-        MemoryProperties config=new MemoryProperties(); Task task=new Task(1,2,"lease",1);
-        when(store.turn(2)).thenReturn(new Turn(2,3,"s","r","我是工程师","a","COMPLETED",Instant.now()));
-        when(llm.decide(anyList(),anyList())).thenReturn(Mono.just(new AgentDecision("[{\"userId\":99}]",List.of())));
-        new MemoryWorker(config,store,mock(MemoryContextService.class),new MemoryPolicy(config),llm,new ObjectMapper()).extract(task);
-        verify(store).taskFailed(task,"extraction_failed"); verify(store,never()).apply(any(),anyList());
-    }
     @Test void documentExtractionUsesStrictObjectAndOriginalQuestion() {
         MemoryStore store=mock(MemoryStore.class); AgentLlmClient llm=mock(AgentLlmClient.class);
-        MemoryProperties config=new MemoryProperties(); config.setStorageMode("document");
+        MemoryProperties config=new MemoryProperties();
         Task task=new Task(1,2,"lease",1);
         when(store.turn(2)).thenReturn(new Turn(2,3,"s","r","我是工程师","secret assistant answer","COMPLETED",Instant.now()));
         when(store.documents(3)).thenReturn(List.of());
@@ -56,7 +34,7 @@ class MemoryWorkerTest {
     @Test void documentProtocolRejectsMalformedNullUnknownAndDuplicateFields() {
         for (String output:List.of("{\"patches\":null}","{\"patches\":[],\"userId\":9}","{\"patches\":[],\"patches\":[]}","{\"patches\":[]} {}")) {
             MemoryStore store=mock(MemoryStore.class); AgentLlmClient llm=mock(AgentLlmClient.class);
-            MemoryProperties config=new MemoryProperties(); config.setStorageMode("document");
+            MemoryProperties config=new MemoryProperties();
             Task task=new Task(1,2,"lease",1);
             when(store.turn(2)).thenReturn(new Turn(2,3,"s","r","我是工程师","answer","COMPLETED",Instant.now()));
             when(store.documents(3)).thenReturn(List.of());
@@ -70,7 +48,7 @@ class MemoryWorkerTest {
     }
     @Test void documentProtocolRejectsScalarCoercionAndUsesConfiguredPatchLimit() {
         MemoryStore store=mock(MemoryStore.class); AgentLlmClient llm=mock(AgentLlmClient.class);
-        MemoryProperties config=new MemoryProperties(); config.setStorageMode("document"); config.setMaxPatches(3);
+        MemoryProperties config=new MemoryProperties(); config.setMaxPatches(3);
         Task task=new Task(1,2,"lease",1);
         when(store.turn(2)).thenReturn(new Turn(2,3,"s","r","我是工程师","answer","COMPLETED",Instant.now()));
         when(llm.decide(anyList(),anyList())).thenAnswer(call -> {
@@ -89,7 +67,7 @@ class MemoryWorkerTest {
     }
     @Test void pollRunsAtMostConfiguredNumberOfTasksConcurrently() throws Exception {
         MemoryStore store=mock(MemoryStore.class); AgentLlmClient llm=mock(AgentLlmClient.class);
-        MemoryProperties config=new MemoryProperties(); config.setEnabled(true); config.setStorageMode("document"); config.setWorkerConcurrency(2);
+        MemoryProperties config=new MemoryProperties(); config.setEnabled(true); config.setWorkerConcurrency(2);
         when(store.claim()).thenReturn(java.util.Optional.of(new Task(1,1,"a",1)),java.util.Optional.of(new Task(2,2,"b",1)),java.util.Optional.empty());
         when(store.turn(anyLong())).thenAnswer(call -> new Turn(call.getArgument(0),call.getArgument(0),"s","r","我是工程师","answer","COMPLETED",Instant.now()));
         java.util.concurrent.CountDownLatch started=new java.util.concurrent.CountDownLatch(2);

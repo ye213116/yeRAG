@@ -13,12 +13,11 @@ public class MemoryController {
     private final MemoryStore store;
     private final UserRepository users;
     private final MemoryProperties config;
-    private final MemoryLegacyImporter importer;
     private final com.yizhaoqi.smartpai.service.ChatHandler chat;
     private final MemoryContextService context;
-    public MemoryController(MemoryStore store, UserRepository users, MemoryProperties config, MemoryLegacyImporter importer,
+    public MemoryController(MemoryStore store, UserRepository users, MemoryProperties config,
                             com.yizhaoqi.smartpai.service.ChatHandler chat, MemoryContextService context) {
-        this.store=store; this.users=users; this.config=config; this.importer=importer; this.chat=chat; this.context=context;
+        this.store=store; this.users=users; this.config=config; this.chat=chat; this.context=context;
     }
     private long user(Principal principal) {
         if (!config.isEnabled()) throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"记忆功能未启用");
@@ -28,7 +27,7 @@ public class MemoryController {
     private Map<String,Object> result(Object data) { return Map.of("code",200,"message","success","data",data); }
     @GetMapping("/sessions/current")
     public Map<String,Object> current(Principal p) {
-        long uid=user(p); importer.importIfNeeded(uid);
+        long uid=user(p);
         String id=store.current(uid,false); context.cacheCurrent(uid,id);
         return result(Map.of("conversationId",id));
     }
@@ -52,10 +51,6 @@ public class MemoryController {
     @GetMapping("/documents")
     public Map<String,Object> documents(Principal p) {
         long uid = user(p);
-        if (!config.documentMode()) throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"文档记忆未启用");
         return result(store.documents(uid).stream().map(d -> Map.of("fileName",d.type().fileName(),"type",d.type(),"content",d.content())).toList());
     }
-    @Deprecated
-    @GetMapping("/facts")
-    public Map<String,Object> facts(Principal p) { return result(store.memories(user(p))); }
 }

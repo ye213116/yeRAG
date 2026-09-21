@@ -29,14 +29,12 @@ class MemoryDocumentMySqlTest extends MemoryDocumentStoreTest {
         String base=url.substring(0,url.indexOf('/',"jdbc:mysql://".length()));
         var ds=new DriverManagerDataSource(base+"/"+schema+"?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone="+java.util.TimeZone.getDefault().getID(),user,password);
         db=new JdbcTemplate(ds);
-        db.execute("CREATE TABLE users(id BIGINT PRIMARY KEY,username VARCHAR(255))");
-        db.update("INSERT INTO users VALUES(1,'test-a'),(123,'test-b')");
         try(var c=ds.getConnection()) {
-            ScriptUtils.executeSqlScript(c,new FileSystemResource("docs/databases/migrations/2026-09-09-memory-v1.sql"));
-            ScriptUtils.executeSqlScript(c,new FileSystemResource("docs/databases/migrations/2026-09-17-markdown-memory-v2.sql"));
+            ScriptUtils.executeSqlScript(c,new FileSystemResource("docs/databases/ddl.sql"));
         }
-        config=new MemoryProperties(); config.setEnabled(true); config.setStorageMode("document");
-        store=new MemoryStore(db,new DataSourceTransactionManager(ds),config,new ObjectMapper());
+        db.update("INSERT INTO users(id,username,password,role) VALUES(1,'test-a','test','USER'),(123,'test-b','test','USER')");
+        config=new MemoryProperties(); config.setEnabled(true);
+        store=new MemoryStore(db,new DataSourceTransactionManager(ds),config);
     }
     @AfterEach void cleanupSchema() {
         if(admin!=null && schema!=null) admin.execute("DROP DATABASE "+schema);
