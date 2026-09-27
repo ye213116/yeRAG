@@ -24,7 +24,6 @@ public final class MemoryEnvironmentPostProcessor implements EnvironmentPostProc
             Map.entry("ai.memory.max-extraction-input-bytes", "AI_MEMORY_MAX_EXTRACTION_INPUT_BYTES"),
             Map.entry("ai.memory.max-extraction-output-bytes", "AI_MEMORY_MAX_EXTRACTION_OUTPUT_BYTES"),
             Map.entry("ai.memory.index-description-code-points", "AI_MEMORY_INDEX_DESCRIPTION_CODE_POINTS"),
-            Map.entry("ai.memory.enabled", "AI_MEMORY_ENABLED"),
             Map.entry("ai.memory.short-term-enabled", "AI_MEMORY_SHORT_TERM_ENABLED"),
             Map.entry("ai.memory.extraction-enabled", "AI_MEMORY_EXTRACTION_ENABLED"),
             Map.entry("ai.memory.recall-enabled", "AI_MEMORY_RECALL_ENABLED"),

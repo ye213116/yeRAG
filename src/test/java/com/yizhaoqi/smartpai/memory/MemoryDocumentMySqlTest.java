@@ -33,7 +33,7 @@ class MemoryDocumentMySqlTest extends MemoryDocumentStoreTest {
             ScriptUtils.executeSqlScript(c,new FileSystemResource("docs/databases/ddl.sql"));
         }
         db.update("INSERT INTO users(id,username,password,role) VALUES(1,'test-a','test','USER'),(123,'test-b','test','USER')");
-        config=new MemoryProperties(); config.setEnabled(true);
+        config=new MemoryProperties();
         store=new MemoryStore(db,new DataSourceTransactionManager(ds),config);
     }
     @AfterEach void cleanupSchema() {

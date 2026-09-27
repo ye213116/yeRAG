@@ -181,7 +181,7 @@ public class DeepSeekClient implements AgentLlmClient {
     }
     
     private void checkMemoryBudget(Map<String,Object> request) {
-        if (memoryProperties == null || !memoryProperties.isEnabled()) return;
+        if (memoryProperties == null) return;
         try {
             if (objectMapper.writeValueAsBytes(request).length > memoryProperties.getMaxInputBytes())
                 throw new IllegalArgumentException("Model input budget exceeded");

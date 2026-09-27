@@ -8,7 +8,7 @@ yeRAG is a Spring Boot + Vue application for permission-aware enterprise RAG. Th
 
 1. Document ingestion and hybrid retrieval.
 2. A native OpenAI-compatible tool-calling Agent that decides whether to search.
-3. Optional conversation context and user memory, disabled by default.
+3. Conversation context and user memory on the unified chat path.
 
 The repository does not contain a production `application.yml` or a Docker Compose file. Do not assume either exists when changing setup documentation or deployment code.
 
@@ -84,18 +84,18 @@ mvn -Dtest=ChatHandlerAgentTest test
 
 ### Conversation memory
 
-Memory is opt-in through `ai.memory.enabled=false` by default. With memory enabled:
+All chat requests use the Memory path:
 
 - `MemoryStore` owns MySQL-backed sessions, turns, idempotency and extraction task state.
 - `MemoryContextService` builds bounded context from a rolling summary, recent complete turns and long-term memory.
-- Redis stores short-term context with TTL and CAS/version checks; MySQL remains authoritative for business sessions.
+- MySQL stores durable turns and rolling summaries; Redis is an optional short-term cache.
 - `MemoryWorker` performs durable sync, lease-based extraction, retries and cleanup.
 - `MemoryPolicy` validates evidence, categories, section ownership, expiry and ordering before writes.
 - `ChatHandler` persists only a completed full answer; cancellation or failure must not save a partial answer as completed.
 
 Long-term memory is always the controlled Markdown document model: `profile.md` and `preferences.md` sections, with a dynamically generated `MEMORY.md` recall index.
 
-Apply `docs/databases/ddl.sql` to an empty MySQL 8 database before starting a new environment or enabling memory. The file contains the complete application schema, including Memory v2. `MemoryStartupCheck` intentionally fails startup if the required memory schema is absent.
+Apply `docs/databases/ddl.sql` to an empty MySQL 8 database before starting a new environment. Existing databases require `docs/databases/migrations/20260927_durable_short_term_memory.sql` before deployment. `MemoryStartupCheck` fails startup if the required schema is absent.
 
 Memory boundaries to preserve:
 
@@ -148,7 +148,7 @@ Required integration properties normally include:
 - `embedding.api.url`, `embedding.api.key`, `embedding.api.model`
 - `jwt.secret-key`
 
-`AI_MEMORY_*` environment aliases are supported for memory properties, including `AI_MEMORY_ENABLED` and `AI_MEMORY_WORKER_CONCURRENCY`.
+`AI_MEMORY_*` environment aliases are supported for memory properties, including `AI_MEMORY_SHORT_TERM_ENABLED` and `AI_MEMORY_WORKER_CONCURRENCY`. There is no global memory enable switch.
 
 ## Common commands
 
@@ -189,5 +189,5 @@ pnpm preview
 - For a new tool, implement `AgentTool`, register it as a Spring bean, define a strict schema, validate all arguments, and add focused tests.
 - For retrieval-related work, use `searchWithPermission` and test cross-user/organization boundaries.
 - For database or memory changes, update both `docs/databases/ddl.sql` and `docs/databases/database-design.md`. Keep ownership, idempotency, leases, expiry and late-event handling explicit.
-- Keep WebSocket protocol compatibility: plain text remains supported when memory is disabled; memory mode uses JSON `{type, message, conversationId, requestId}`.
+- Chat WebSocket requests use JSON `{type, message, conversationId, requestId}`; plain text is not accepted.
 - Avoid introducing secrets, real service endpoints or generated build output into source control.

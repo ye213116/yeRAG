@@ -67,7 +67,7 @@ class MemoryWorkerTest {
     }
     @Test void pollRunsAtMostConfiguredNumberOfTasksConcurrently() throws Exception {
         MemoryStore store=mock(MemoryStore.class); AgentLlmClient llm=mock(AgentLlmClient.class);
-        MemoryProperties config=new MemoryProperties(); config.setEnabled(true); config.setWorkerConcurrency(2);
+            MemoryProperties config=new MemoryProperties(); config.setWorkerConcurrency(2);
         when(store.claim()).thenReturn(java.util.Optional.of(new Task(1,1,"a",1)),java.util.Optional.of(new Task(2,2,"b",1)),java.util.Optional.empty());
         when(store.turn(anyLong())).thenAnswer(call -> new Turn(call.getArgument(0),call.getArgument(0),"s","r","我是工程师","answer","COMPLETED",Instant.now()));
         java.util.concurrent.CountDownLatch started=new java.util.concurrent.CountDownLatch(2);

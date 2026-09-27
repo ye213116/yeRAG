@@ -94,23 +94,7 @@ CREATE TABLE document_vectors (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Parsed document chunks and search metadata';
 
 -- ---------------------------------------------------------------------------
--- Conversation history used when the memory subsystem is disabled
--- ---------------------------------------------------------------------------
-
-CREATE TABLE conversations (
-    id BIGINT NOT NULL AUTO_INCREMENT COMMENT 'Conversation record primary key',
-    user_id BIGINT NOT NULL COMMENT 'Owner user ID',
-    question TEXT NOT NULL COMMENT 'User question',
-    answer TEXT NOT NULL COMMENT 'Assistant answer',
-    timestamp DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT 'Conversation time',
-    PRIMARY KEY (id),
-    KEY idx_user_id (user_id),
-    KEY idx_timestamp (timestamp),
-    CONSTRAINT fk_conversations_user FOREIGN KEY (user_id) REFERENCES users(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Non-memory conversation history';
-
--- ---------------------------------------------------------------------------
--- Memory v2: sessions and durable turns
+-- Memory: sessions and durable turns
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE chat_session (
@@ -122,6 +106,9 @@ CREATE TABLE chat_session (
     created_at DATETIME(6) NOT NULL COMMENT 'Creation time',
     closed_at DATETIME(6) NULL COMMENT 'Close time',
     revision BIGINT NOT NULL DEFAULT 0 COMMENT 'Optimistic context revision',
+    context_summary TEXT NULL COMMENT 'Durable rolling short-term summary',
+    summary_covered_turn_seq BIGINT NOT NULL DEFAULT 0 COMMENT 'Last turn included in the summary',
+    summary_revision BIGINT NOT NULL DEFAULT 0 COMMENT 'Summary compare-and-set version',
     active_turn_id BIGINT NULL COMMENT 'Currently running turn; guarded by user lock',
     PRIMARY KEY (id),
     KEY ix_chat_session_user (user_id, status, last_activity_at),
@@ -160,7 +147,7 @@ CREATE TABLE chat_turn (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Durable chat turns and context synchronization state';
 
 -- ---------------------------------------------------------------------------
--- Memory v2: extraction queue and Markdown documents
+-- Memory: extraction queue and Markdown documents
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE memory_extraction_task (

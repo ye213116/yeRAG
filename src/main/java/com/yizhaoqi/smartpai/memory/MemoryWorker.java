@@ -79,7 +79,7 @@ public class MemoryWorker {
 
     @Scheduled(fixedDelayString = "${ai.memory.worker-delay-ms:2000}")
     public synchronized void poll() {
-        if (!config.isEnabled() || closing) return;
+        if (closing) return;
         try {
             store.maintain();
             for (Turn turn : store.pendingSync()) {

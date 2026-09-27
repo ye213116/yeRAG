@@ -13,7 +13,6 @@ import java.util.List;
 @EnableScheduling
 @ConfigurationProperties(prefix = "ai.memory")
 public class MemoryProperties {
-    private boolean enabled = false;
     private boolean shortTermEnabled = true;
     private boolean extractionEnabled = true;
     private boolean recallEnabled = true;

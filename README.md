@@ -12,7 +12,7 @@ yeRAG 是一个面向企业知识库的 Agentic RAG 应用。它把文档处理�
 - 结合公开文档、用户文档和组织标签的权限过滤
 - 基于 WebSocket 的流式 AI 对话
 - 原生 OpenAI-compatible `tools/tool_calls` 知识库 Agent
-- 可选的会话上下文、长期用户记忆和 Markdown 记忆文档
+- 会话上下文、长期用户记忆和 Markdown 记忆文档
 - JWT 认证、Spring Security、组织标签隔离和管理能力
 
 ## 架构概览
@@ -36,7 +36,7 @@ yeRAG 是一个面向企业知识库的 Agentic RAG 应用。它把文档处理�
   -> 流式回答与引用
 ```
 
-未启用记忆时，对话历史使用兼容旧版本的 Redis 会话结构；启用记忆后，业务会话和完整回合以 MySQL 为准，Redis 保存有 TTL 的短期上下文缓存。
+聊天始终使用统一记忆链路。业务会话、完整回合和滚动摘要以 MySQL 为准；Redis 仅保存有 TTL 的缓存。
 
 ## Agent 与 Tool Calling
 
@@ -69,13 +69,12 @@ service/RagFallbackService.java
 
 ## Memory：会话上下文与用户长期记忆
 
-记忆功能默认关闭，启用前必须先初始化完整数据库结构。它不是知识库检索的替代品：个人记忆不能改变权限、工具规则，也不能代替企业知识库证据。
+启动前必须先初始化完整数据库结构。个人记忆不能改变权限、工具规则，也不能代替企业知识库证据。
 
 ### 短期会话上下文
 
-- MySQL 保存业务会话、完整问答回合、请求幂等信息和异步任务状态。
-- Redis 保存滚动摘要、最近完整问答和压缩进度，默认上下文 TTL 为 7 天。
-- 使用 token/字节预算构建模型上下文；摘要失败时保留可用的近期完整问答，并通过 `context_reduced` 通知前端。
+- MySQL 保存业务会话、完整问答回合、滚动摘要、请求幂等信息和异步任务状态。成功回答后，短期上下文续期 7 天。
+- Redis 只缓存短期上下文；缓存丢失时从 MySQL 恢复。记忆读取失败时用当前问题继续回答，并通过 `context_reduced` 通知前端。
 - 业务 `conversationId` 与 WebSocket `sessionId` 分离；新建会话、空闲超时切换、重连和迟到事件都有边界处理。
 - 前端支持新建会话、历史会话只读查看和 `requestId` 事件隔离。
 
@@ -85,7 +84,7 @@ yeRAG 只保留 Markdown document memory：每个用户维护 `profile.md` 和 `
 
 长期记忆使用持久化提取任务、租约、重试和幂等处理，不使用 Elasticsearch 向量召回。
 
-启用示例：
+配置示例：
 
 ```yaml
 ai:
@@ -93,14 +92,12 @@ ai:
     enabled: true
     fallback-enabled: true
   memory:
-    enabled: true
+    short-term-enabled: true
+    extraction-enabled: true
+    recall-enabled: true
 ```
 
-也可以使用环境变量：
-
-```bash
-export AI_MEMORY_ENABLED=true
-```
+这些子功能默认开启，可使用对应的 `AI_MEMORY_*` 环境变量配置。
 
 记忆接口包括：
 
@@ -114,10 +111,12 @@ GET  /api/v1/memory/documents
 
 数据库初始化和设计说明：
 
-- [完整 MySQL DDL（包含 Memory v2）](docs/databases/ddl.sql)
+- [完整 MySQL DDL](docs/databases/ddl.sql)
 - [完整数据库表设计](docs/databases/database-design.md)
+- [现有数据库升级 SQL](docs/databases/migrations/20260927_durable_short_term_memory.sql)
+- [现有数据库部署说明](docs/databases/migrations/20260927_durable_short_term_memory.md)
 
-`ddl.sql` 是当前关系型数据库结构的唯一初始化入口。启用记忆前必须完成初始化；启动检查会在 memory 表结构缺失时阻止应用启动。
+`ddl.sql` 用于空数据库初始化。现有数据库先执行升级 SQL，再部署新版本。应用启动时检查记忆表及摘要列；旧 Redis 有效会话和摘要由可重试迁移任务导入。
 
 ## 技术栈
 

@@ -10,7 +10,6 @@ defineOptions({
 const chatStore = useChatStore();
 const { list, sessionId } = storeToRefs(chatStore);
 
-const loading = ref(false);
 const scrollbarRef = ref<InstanceType<typeof NScrollbar>>();
 
 watch(() => [...list.value], scrollToBottom);
@@ -24,31 +23,6 @@ function scrollToBottom() {
   }, 100);
 }
 
-const range = ref<[number, number]>([dayjs().subtract(7, 'day').valueOf(), dayjs().add(1, 'day').valueOf()]);
-
-const params = computed(() => {
-  return {
-    start_date: dayjs(range.value[0]).format('YYYY-MM-DD'),
-    end_date: dayjs(range.value[1]).format('YYYY-MM-DD')
-  };
-});
-
-watchEffect(() => {
-  if (!chatStore.memoryEnabled) getList();
-});
-
-async function getList() {
-  loading.value = true;
-  const { error, data } = await request<Api.Chat.Message[]>({
-    url: 'users/conversation',
-    params: params.value
-  });
-  if (!error) {
-    if (!chatStore.memoryEnabled) list.value = data;
-  }
-  loading.value = false;
-}
-
 onMounted(() => {
   chatStore.scrollToBottom = scrollToBottom;
 });
@@ -57,20 +31,9 @@ onMounted(() => {
 <template>
   <Suspense>
     <NScrollbar ref="scrollbarRef" class="h-0 flex-auto">
-      <Teleport defer to="#header-extra">
-        <div class="px-10">
-          <NForm :model="params" label-placement="left" :show-feedback="false" inline>
-            <NFormItem label="时间">
-              <NDatePicker v-model:value="range" type="daterange" />
-            </NFormItem>
-          </NForm>
-        </div>
-      </Teleport>
-      <NSpin :show="loading">
-        <VueMarkdownItProvider>
-          <ChatMessage v-for="(item, index) in list" :key="index" :msg="item" :session-id="sessionId" />
-        </VueMarkdownItProvider>
-      </NSpin>
+      <VueMarkdownItProvider>
+        <ChatMessage v-for="(item, index) in list" :key="index" :msg="item" :session-id="sessionId" />
+      </VueMarkdownItProvider>
     </NScrollbar>
   </Suspense>
 </template>

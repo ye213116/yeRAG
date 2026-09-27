@@ -12,15 +12,15 @@ import java.util.*;
 public class MemoryController {
     private final MemoryStore store;
     private final UserRepository users;
-    private final MemoryProperties config;
     private final com.yizhaoqi.smartpai.service.ChatHandler chat;
     private final MemoryContextService context;
-    public MemoryController(MemoryStore store, UserRepository users, MemoryProperties config,
-                            com.yizhaoqi.smartpai.service.ChatHandler chat, MemoryContextService context) {
-        this.store=store; this.users=users; this.config=config; this.chat=chat; this.context=context;
+    private final LegacyMemoryMigration migration;
+    public MemoryController(MemoryStore store, UserRepository users,
+                            com.yizhaoqi.smartpai.service.ChatHandler chat, MemoryContextService context,
+                            LegacyMemoryMigration migration) {
+        this.store=store; this.users=users; this.chat=chat; this.context=context; this.migration=migration;
     }
     private long user(Principal principal) {
-        if (!config.isEnabled()) throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"记忆功能未启用");
         if (principal==null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         return users.findByUsername(principal.getName()).orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED)).getId();
     }
@@ -28,6 +28,7 @@ public class MemoryController {
     @GetMapping("/sessions/current")
     public Map<String,Object> current(Principal p) {
         long uid=user(p);
+        migration.migrateUser(uid,p.getName());
         String id=store.current(uid,false); context.cacheCurrent(uid,id);
         return result(Map.of("conversationId",id));
     }

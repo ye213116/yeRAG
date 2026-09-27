@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const chatStore = useChatStore();
-const { input, list, wsStatus, wsData, memoryEnabled, memoryReady, activeRequestId } = storeToRefs(chatStore);
+const { input, list, wsStatus, wsData, memoryReady, activeRequestId } = storeToRefs(chatStore);
 
 const latestMessage = computed(() => {
   return list.value[list.value.length - 1] ?? {};
@@ -16,7 +16,8 @@ const sendable = computed(
   () =>
     (!input.value.message && !isSending.value) ||
     ['CLOSED', 'CONNECTING'].includes(wsStatus.value) ||
-    (memoryEnabled.value && (!memoryReady.value || chatStore.historyReadOnly))
+    !memoryReady.value ||
+    chatStore.historyReadOnly
 );
 
 watch(wsData, val => {
@@ -27,7 +28,7 @@ watch(wsData, val => {
   } catch {
     return;
   }
-  if (memoryEnabled.value && data.requestId && data.requestId !== activeRequestId.value) return;
+  if (data.requestId && data.requestId !== activeRequestId.value) return;
   const assistant = list.value[list.value.length - 1];
   if (!assistant || assistant.role !== 'assistant') return;
   if (data.type === 'request_rejected') {
@@ -63,17 +64,15 @@ const handleSend = async () => {
     content: input.value.message,
     role: 'user'
   });
-  if (memoryEnabled.value) {
-    activeRequestId.value = crypto.randomUUID();
-    chatStore.wsSend(
-      JSON.stringify({
-        type: 'chat',
-        message: input.value.message,
-        conversationId: chatStore.conversationId,
-        requestId: activeRequestId.value
-      })
-    );
-  } else chatStore.wsSend(input.value.message);
+  activeRequestId.value = crypto.randomUUID();
+  chatStore.wsSend(
+    JSON.stringify({
+      type: 'chat',
+      message: input.value.message,
+      conversationId: chatStore.conversationId,
+      requestId: activeRequestId.value
+    })
+  );
   list.value.push({
     content: '',
     role: 'assistant',

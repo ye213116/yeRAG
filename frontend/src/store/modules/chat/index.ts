@@ -6,7 +6,6 @@ const { otherBaseURL } = getServiceBaseURL(import.meta.env, isWebSocketProxy);
 
 export const useChatStore = defineStore(SetupStoreId.Chat, () => {
   const conversationId = ref<string>('');
-  const memoryEnabled = ref(false);
   const memoryReady = ref(false);
   const activeRequestId = ref('');
   const memoryNotice = ref('');
@@ -92,10 +91,9 @@ export const useChatStore = defineStore(SetupStoreId.Chat, () => {
       const data = JSON.parse(val);
       if (data.type === 'connection' && data.sessionId) {
         sessionId.value = data.sessionId;
-        memoryEnabled.value = data.memoryEnabled === true;
-        if (memoryEnabled.value) loadCurrentConversation();
+        loadCurrentConversation();
       }
-      if (memoryEnabled.value && data.requestId && data.requestId === activeRequestId.value) {
+      if (data.requestId && data.requestId === activeRequestId.value) {
         if (data.type === 'conversation') {
           conversationId.value = data.conversationId;
           if (data.switched) {
@@ -118,7 +116,6 @@ export const useChatStore = defineStore(SetupStoreId.Chat, () => {
   return {
     input,
     conversationId,
-    memoryEnabled,
     memoryReady,
     activeRequestId,
     memoryNotice,

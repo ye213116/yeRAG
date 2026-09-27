@@ -1,6 +1,6 @@
 # yeRAG 数据库表设计
 
-本文档描述 yeRAG 当前完整的 MySQL 8.0 关系模型。对应的唯一初始化脚本是 [ddl.sql](ddl.sql)，包含用户、组织、文件、文档、普通会话以及 Markdown Memory v2 的全部 11 张表。
+本文档描述 yeRAG 当前完整的 MySQL 8.0 关系模型。空数据库初始化脚本是 [ddl.sql](ddl.sql)，包含用户、组织、文件、文档和统一记忆链路的 10 张表。
 
 ## 1. 存储边界
 
@@ -23,12 +23,11 @@
 | 文件与知识库 | `file_upload` | 用户文件及访问范围 |
 | 文件与知识库 | `chunk_info` | 分片上传期间的 MinIO 对象元数据 |
 | 文件与知识库 | `document_vectors` | 解析后的文本块及检索权限元数据 |
-| 普通会话 | `conversations` | memory 关闭时使用的问答历史 |
-| Memory v2 | `chat_session` | memory 模式下的业务会话 |
-| Memory v2 | `chat_turn` | 可恢复、可过期的完整问答回合 |
-| Memory v2 | `memory_extraction_task` | 长期记忆异步提取队列 |
-| Memory v2 | `memory_document` | 用户当前 Markdown 长期记忆正文 |
-| Memory v2 | `memory_document_section` | Markdown section 的稳定身份和顺序屏障 |
+| Memory | `chat_session` | 业务会话与滚动摘要 |
+| Memory | `chat_turn` | 可恢复、可过期的完整问答回合 |
+| Memory | `memory_extraction_task` | 长期记忆异步提取队列 |
+| Memory | `memory_document` | 用户当前 Markdown 长期记忆正文 |
+| Memory | `memory_document_section` | Markdown section 的稳定身份和顺序屏障 |
 
 ## 3. 关系总览
 
@@ -36,7 +35,6 @@
 erDiagram
     users ||--o{ organization_tags : creates
     organization_tags o|--o{ organization_tags : parent_of
-    users ||--o{ conversations : owns
     users ||--o{ chat_session : owns
     users ||--o{ chat_turn : owns
     chat_session ||--o{ chat_turn : contains
@@ -137,25 +135,9 @@ erDiagram
 
 `file_md5` 用于整文件重建或删除；`user_id`、`org_tag`、`is_public` 用于 RAG 检索前的访问范围过滤。
 
-## 6. 普通会话历史
+## 6. Memory
 
-### 6.1 `conversations`
-
-当 `ai.memory.enabled=false` 时，`ConversationService` 使用该表保存传统的一问一答记录。memory 模式的权威会话数据位于 `chat_session` 和 `chat_turn`，两套表不能混合作为同一会话来源。
-
-| 字段 | 类型 | 可空/默认 | 约束与说明 |
-| --- | --- | --- | --- |
-| `id` | `BIGINT` | 非空，自增 | 主键 |
-| `user_id` | `BIGINT` | 非空 | 外键到 `users.id` |
-| `question` | `TEXT` | 非空 | 用户问题 |
-| `answer` | `TEXT` | 非空 | 助手回答 |
-| `timestamp` | `DATETIME(6)` | 当前时间 | 记录时间 |
-
-按用户和时间分别建立索引，供用户历史与管理员时间范围查询使用。
-
-## 7. Memory v2
-
-Memory v2 只保存两类长期记忆：
+Memory 只保存两类长期记忆：
 
 | `memory_type` | 生成文件 | 内容 |
 | --- | --- | --- |
@@ -164,7 +146,7 @@ Memory v2 只保存两类长期记忆：
 
 运行时的 `MEMORY.md` 是召回索引，由当前有效 section 确定性生成，不单独落库。
 
-### 7.1 `chat_session`
+### 6.1 `chat_session`
 
 | 字段 | 类型 | 可空/默认 | 约束与说明 |
 | --- | --- | --- | --- |
@@ -175,12 +157,15 @@ Memory v2 只保存两类长期记忆：
 | `context_expires_at` | `DATETIME(6)` | 非空 | 短期上下文失效时间 |
 | `created_at` | `DATETIME(6)` | 非空 | 创建时间 |
 | `closed_at` | `DATETIME(6)` | 可空 | 关闭时间 |
-| `revision` | `BIGINT` | 默认 `0` | Redis 上下文同步版本 |
+| `revision` | `BIGINT` | 默认 `0` | 会话状态版本 |
+| `context_summary` | `TEXT` | 可空 | MySQL 持久化的滚动摘要 |
+| `summary_covered_turn_seq` | `BIGINT` | 默认 `0` | 已纳入摘要的最后回合 ID |
+| `summary_revision` | `BIGINT` | 默认 `0` | 摘要条件更新版本 |
 | `active_turn_id` | `BIGINT` | 可空 | 当前执行中的回合 ID |
 
 `active_turn_id` 不设置循环外键：`chat_turn` 本身已经引用 `chat_session`，当前回合一致性由锁定 `users.id` 的事务维护。一个用户同时只应有一个可写的 `OPEN` 会话。
 
-### 7.2 `chat_turn`
+### 6.2 `chat_turn`
 
 | 字段 | 类型 | 可空/默认 | 约束与说明 |
 | --- | --- | --- | --- |
@@ -207,7 +192,7 @@ Memory v2 只保存两类长期记忆：
 - `request_id` 重用时必须同时匹配 `request_hash` 和目标会话。
 - 完成回合后才创建长期记忆提取任务。
 
-### 7.3 `memory_extraction_task`
+### 6.3 `memory_extraction_task`
 
 | 字段 | 类型 | 可空/默认 | 约束与说明 |
 | --- | --- | --- | --- |
@@ -224,7 +209,7 @@ Memory v2 只保存两类长期记忆：
 
 一个完成回合最多对应一个提取任务。worker 使用 `FOR UPDATE SKIP LOCKED` 领取任务；同一用户必须按 `user_turn_seq` 顺序处理，不同用户可以并行。提交时必须再次校验任务状态、租约 token、租约期限和来源回合。
 
-### 7.4 `memory_document`
+### 6.4 `memory_document`
 
 | 字段 | 类型 | 可空/默认 | 约束与说明 |
 | --- | --- | --- | --- |
@@ -237,7 +222,7 @@ Memory v2 只保存两类长期记忆：
 
 `(user_id, memory_type)` 唯一，因此每个用户最多拥有一份 profile 和一份 preferences 文档。空提取结果不会创建空文档。
 
-### 7.5 `memory_document_section`
+### 6.5 `memory_document_section`
 
 | 字段 | 类型 | 可空/默认 | 约束与说明 |
 | --- | --- | --- | --- |
@@ -251,7 +236,7 @@ Memory v2 只保存两类长期记忆：
 
 section UUID 不写入 Markdown 正文。正文负责向模型提供可读内容，section 表负责身份、所有权、逻辑删除和防止旧回合覆盖新内容。删除 section 时保留 tombstone，只有明确引用原 UUID 的后续写入才能恢复。
 
-## 8. Memory 写入与召回
+## 7. Memory 写入与召回
 
 ```text
 chat_turn COMPLETED
@@ -265,17 +250,18 @@ chat_turn COMPLETED
 
 召回只读取 `memory_document` 与 `memory_document_section`，不调用 LLM、Embedding 或 Elasticsearch。所有个人记忆都按不可信用户数据注入模型上下文，不能覆盖系统规则、ACL、工具权限或知识库事实。
 
-## 9. 生命周期与一致性
+## 8. 生命周期与一致性
 
-- MySQL 是 session、turn、task 和长期 Markdown 文档的权威来源。
-- Redis 的 `memory:v2:user:{uid}:current` 与 `memory:v2:session:{sid}:context` 只是有 TTL 的短期缓存。
+- MySQL 是 session、turn、滚动摘要、task 和长期 Markdown 文档的权威来源。
+- Redis 的 `memory:user:{uid}:current` 与 `memory:session:{sid}:context` 只是有 TTL 的短期缓存；缓存丢失后从 MySQL 恢复。
+- 成功完成回答后，`chat_session.context_expires_at` 与 `chat_turn.content_expires_at` 按配置续期，默认 7 天。摘要用 `summary_revision` 条件更新，防止旧结果覆盖新结果。
 - `chat_turn.content_expires_at` 到期后清空 `question` 和 `answer`，同时将未完成的上下文同步标记为 `EXPIRED`。
 - 已完成的长期记忆 section 不随问答正文过期；删除通过 tombstone 表示。
 - 模型调用发生在数据库事务外；最终 patch 应用与任务完成状态在同一事务内提交。
 - 会话写入先锁定 `users.id`，避免同一用户并发创建多个活动回合。
 - 所有用户级查询必须带认证后的数据库 `user_id`，不能使用 WebSocket 连接 ID 代替所有者身份。
 
-## 10. 初始化与校验
+## 9. 初始化与校验
 
 创建空数据库并执行完整 DDL：
 
@@ -284,6 +270,6 @@ mysql -u root -p -e "CREATE DATABASE yerag CHARACTER SET utf8mb4 COLLATE utf8mb4
 mysql -u root -p yerag < docs/databases/ddl.sql
 ```
 
-推荐将生产环境的 `SPRING_JPA_HIBERNATE_DDL_AUTO` 设为 `validate` 或 `none`，不要依赖 Hibernate 自动更新生产表结构。启用 memory 前，`MemoryStartupCheck` 会检查五张 memory 表及关键字段；缺失时应用会拒绝启动。
+推荐将生产环境的 `SPRING_JPA_HIBERNATE_DDL_AUTO` 设为 `validate` 或 `none`，不要依赖 Hibernate 自动更新生产表结构。`MemoryStartupCheck` 会检查五张 memory 表及摘要字段；缺失时应用会拒绝启动。
 
-该 DDL 面向空数据库，不包含 `DROP TABLE`，也不会删除已有数据。已有环境升级时应先备份，再根据实际 schema 制作经过评审的增量迁移。
+该 DDL 面向空数据库，不包含 `DROP TABLE`。已有环境先执行 [升级 SQL](migrations/20260927_durable_short_term_memory.sql)，再部署新版本。旧 `conversations` 表保留在现有数据库中，但聊天不再读写它；旧 Redis 有效会话和摘要由可重试迁移任务导入。

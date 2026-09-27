@@ -2,17 +2,16 @@ package com.yizhaoqi.smartpai.memory;
 
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Component
+@Order(1)
 public class MemoryStartupCheck implements ApplicationRunner {
-    private final MemoryProperties config;
     private final MemoryStore store;
-    public MemoryStartupCheck(MemoryProperties config, MemoryStore store) { this.config=config; this.store=store; }
+    public MemoryStartupCheck(MemoryStore store) { this.store=store; }
     @Override public void run(ApplicationArguments args) {
-        if(config.isEnabled()) {
-            try { store.verifySchema(); }
-            catch (Exception e) { throw new IllegalStateException("Apply the yeRAG Markdown memory migration before enabling ai.memory.enabled", e); }
-        }
+        try { store.verifySchema(); }
+        catch (Exception e) { throw new IllegalStateException("Apply the yeRAG memory schema before starting", e); }
     }
 }

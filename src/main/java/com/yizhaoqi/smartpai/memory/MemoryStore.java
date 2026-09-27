@@ -20,6 +20,7 @@ import static com.yizhaoqi.smartpai.memory.MemoryTypes.*;
  * No transaction/lock spans a model or Redis call. */
 @Repository
 public class MemoryStore {
+    public record LegacyTurn(String question, String answer, Instant createdAt) {}
     private final JdbcTemplate db;
     private final TransactionTemplate tx;
     private final MemoryProperties config;
@@ -29,7 +30,7 @@ public class MemoryStore {
         this.db = db; this.tx = new TransactionTemplate(manager); this.config = config;
     }
     public void verifySchema() {
-        db.queryForList("SELECT active_turn_id,context_expires_at FROM chat_session WHERE 1=0");
+        db.queryForList("SELECT active_turn_id,context_expires_at,context_summary,summary_covered_turn_seq,summary_revision FROM chat_session WHERE 1=0");
         db.queryForList("SELECT user_turn_seq,request_hash,context_sync_status FROM chat_turn WHERE 1=0");
         db.queryForList("SELECT lease_token,lease_until FROM memory_extraction_task WHERE 1=0");
         db.queryForList("SELECT user_id,memory_type,content,created_at,updated_at FROM memory_document WHERE 1=0");
@@ -82,7 +83,8 @@ public class MemoryStore {
         if (!rows.isEmpty()) {
             var row = rows.get(0);
             boolean running = row.get("active_turn_id") != null;
-            boolean idle = instant(row.get("last_activity_at")).plus(config.getIdleTimeout()).isBefore(now);
+            boolean idle = instant(row.get("last_activity_at")).plus(config.getIdleTimeout()).isBefore(now)
+                    || !instant(row.get("context_expires_at")).isAfter(now);
             if (!forceNew && (running || !idle)) return (String) row.get("id");
             for (var old : rows) {
                 db.update("UPDATE chat_turn SET status='CANCELLED' WHERE session_id=? AND status='RUNNING'", old.get("id"));
@@ -105,6 +107,9 @@ public class MemoryStore {
                 var row = previous.get(0);
                 if (!hash(question).equals(row.get("request_hash")) || (requestedSession != null && !requestedSession.equals(row.get("session_id"))))
                     throw new ResponseStatusException(HttpStatus.CONFLICT, "请求标识已用于其他内容或会话");
+                if ("COMPLETED".equals(row.get("status")) && (row.get("answer")==null
+                        || !instant(row.get("content_expires_at")).isAfter(Instant.now())))
+                    throw new ResponseStatusException(HttpStatus.CONFLICT,"请求结果已过期");
                 return new Begin(turn(row), false, false);
             }
             if (requestedSession != null) {
@@ -118,8 +123,8 @@ public class MemoryStore {
             long turn = insert("INSERT INTO chat_turn(session_id,user_id,request_id,request_hash,question,status,created_at,content_expires_at) VALUES (?,?,?,?,?,'RUNNING',?,?)",
                     id, user, requestId, hash(question), question, time(now), time(now.plus(config.getContentRetention())));
             db.update("UPDATE chat_turn SET user_turn_seq=? WHERE id=?", turn, turn);
-            db.update("UPDATE chat_session SET active_turn_id=?,last_activity_at=?,context_expires_at=?,revision=revision+1 WHERE id=?",
-                    turn, time(now), time(now.plus(config.getContextTtl())), id);
+            db.update("UPDATE chat_session SET active_turn_id=?,last_activity_at=?,revision=revision+1 WHERE id=?",
+                    turn, time(now), id);
             return new Begin(new Turn(turn, user, id, requestId, question, null, "RUNNING", now), true,
                     requestedSession != null && !id.equals(requestedSession));
         });
@@ -138,8 +143,8 @@ public class MemoryStore {
             lockUser(t.userId());
             if (!running(t)) return false;
             Instant now = Instant.now();
-            db.update("UPDATE chat_turn SET answer=?,status='COMPLETED',completed_at=?,context_sync_status='PENDING',context_next_attempt_at=? WHERE id=?",
-                    answer, time(now), time(now), t.id());
+            db.update("UPDATE chat_turn SET answer=?,status='COMPLETED',completed_at=?,content_expires_at=?,context_sync_status='PENDING',context_next_attempt_at=? WHERE id=?",
+                    answer, time(now), time(now.plus(config.getContentRetention())), time(now), t.id());
             db.update("UPDATE chat_session SET active_turn_id=NULL,context_expires_at=?,revision=revision+1 WHERE id=? AND active_turn_id=?",
                     time(now.plus(config.getContextTtl())), t.sessionId(), t.id());
             if (config.isExtractionEnabled()) db.update("INSERT INTO memory_extraction_task(turn_id,status,next_attempt_at,created_at,updated_at) VALUES (?,'PENDING',?,?,?)",
@@ -159,6 +164,67 @@ public class MemoryStore {
         // Bounded DB reads; older completed turns can be requested separately for history display.
         var rows = db.queryForList("SELECT * FROM chat_turn WHERE user_id=? AND session_id=? AND status='COMPLETED' AND content_expires_at>? ORDER BY id DESC LIMIT 200", user, session, time(Instant.now()));
         List<Turn> turns = new ArrayList<>(); rows.forEach(r -> turns.add(turn(r))); Collections.reverse(turns); return turns;
+    }
+    public List<Turn> uncoveredHistory(long user, String session, long covered) {
+        session(user,session);
+        return db.queryForList("""
+            SELECT * FROM chat_turn WHERE user_id=? AND session_id=? AND status='COMPLETED'
+              AND content_expires_at>? AND id>? ORDER BY id LIMIT 200
+            """,user,session,time(Instant.now()),covered).stream().map(this::turn).toList();
+    }
+    public boolean hasContextGap(long user, String session, long covered, long before) {
+        return db.queryForObject("""
+            SELECT COUNT(*) FROM chat_turn WHERE user_id=? AND session_id=? AND status='COMPLETED'
+              AND content_expires_at>? AND id>? AND id<?
+            """,Long.class,user,session,time(Instant.now()),covered,before)>0;
+    }
+    public boolean saveSummary(long user, String session, long expectedRevision, String summary, long covered) {
+        if (summary == null || summary.isBlank() || MemoryContextService.bytes(summary) > config.getSummaryBytes() || covered <= 0)
+            throw new IllegalArgumentException("invalid summary");
+        return db.update("""
+            UPDATE chat_session SET context_summary=?,summary_covered_turn_seq=?,summary_revision=summary_revision+1
+            WHERE id=? AND user_id=? AND summary_revision=? AND summary_covered_turn_seq<? AND context_expires_at>?
+            """, summary, covered, session, user, expectedRevision, covered, time(Instant.now())) == 1;
+    }
+    public boolean importSummary(long user, String session, String summary, long covered) {
+        if (summary == null || summary.isBlank() || MemoryContextService.bytes(summary) > config.getSummaryBytes() || covered <= 0)
+            return false;
+        return db.update("""
+            UPDATE chat_session SET context_summary=?,summary_covered_turn_seq=?,summary_revision=summary_revision+1
+            WHERE id=? AND user_id=? AND summary_revision=0 AND summary_covered_turn_seq=0
+              AND context_expires_at>? AND EXISTS (
+                SELECT 1 FROM chat_turn WHERE id=? AND session_id=? AND user_id=? AND status='COMPLETED')
+            """, summary, covered, session, user, time(Instant.now()), covered, session, user) == 1;
+    }
+    public boolean importLegacySession(long user, String id, List<LegacyTurn> turns, Instant expiresAt) {
+        if (id == null || expiresAt == null || !expiresAt.isAfter(Instant.now()) || turns == null || turns.size() > 10)
+            return false;
+        try { UUID.fromString(id); } catch (IllegalArgumentException invalid) { return false; }
+        return Boolean.TRUE.equals(tx.execute(s -> {
+            lockUser(user);
+            if (!db.queryForList("SELECT id FROM chat_session WHERE id=?",id).isEmpty()) return false;
+            Instant now = Instant.now();
+            boolean open = db.queryForObject("SELECT COUNT(*) FROM chat_session WHERE user_id=? AND status='OPEN'", Long.class,user) == 0;
+            Instant created = turns.isEmpty() ? now : turns.get(0).createdAt();
+            Instant activity = turns.isEmpty() ? now : turns.get(turns.size()-1).createdAt();
+            if (activity.isAfter(now)) activity = now;
+            db.update("""
+                INSERT INTO chat_session(id,user_id,status,last_activity_at,context_expires_at,created_at,closed_at,revision)
+                VALUES (?,?,?,?,?,?,?,0)
+                """,id,user,open ? "OPEN" : "CLOSED",time(activity),time(expiresAt),time(created),open ? null : time(now));
+            for (int i=0; i<turns.size(); i++) {
+                LegacyTurn turn = turns.get(i);
+                String requestId = "legacy_" + hash(id + ":" + i).substring(0,32);
+                long turnId = insert("""
+                    INSERT INTO chat_turn(session_id,user_id,request_id,request_hash,question,answer,status,
+                      context_sync_status,created_at,completed_at,content_expires_at)
+                    VALUES (?,?,?,?,?,?,'COMPLETED','SYNCED',?,?,?)
+                    """,id,user,requestId,hash(turn.question()),turn.question(),turn.answer(),
+                        time(turn.createdAt()),time(turn.createdAt()),time(expiresAt));
+                db.update("UPDATE chat_turn SET user_turn_seq=? WHERE id=?",turnId,turnId);
+            }
+            return true;
+        }));
     }
     /** One joined statement gives recall a consistent snapshot of current documents and metadata. */
     public List<MemoryDocument> documents(long user) {
@@ -252,30 +318,17 @@ public class MemoryStore {
         });
     }
 
-    /** Called only by the existing admin-authorized history controller; never returns memory facts. */
-    public List<Map<String,Object>> adminHistory(Long target, String start, String end) {
-        String sql="SELECT t.*,u.username FROM chat_turn t JOIN users u ON u.id=t.user_id WHERE t.status='COMPLETED' AND t.content_expires_at>?";
-        List<Object> args=new ArrayList<>(); args.add(time(Instant.now()));
-        if(target!=null) { sql+=" AND t.user_id=?"; args.add(target); }
-        if(start!=null && !start.isBlank()) { sql+=" AND t.created_at>=?"; args.add(time(java.time.LocalDate.parse(start.substring(0,10)).atStartOfDay(java.time.ZoneOffset.UTC).toInstant())); }
-        if(end!=null && !end.isBlank()) { sql+=" AND t.created_at<?"; args.add(time(java.time.LocalDate.parse(end.substring(0,10)).plusDays(1).atStartOfDay(java.time.ZoneOffset.UTC).toInstant())); }
-        List<Map<String,Object>> result=new ArrayList<>();
-        for(var r:db.queryForList(sql+" ORDER BY t.id DESC LIMIT 200",args.toArray())) {
-            for(String role:List.of("user","assistant")) result.add(Map.of("role",role,"content",r.get(role.equals("user")?"question":"answer"),"username",r.get("username"),"timestamp",r.get("created_at").toString()));
-        }
-        return result;
-    }
     public List<Turn> pendingSync() {
         return db.queryForList("SELECT * FROM chat_turn WHERE context_sync_status='PENDING' AND context_next_attempt_at<=? ORDER BY id LIMIT 20", time(Instant.now())).stream().map(this::turn).toList();
     }
     public void synced(String session, long through) {
-        db.update("UPDATE chat_turn SET context_sync_status='SYNCED' WHERE session_id=? AND id<=? AND status='COMPLETED'", session, through);
+        db.update("UPDATE chat_turn SET context_sync_status='SYNCED' WHERE session_id=? AND id<=? AND status='COMPLETED' AND context_sync_status='PENDING'", session, through);
     }
     public void syncedTurns(String session, List<Long> ids) {
         if (ids.isEmpty()) return;
         String placeholders=String.join(",",Collections.nCopies(ids.size(),"?"));
         List<Object> args=new ArrayList<>(); args.add(session); args.addAll(ids);
-        db.update("UPDATE chat_turn SET context_sync_status='SYNCED' WHERE session_id=? AND status='COMPLETED' AND id IN ("+placeholders+")",args.toArray());
+        db.update("UPDATE chat_turn SET context_sync_status='SYNCED' WHERE session_id=? AND status='COMPLETED' AND context_sync_status='PENDING' AND id IN ("+placeholders+")",args.toArray());
     }
     public void contextExpired(long turnId) {
         db.update("UPDATE chat_turn SET context_sync_status='EXPIRED' WHERE id=? AND context_sync_status='PENDING'", turnId);
@@ -319,5 +372,6 @@ public class MemoryStore {
     public void maintain() {
         for (var r : db.queryForList("SELECT * FROM chat_turn WHERE status='RUNNING' AND created_at<? LIMIT 50", time(Instant.now().minus(config.getRunTimeout())))) cancel(turn(r), "FAILED");
         db.update("UPDATE chat_turn SET question=NULL,answer=NULL,context_sync_status='EXPIRED' WHERE content_expires_at<? AND question IS NOT NULL AND status<>'RUNNING'", time(Instant.now()));
+        db.update("UPDATE chat_session SET context_summary=NULL,summary_covered_turn_seq=0,summary_revision=summary_revision+1 WHERE context_expires_at<? AND context_summary IS NOT NULL", time(Instant.now()));
     }
 }

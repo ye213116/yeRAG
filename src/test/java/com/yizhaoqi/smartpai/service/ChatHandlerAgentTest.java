@@ -3,44 +3,46 @@ package com.yizhaoqi.smartpai.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yizhaoqi.smartpai.agent.AgentEventListener;
 import com.yizhaoqi.smartpai.agent.KnowledgeAgentService;
-import com.yizhaoqi.smartpai.agent.model.AgentMessage;
 import com.yizhaoqi.smartpai.config.AiProperties;
+import com.yizhaoqi.smartpai.memory.MemoryContextService;
+import com.yizhaoqi.smartpai.memory.MemoryStore;
+import com.yizhaoqi.smartpai.memory.MemoryTypes;
 import org.junit.jupiter.api.Test;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.web.socket.WebSocketSession;
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
 
+import java.time.Instant;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 class ChatHandlerAgentTest {
-    @SuppressWarnings("unchecked")
     @Test
-    void synchronousAgentFailureKeepsFallbackCancellable() {
-        RedisTemplate<String, String> redis = mock(RedisTemplate.class);
-        ValueOperations<String, String> values = mock(ValueOperations.class);
-        when(redis.opsForValue()).thenReturn(values);
-        when(values.get(anyString())).thenReturn("conversation-id", null);
-        KnowledgeAgentService agent = mock(KnowledgeAgentService.class);
-        when(agent.run(anyString(), anyString(), anyList(), any(AgentEventListener.class)))
+    void agentFailureKeepsRagFallbackCancellable() {
+        MemoryStore store=mock(MemoryStore.class);
+        MemoryContextService context=mock(MemoryContextService.class);
+        KnowledgeAgentService agent=mock(KnowledgeAgentService.class);
+        RagFallbackService fallback=mock(RagFallbackService.class);
+        Disposable fallbackRun=mock(Disposable.class);
+        WebSocketSession socket=mock(WebSocketSession.class);
+        MemoryTypes.Turn turn=new MemoryTypes.Turn(1,1,"sid","request","question",null,"RUNNING", Instant.now());
+        when(socket.getId()).thenReturn("ws-1");
+        when(socket.isOpen()).thenReturn(true);
+        when(store.begin(1,"sid","request","question")).thenReturn(new MemoryTypes.Begin(turn,true,false));
+        when(context.build(turn)).thenReturn(new MemoryTypes.Context(List.of(),false));
+        when(agent.run(anyString(),anyString(),anyList(),any(AgentEventListener.class)))
                 .thenReturn(Mono.error(new IllegalStateException("unsupported tools")));
-        RagFallbackService fallback = mock(RagFallbackService.class);
-        Disposable fallbackRun = mock(Disposable.class);
-        when(fallback.stream(anyString(), anyString(), anyList(), any(), any(), any(), any()))
+        when(fallback.stream(anyString(),anyString(),anyList(),any(),any(),any(),any()))
                 .thenReturn(fallbackRun);
-        AiProperties properties = new AiProperties();
-        WebSocketSession session = mock(WebSocketSession.class);
-        when(session.getId()).thenReturn("ws-1");
-        when(session.isOpen()).thenReturn(true);
-        ChatHandler handler = new ChatHandler(redis, agent, fallback, properties, new ObjectMapper());
+        ChatHandler handler=new ChatHandler(agent,fallback,new AiProperties(),new ObjectMapper(),store,context);
 
-        handler.processMessage("alice", "question", session);
+        handler.processMessage("1","question","sid","request",socket);
+        verify(fallback,timeout(3000)).stream(anyString(),anyString(),anyList(),any(),any(),any(),any());
         handler.cancelSession("ws-1");
 
-        verify(fallbackRun).dispose();
+        verify(fallbackRun,timeout(3000)).dispose();
+        verify(store,never()).complete(any(),anyString());
     }
 }

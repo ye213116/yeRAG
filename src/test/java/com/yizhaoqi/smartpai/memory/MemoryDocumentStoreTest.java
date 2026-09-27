@@ -28,7 +28,7 @@ class MemoryDocumentStoreTest {
             ScriptUtils.executeSqlScript(c, new FileSystemResource("docs/databases/ddl.sql"));
         }
         db.update("INSERT INTO users(id,username,password,role) VALUES(1,'123','test','USER'),(123,'another','test','USER')");
-        config = new MemoryProperties(); config.setEnabled(true);
+        config = new MemoryProperties();
         store = new MemoryStore(db, new DataSourceTransactionManager(ds), config);
     }
     MemoryPatch patch(UUID id, String heading, String content) {

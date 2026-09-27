@@ -48,7 +48,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             Map<String, Object> connectionMessage = Map.of(
                 "type", "connection",
                 "sessionId", session.getId(),
-                "memoryEnabled", chatHandler.memoryEnabled(),
                 "message", "WebSocket连接已建立"
             );
             String jsonMessage = objectMapper.writeValueAsString(connectionMessage);
@@ -67,40 +66,23 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             logger.info("接收到消息，用户ID: {}，会话ID: {}，消息长度: {}", 
                        userId, session.getId(), payload.length());
             
-            // 检查是否是JSON格式的系统指令
-            if (payload.trim().startsWith("{")) {
-                try {
-                    Map<String, Object> jsonMessage = objectMapper.readValue(payload, Map.class);
-                    String messageType = (String) jsonMessage.get("type");
-                    String internalToken = (String) jsonMessage.get("_internal_cmd_token");
-
-                    if ("chat".equals(messageType) && chatHandler.memoryEnabled()) {
-                        String question = (String) jsonMessage.get("message");
-                        String conversationId = (String) jsonMessage.get("conversationId");
-                        String requestId = (String) jsonMessage.get("requestId");
-                        if (requestId == null) { sendErrorMessage(session,"缺少requestId"); return; }
-                        chatHandler.processMessage(userId,question,conversationId,requestId,session);
-                        return;
-                    }
-                    
-                    // 只有包含正确内部令牌的停止指令才处理
-                    if ("stop".equals(messageType) && INTERNAL_CMD_TOKEN.equals(internalToken)) {
-                        // 处理停止指令
-                        logger.info("收到有效的停止按钮指令，用户ID: {}，会话ID: {}", userId, session.getId());
-                        chatHandler.stopResponse(userId, session);
-                        return;
-                    }
-                    
-                    // 其他JSON消息当作普通消息处理
-                    logger.debug("收到JSON格式的聊天消息，当作普通消息处理");
-                } catch (Exception jsonParseError) {
-                    // JSON解析失败，当作普通文本消息处理
-                    logger.debug("JSON解析失败，当作普通消息处理: {}", jsonParseError.getMessage());
-                }
+            Map<?,?> jsonMessage;
+            try { jsonMessage = objectMapper.readValue(payload, Map.class); }
+            catch (Exception invalid) { sendErrorMessage(session, "消息必须是 JSON 对象"); return; }
+            String messageType = jsonMessage.get("type") instanceof String value ? value : null;
+            if ("stop".equals(messageType) && INTERNAL_CMD_TOKEN.equals(jsonMessage.get("_internal_cmd_token"))) {
+                chatHandler.stopResponse(userId, session);
+                return;
             }
-            
-            // 普通聊天消息处理（保持向下兼容）
-            chatHandler.processMessage(userId, payload, session);
+            if (!"chat".equals(messageType)
+                    || !(jsonMessage.get("message") instanceof String question)
+                    || !(jsonMessage.get("conversationId") instanceof String conversationId)
+                    || !(jsonMessage.get("requestId") instanceof String requestId)
+                    || conversationId.isBlank() || requestId.isBlank()) {
+                sendErrorMessage(session, "聊天消息需要 type、message、conversationId 和 requestId");
+                return;
+            }
+            chatHandler.processMessage(userId,question,conversationId,requestId,session);
             
         } catch (Exception e) {
             logger.error("处理消息出错，用户ID: {}，会话ID: {}，错误: {}", 
@@ -126,20 +108,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         String[] segments = path.split("/");
         String jwtToken = segments[segments.length - 1];
         if (!jwtUtils.validateToken(jwtToken)) throw new IllegalArgumentException("Invalid token");
-        if (chatHandler.memoryEnabled()) {
-            String id=jwtUtils.extractUserIdFromToken(jwtToken);
-            if (id == null || !id.matches("[0-9]+")) throw new IllegalArgumentException("Missing user ID; sign in again");
-            return id;
-        }
-        
-        // 从JWT令牌中提取用户名
-        String username = jwtUtils.extractUsernameFromToken(jwtToken);
-        if (username == null) {
-            throw new IllegalArgumentException("Missing username");
-        }
-        
-        logger.debug("从JWT令牌中提取的用户名: {}", username);
-        return username;
+        String id=jwtUtils.extractUserIdFromToken(jwtToken);
+        if (id == null || !id.matches("[0-9]+")) throw new IllegalArgumentException("Missing user ID; sign in again");
+        return id;
     }
 
     private void sendErrorMessage(WebSocketSession session, String errorMessage) {

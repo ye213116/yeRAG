@@ -6,7 +6,11 @@ spring:
     password:
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: none
+  sql:
+    init:
+      mode: always
+      schema-locations: file:docs/databases/ddl.sql
   kafka:
     bootstrap-servers: localhost:9092
     listener:
