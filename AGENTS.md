@@ -52,7 +52,22 @@ UploadController -> MinIO -> Kafka -> FileProcessingConsumer
   -> Elasticsearch index: knowledge_base
 ```
 
-`HybridSearchService.searchWithPermission` combines embedding/KNN and BM25-style text matching. It filters by the authenticated user, public documents and effective organization tags. New Agent tools must reuse this permission-aware method instead of the unrestricted compatibility search method.
+`HybridSearchService.searchWithPermission` is the only supported retrieval entry. The pipeline is:
+
+```text
+HybridRecallClient: BM25 route + KNN route in parallel (each window = topK x recall-multiplier)
+  -> RrfFusion: merge by rank (1/(k+rank), weights) and deduplicate by fileMd5 + chunkId
+  -> RerankClient: gte-rerank the head of the fused list (top-n candidates)
+  -> topK results with file names attached
+```
+
+- Permission filtering must be **pre-filtering inside every route** (`knn.filter` for the KNN route, `bool.filter` for the BM25 route) through `HybridRecallClient.aclQuery`; a post-filter burns the recall window and can silently drop authorized candidates. Both routes must use the same ACL query.
+- RRF deliberately compares ranks, not scores: BM25 and cosine scores are not normalized into one scale, and any "weighted sum" reintroduces the bug this pipeline removes.
+- Degradations are allowed and expected: failed embedding -> BM25 route only (rerank still applies); one failed/timed-out route -> the other route's results; rerank timeout/failure -> the RRF order (rerank scores and RRF scores are never mixed in one ranking). No degradation may widen authorization.
+- `ai.retrieval.mode=legacy` restores the old single-request KNN + BM25 rescore path for rollback only.
+- `topK` must stay within `ai.retrieval.max-top-k`; the recall window is 30x topK, so an unvalidated `topK` becomes an Elasticsearch load incident.
+
+New Agent tools must reuse this permission-aware method instead of the unrestricted compatibility search method.
 
 ### Agent and tool calls
 
@@ -133,6 +148,21 @@ ai:
     llm-timeout: 30s
     tool-timeout: 10s
     total-timeout: 60s
+  retrieval:
+    mode: rrf              # rrf | legacy (rollback only)
+    recall-multiplier: 30  # per-route recall window = topK * 30
+    max-top-k: 50
+    rrf-rank-constant: 60
+    bm25-weight: 1.0
+    knn-weight: 1.0
+    route-timeout: 2s
+    rerank:
+      enabled: true
+      url: ${RERANK_API_URL}     # empty -> RRF only
+      api-key: ${RERANK_API_KEY} # empty -> reuse embedding.api.key
+      model: gte-rerank
+      top-n: 50
+      timeout: 1500ms
   memory:
     enabled: false
 ```
@@ -187,7 +217,7 @@ pnpm preview
 
 - Keep the existing package structure unless a migration is explicitly requested.
 - For a new tool, implement `AgentTool`, register it as a Spring bean, define a strict schema, validate all arguments, and add focused tests.
-- For retrieval-related work, use `searchWithPermission` and test cross-user/organization boundaries.
+- For retrieval-related work, use `searchWithPermission` and test cross-user/organization boundaries. Retrieval changes must keep both recall routes ACL-filtered, and must degrade (never fail hard) when rerank or one route is unavailable.
 - For database or memory changes, update both `docs/databases/ddl.sql` and `docs/databases/database-design.md`. Keep ownership, idempotency, leases, expiry and late-event handling explicit.
 - Chat WebSocket requests use JSON `{type, message, conversationId, requestId}`; plain text is not accepted.
 - Avoid introducing secrets, real service endpoints or generated build output into source control.

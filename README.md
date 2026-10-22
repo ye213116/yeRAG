@@ -8,10 +8,11 @@ yeRAG 是一个面向企业知识库的 Agentic RAG 应用。它把文档处理�
 
 - 文档分片上传、断点续传、MinIO 文件存储和 Apache Tika 解析
 - Kafka 驱动的异步文档处理、切分与向量化
-- Elasticsearch 向量检索、BM25 文本检索和混合检索
+- Elasticsearch 的 BM25 与 KNN 双路并行召回、RRF 排名融合和 gte-rerank 重排序
 - 结合公开文档、用户文档和组织标签的权限过滤
 - 基于 WebSocket 的流式 AI 对话
 - 原生 OpenAI-compatible `tools/tool_calls` 知识库 Agent
+- 可选的 MCP Streamable HTTP 只读工具接入
 - 会话上下文、长期用户记忆和 Markdown 记忆文档
 - JWT 认证、Spring Security、组织标签隔离和管理能力
 
@@ -32,7 +33,9 @@ yeRAG 是一个面向企业知识库的 Agentic RAG 应用。它把文档处理�
        -> LLM 判断是否调用工具
        -> AgentToolRegistry
        -> search_knowledge_base
-       -> HybridSearchService（向量 + BM25 + 权限过滤）
+       -> HybridSearchService（双路召回 + 权限前置过滤 + RRF 融合 + gte-rerank 重排）
+       -> MCP Tool Adapter（启用时）
+       -> 远程 MCP Server
   -> 流式回答与引用
 ```
 
@@ -45,15 +48,52 @@ Agent 入口是 `KnowledgeAgentService`，模型客户端通过 `AgentLlmClient`
 | 工具 | 用途 | 参数 |
 | --- | --- | --- |
 | `search_knowledge_base` | 检索当前用户有权限访问的企业知识库 | 必填 `query`，可选 `topK` |
+| `read_knowledge_document` | 重新校验权限后，深入阅读原文与相邻片段 | 必填 `fileMd5`、`startChunk`，可选 `chunkCount`（1～5）、`offset` |
+| `search_web` | 搜索公开资料，返回带链接的摘要 | 必填 `query`，可选 `count`；需启用联网并配置搜索密钥 |
+| `read_web_page` | 读取公开 HTML / 纯文本网页正文 | 必填 `url`，可选 `offset`；需启用联网 |
 
 运行规则：
 
-- 闲聊和通用知识可以直接回答；涉及企业资料、用户文档或需要知识库证据的问题必须检索。
+- 根据当前问题和最近对话，在同一次 Agent 决策中识别任务与所需来源。内部资料优先知识库；涉及最新公开信息、外部资料或内外对比时联网。知识库无结果本身不是联网理由，不用公开资料替代内部依据。
+- 前端支持自动、仅知识库、仅联网三种来源模式。后端按每轮模式过滤工具目录并限制执行；MCP 工具未声明来源，当前仅在自动模式可用。
 - `userId` 由服务端从认证上下文传入，模型不能通过工具参数改变权限范围。
-- `query` 默认最多 500 个字符，`topK` 限制在 1～10，单次 Agent 默认最多调用工具 3 次。
+- `query` 默认最多 500 个字符，`topK` 限制在 1～10，单次 Agent 默认最多调用工具 8 次，总超时仍为 60 秒。显式配置会覆盖默认值。一个决策中的多个调用按顺序执行并逐个回填结果，超过预算的调用返回预算耗尽错误。
 - 工具结果会限制正文长度，并显式标记为不可信参考数据；文档内容不能覆盖系统规则，也不能诱导模型执行命令。
 - WebSocket 保留 `chunk`、`completion` 消息，并发送 `agent_status` 的 `thinking`、`tool_started`、`tool_finished` 等状态。
-- Agent 失败且尚未输出答案时，可以按 `ai.agent.fallback-enabled` 自动切换到固定的 RAG 流程。
+- 仅知识库模式下，Agent 失败且尚未输出答案时，可以按 `ai.agent.fallback-enabled` 切换到固定 RAG。自动及仅联网模式不做固定 RAG 降级，避免将内部检索当作公开证据；Agent 关闭时需选择仅知识库模式使用固定 RAG。
+- 统一来源包含编号、类型、标题、文档片段或网页 URL、获取时间和证据层级。服务端把可点击的来源列表附入完整答案后持久化，历史会话和重复请求仍能查看来源；完成事件额外带 `sources` 元数据。搜索摘要与已读取网页正文明确区分。
+
+### 知识库深读与联网配置
+
+知识库搜索会返回 `file_md5`、`chunk_id` 和截断标志，模型可据此调用 `read_knowledge_document`。读取使用与双路召回相同的 ACL 前置过滤，按 `chunkId` 升序返回指定范围，不依赖模型提供用户或组织身份。正文受工具结果预算限制；`next_start_chunk`、`next_offset` 支持续读，局部片段不代表全文。
+
+联网默认关闭。首个搜索实现使用 [Brave Search Web API](https://api-dashboard.search.brave.com/api-reference/web/search/get)，只发送模型显式生成的公开查询词；不把整段对话或文档自动提交给搜索提供商。
+
+```yaml
+ai:
+  agent:
+    max-tool-calls: 8
+  web:
+    enabled: ${AI_WEB_ENABLED:false}
+    api-key: ${AI_WEB_API_KEY:}
+    search-url: https://api.search.brave.com/res/v1/web/search
+    timeout: 6s
+    max-results: 5
+    max-response-bytes: 1048576
+    max-page-characters: 4000
+```
+
+启用后，未配置密钥仍可读取用户给出的公开网页，搜索会明确返回未配置错误。网页读取仅支持公开 HTTP(S) 标准端口、HTML 与纯文本，不执行 JavaScript，也不携带用户登录凭据。不支持 PDF 和需要登录的页面。每次连接的 DNS 结果、IP 字面量和每跳重定向目标都检查公开地址；请求有超时、响应体大小和正文长度上限，搜索提供商请求不跟随重定向。
+
+模型提示词要求仅向外发送公开产品、版本和技术问题，禁止发送内部原文、客户信息和凭据；此语义约束依赖模型遵循，不能当作独立的数据脱敏系统。文档与网页内容均作为不可信参考材料处理。
+
+WebSocket 请求兼容原协议，新增可选字段 `sourceMode`，缺省 `auto`：
+
+```json
+{"type":"chat","message":"比较内部方案和最新官方建议","conversationId":"...","requestId":"...","sourceMode":"auto"}
+```
+
+`sourceMode` 只接受 `auto`、`knowledge`、`web`。限制按每轮请求生效，历史对话不会改变本轮工具权限。
 
 相关实现：
 
@@ -66,6 +106,89 @@ agent/model/ToolCall.java
 service/ChatHandler.java
 service/RagFallbackService.java
 ```
+
+### 检索 Query Rewrite
+
+`search_knowledge_base` 在参数校验后，先用当前 LLM 将 query 改写为一条检索查询，再执行带权限过滤的混合检索。改写保留原意、实体和限制条件；仅向模型提供 query，不传入用户身份或授权信息。改写失败、超时或输出无效时使用原 query。固定 RAG fallback 路径不执行此步骤。
+
+```yaml
+ai:
+  agent:
+    query-rewrite-enabled: true
+    query-rewrite-timeout: 2s
+```
+
+改写时间包含在 `tool-timeout` 内，实际等待上限为 `query-rewrite-timeout` 与 `tool-timeout` 一半的较小值，给后续检索预留时间。关闭开关可直接使用工具收到的 query。
+
+### 检索链路：双路召回 + RRF + 重排序
+
+检索不再把关键词分和向量分加权相加，而是拆成互不依赖的三步：
+
+```text
+BM25 路（bool.filter 前置 ACL）┐
+                               ├─ RRF 按排名融合 ─ gte-rerank 精排前 50 ─ 返回 topK
+KNN  路（knn.filter 前置 ACL） ┘
+```
+
+- 两路各自取 `topK × 30` 的召回窗口，互不影响；同一 chunk（`fileMd5 + chunkId`）在两路都命中时在 RRF 中累加分数，这也是 RRF 奖励“多路共识”的方式。
+- RRF 只比较排名（`score = Σ 1/(k + rank)`），因此不需要为两种分数量纲找换算系数；默认等权，权重可配。
+- 重排序只对融合结果的前 50 条候选打分，按重排分返回 `topK`。
+- 降级路径：向量生成失败只走 BM25 路（仍重排）；任一路召回失败或超时只丢该路；重排序超时或失败直接返回 RRF 排序。重排序是增益项，不会成为检索的故障点；任何降级都不会扩大授权范围。
+- 权限过滤在每一路内部前置执行，避免无权限文档先吃掉召回窗口。
+
+```yaml
+ai:
+  retrieval:
+    mode: rrf               # rrf | legacy（legacy 仅用于回滚旧实现）
+    recall-multiplier: 30   # 每路窗口 = topK × 30
+    max-top-k: 50           # 入参 topK 上限，避免窗口被放大
+    rrf-rank-constant: 60
+    bm25-weight: 1.0
+    knn-weight: 1.0
+    route-timeout: 2s
+    rerank:
+      enabled: true
+      url: ${RERANK_API_URL}       # gte-rerank 端点，留空则只用 RRF
+      api-key: ${RERANK_API_KEY}   # 留空时复用 embedding.api.key
+      model: gte-rerank
+      top-n: 50                    # 进入重排的候选数
+      timeout: 1500ms
+```
+
+`ai.retrieval.mode=legacy` 会切回旧的“单请求 KNN + BM25 rescore”实现，仅用于灰度对比与线上回滚。
+
+### MCP 只读工具
+
+MCP 默认关闭。启用后，应用在后台连接配置的 Streamable HTTP Server，发现显式白名单中的只读工具，并以 `{serverId}__{alias}` 注册到同一个 `AgentToolRegistry`。MCP 连接失败不会移除本地 `search_knowledge_base`，服务会后台重连。
+
+```yaml
+ai:
+  mcp:
+    enabled: true
+    connect-timeout: 5s
+    request-timeout: 8s
+    refresh-interval: 5m
+    identity-token-ttl: 30s
+    max-list-pages: 20
+    max-tools-per-server: 200
+    max-argument-characters: 16384
+    max-result-characters: 6000
+    allow-insecure-http: false
+    servers:
+      ops:
+        base-url: https://mcp.example.internal
+        endpoint: /mcp
+        service-token: ${OPS_MCP_SERVICE_TOKEN}
+        identity-signing-key: ${OPS_MCP_IDENTITY_SIGNING_KEY}
+        read-only-tools:
+          - remote-name: lookup_metrics
+            alias: lookup_metrics
+            description-override: 查询只读业务指标
+```
+
+`identity-signing-key` 是每个 MCP Server 独立的 Base64 编码 HMAC 密钥，解码后至少 32 字节。yeRAG 为每次工具调用签发短期用户令牌并放入 `X-YeRAG-User-Token` 请求头；MCP Server 必须验签并根据 `sub` 重新查询用户权限。该身份不会加入模型可控的工具参数。生产配置只应通过部署环境注入密钥和 service token，且默认只允许 HTTPS。
+
+首版只转发文本和结构化 JSON 结果，不支持图片、音频、嵌入资源、STDIO、写操作或人工确认流程。远程结果会被裁剪并按不可信数据回填模型。
 
 ## Memory：会话上下文与用户长期记忆
 
@@ -128,6 +251,7 @@ GET  /api/v1/memory/documents
 - Apache Kafka 3.2、MinIO 8.5.12、Apache Tika 2.9.1
 - DeepSeek 或其他 OpenAI-compatible Chat Completions 服务
 - Embedding API（地址、模型和向量维度由配置指定）
+- 重排序 API（gte-rerank 兼容的文本重排服务，可选；未配置时只用 RRF）
 
 ### 前端
 
@@ -140,7 +264,7 @@ GET  /api/v1/memory/documents
 ```text
 src/main/java/com/yizhaoqi/smartpai/
 ├── agent/          # Agent loop、tool registry、tool call 模型
-├── client/         # LLM 与 Embedding 客户端
+├── client/         # LLM、Embedding 与重排序客户端
 ├── config/         # AI、认证、ES、Kafka、MinIO、WebSocket 配置
 ├── consumer/       # Kafka 文档处理消费者
 ├── controller/     # REST API
@@ -148,8 +272,8 @@ src/main/java/com/yizhaoqi/smartpai/
 ├── memory/         # 会话、上下文、长期记忆与 worker
 ├── model/          # JPA 领域模型
 ├── repository/     # 数据访问
-├── service/        # 上传、解析、检索、RAG fallback 等业务服务
-└── utils/          # 通用工具
+├── service/        # 上传、解析、双路召回、检索编排、RAG fallback
+└── utils/          # 通用工具（含 RRF 融合）
 
 frontend/src/
 ├── store/modules/chat/       # WebSocket、会话和记忆状态
@@ -222,7 +346,8 @@ pnpm preview
 ## 安全边界
 
 - 知识库搜索必须经过用户、公开文档和组织标签权限过滤。
-- Agent 工具只接收 `query` 和 `topK`；身份、组织和权限由服务端决定。
+- 本地知识库工具只接收 `query` 和 `topK`；所有工具的身份、组织和权限均由服务端决定。
+- MCP 只暴露显式白名单中的只读工具，并使用独立短期签名令牌传递当前用户身份。
 - 工具结果、历史记忆和 Markdown section 都按不可信数据注入模型上下文。
 - 长期记忆只接受受控分类和可在用户原文中定位的证据，不接受模型任意创建 key。
 - 生产环境应限制 WebSocket allowed origins，并使用强 JWT secret、真实服务凭据和非默认管理员密码。
