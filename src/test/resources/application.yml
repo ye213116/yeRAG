@@ -66,3 +66,16 @@ ai:
     llm-timeout: 30s
     tool-timeout: 10s
     total-timeout: 60s
+  retrieval:
+    mode: rrf
+    recall-multiplier: 30
+    max-top-k: 50
+    rrf-rank-constant: 60
+    bm25-weight: 1.0
+    knn-weight: 1.0
+    route-timeout: 2s
+    rerank:
+      enabled: true
+      model: gte-rerank
+      top-n: 50
+      timeout: 1500ms
