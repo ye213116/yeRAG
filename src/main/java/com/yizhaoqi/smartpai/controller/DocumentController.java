@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
@@ -207,6 +208,37 @@ public class DocumentController {
         }
     }
     
+    /** Download the exact cited document after rechecking the authenticated user's access. */
+    @GetMapping("/download-by-md5")
+    public ResponseEntity<?> downloadFileByMd5(@RequestParam String fileMd5, Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("code", 401, "message", "请先登录"));
+        }
+        if (!fileMd5.matches("[a-fA-F0-9]{32}")) {
+            return ResponseEntity.badRequest().body(Map.of("code", 400, "message", "文件MD5格式无效"));
+        }
+        try {
+            Optional<FileUpload> accessible = documentService.getAccessibleFiles(authentication.getName(), null)
+                    .stream().filter(file -> fileMd5.equalsIgnoreCase(file.getFileMd5())).findFirst();
+            if (accessible.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("code", 404, "message", "文件不存在或无权限访问"));
+            }
+            FileUpload file = accessible.get();
+            String url = documentService.generateDownloadUrl(file.getFileMd5());
+            if (url == null) {
+                return ResponseEntity.internalServerError()
+                        .body(Map.of("code", 500, "message", "无法生成下载链接"));
+            }
+            return ResponseEntity.ok(Map.of("code", 200, "message", "文件下载链接生成成功", "data", Map.of(
+                    "fileName", file.getFileName(), "downloadUrl", url, "fileSize", file.getTotalSize())));
+        } catch (Exception e) {
+            LogUtils.logBusinessError("DOWNLOAD_FILE_BY_MD5", authentication.getName(), "文件下载失败", e);
+            return ResponseEntity.internalServerError().body(Map.of("code", 500, "message", "文件下载失败"));
+        }
+    }
+
     /**
      * 根据文件名下载文件
      * 
@@ -533,4 +565,4 @@ public class DocumentController {
             return tagId; // 发生错误时返回原tagId
         }
     }
-} 
+}

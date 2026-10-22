@@ -141,6 +141,7 @@ public class DocumentService {
             // 获取用户有效的组织标签（包含层级关系）
             User user = userRepository.findByUsername(userId)
                 .orElseThrow(() -> new RuntimeException("用户不存在: " + userId));
+            String databaseUserId = user.getId().toString();
             
             List<String> userEffectiveTags = orgTagCacheService.getUserEffectiveOrgTags(user.getUsername());
             logger.debug("用户有效组织标签: {}", userEffectiveTags);
@@ -149,11 +150,11 @@ public class DocumentService {
             List<FileUpload> files;
             if (userEffectiveTags.isEmpty()) {
                 // 如果用户没有任何组织标签，只返回自己的文件和公开文件
-                files = fileUploadRepository.findByUserIdOrIsPublicTrue(userId);
+                files = fileUploadRepository.findByUserIdOrIsPublicTrue(databaseUserId);
                 logger.debug("用户无组织标签，仅返回个人和公开文件");
             } else {
                 // 查询用户可访问的所有文件（考虑层级标签）
-                files = fileUploadRepository.findAccessibleFilesWithTags(userId, userEffectiveTags);
+                files = fileUploadRepository.findAccessibleFilesWithTags(databaseUserId, userEffectiveTags);
                 logger.debug("使用有效组织标签查询文件");
             }
             
@@ -368,4 +369,4 @@ public class DocumentService {
             return String.format("%.1f GB", size / (1024.0 * 1024.0 * 1024.0));
         }
     }
-} 
+}
