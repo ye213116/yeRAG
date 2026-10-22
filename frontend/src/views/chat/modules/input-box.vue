@@ -1,6 +1,11 @@
 <script setup lang="ts">
 const chatStore = useChatStore();
-const { input, list, wsStatus, wsData, memoryReady, activeRequestId } = storeToRefs(chatStore);
+const { input, list, wsStatus, wsData, memoryReady, activeRequestId, sourceMode } = storeToRefs(chatStore);
+const sourceOptions = [
+  { label: '自动', value: 'auto' },
+  { label: '仅知识库', value: 'knowledge' },
+  { label: '仅联网', value: 'web' }
+];
 
 const latestMessage = computed(() => {
   return list.value[list.value.length - 1] ?? {};
@@ -29,17 +34,30 @@ watch(wsData, val => {
     return;
   }
   if (data.requestId && data.requestId !== activeRequestId.value) return;
+  if (data.conversationId && data.conversationId !== chatStore.conversationId) return;
   const assistant = list.value[list.value.length - 1];
   if (!assistant || assistant.role !== 'assistant') return;
   if (data.type === 'request_rejected') {
     assistant.status = 'error';
+    assistant.content = data.message;
     return;
+  }
+  if (data.type === 'agent_status') {
+    const toolLabels: Record<string, string> = {
+      search_knowledge_base: '搜索知识库',
+      read_knowledge_document: '阅读知识库原文',
+      search_web: '搜索公开网络',
+      read_web_page: '阅读网页正文'
+    };
+    assistant.agentStatus = toolLabels[data.details?.tool] || data.message;
   }
 
   if (data.type === 'completion' && data.status === 'finished' && assistant.status !== 'error')
     assistant.status = 'finished';
-  if (data.error) assistant.status = 'error';
-  else if (data.chunk) {
+  if (data.error) {
+    assistant.status = 'error';
+    assistant.content = data.error;
+  } else if (data.chunk) {
     assistant.status = 'loading';
     assistant.content += data.chunk;
   }
@@ -70,7 +88,8 @@ const handleSend = async () => {
       type: 'chat',
       message: input.value.message,
       conversationId: chatStore.conversationId,
-      requestId: activeRequestId.value
+      requestId: activeRequestId.value,
+      sourceMode: sourceMode.value
     })
   );
   list.value.push({
@@ -121,6 +140,18 @@ const handShortcut = (e: KeyboardEvent) => {
       class="min-h-10 w-full cursor-text resize-none b-none bg-transparent color-#333 caret-[rgb(var(--primary-color))] outline-none dark:color-#f1f1f1"
       @keydown="handShortcut"
     />
+    <div class="flex items-center gap-2 pb-2">
+      <NText depth="3">信息来源</NText>
+      <NSelect
+        v-model:value="sourceMode"
+        class="w-36"
+        size="small"
+        :options="sourceOptions"
+        :disabled="isSending || chatStore.historyReadOnly"
+        aria-label="信息来源"
+      />
+      <NText v-if="sourceMode === 'auto'" depth="3" class="text-12px">内部资料优先，需要公开或最新信息时联网</NText>
+    </div>
     <div class="flex items-center justify-between pt-2">
       <div class="flex items-center text-18px color-gray-500">
         <NText class="text-14px">连接状态：</NText>

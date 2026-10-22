@@ -9,6 +9,7 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yizhaoqi.smartpai.service.ChatHandler;
+import com.yizhaoqi.smartpai.agent.SourceMode;
 import com.yizhaoqi.smartpai.utils.JwtUtils;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
@@ -82,7 +83,16 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 sendErrorMessage(session, "聊天消息需要 type、message、conversationId 和 requestId");
                 return;
             }
-            chatHandler.processMessage(userId,question,conversationId,requestId,session);
+            final SourceMode sourceMode;
+            try { sourceMode = SourceMode.parse(jsonMessage.get("sourceMode")); }
+            catch (IllegalArgumentException invalid) {
+                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of(
+                        "type", "request_rejected", "requestId", requestId, "conversationId", conversationId,
+                        "message", "sourceMode 必须是 auto、knowledge 或 web"))));
+                return;
+            }
+            if (sourceMode == SourceMode.AUTO) chatHandler.processMessage(userId,question,conversationId,requestId,session);
+            else chatHandler.processMessage(userId,question,conversationId,requestId,sourceMode,session);
             
         } catch (Exception e) {
             logger.error("处理消息出错，用户ID: {}，会话ID: {}，错误: {}", 

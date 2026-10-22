@@ -13,6 +13,7 @@ export const useChatStore = defineStore(SetupStoreId.Chat, () => {
   const sessionOptions = ref<Array<{ label: string; value: string; closed: boolean }>>([]);
   let historyRevision = 0;
   const input = ref<Api.Chat.Input>({ message: '' });
+  const sourceMode = ref<Api.Chat.SourceMode>('auto');
   const list = ref<Api.Chat.Message[]>([]);
 
   async function loadCurrentConversation(fresh = false) {
@@ -115,6 +116,7 @@ export const useChatStore = defineStore(SetupStoreId.Chat, () => {
 
   return {
     input,
+    sourceMode,
     conversationId,
     memoryReady,
     activeRequestId,

@@ -41,7 +41,7 @@ class MemoryChatIntegrationTest {
             java.util.function.Consumer<String> chunk=call.getArgument(3); chunk.accept("降级答案");
             Runnable complete=call.getArgument(6); complete.run(); return reactor.core.Disposables.disposed();
         });
-        fixture.handler.processMessage("1","问题","sid","request",fixture.socket);
+        fixture.handler.processMessage("1","问题","sid","request",SourceMode.KNOWLEDGE,fixture.socket);
         verify(fixture.store,timeout(3000)).complete(fixture.turn,"降级答案");
         verifyNoInteractions(fixture.agent);
     }

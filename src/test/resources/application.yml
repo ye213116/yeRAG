@@ -58,7 +58,7 @@ ai:
   agent:
     enabled: true
     fallback-enabled: true
-    max-tool-calls: 3
+    max-tool-calls: 8
     max-query-length: 500
     default-top-k: 5
     max-top-k: 10
@@ -79,3 +79,5 @@ ai:
       model: gte-rerank
       top-n: 50
       timeout: 1500ms
+  web:
+    enabled: false

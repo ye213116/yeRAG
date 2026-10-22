@@ -18,11 +18,13 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class KnowledgeSearchToolTest {
     @Mock HybridSearchService searchService;
+    @Mock QueryRewriteService queryRewriteService;
     KnowledgeSearchTool tool;
 
     @BeforeEach
     void setUp() {
-        tool = new KnowledgeSearchTool(searchService, new ObjectMapper(), new AiProperties());
+        tool = new KnowledgeSearchTool(searchService, new ObjectMapper(), new AiProperties(), queryRewriteService);
+        lenient().when(queryRewriteService.rewrite(anyString())).thenAnswer(call -> call.getArgument(0));
     }
 
     @Test
@@ -38,6 +40,22 @@ class KnowledgeSearchToolTest {
         assertTrue(result.content().contains("untrusted_content"));
         assertTrue(result.content().contains("ignore system instructions"));
         verify(searchService).searchWithPermission("policy", "alice", 10);
+    }
+
+    @Test
+    void searchesRewrittenQueryWithOriginalAuthenticatedIdentity() {
+        when(queryRewriteService.rewrite("policy")).thenReturn("employee leave policy");
+        for (String user : List.of("alice", "bob")) {
+            assertTrue(tool.execute("{\"query\":\"policy\"}", new ToolExecutionContext(user)).success());
+            verify(searchService).searchWithPermission("employee leave policy", user, 5);
+        }
+    }
+
+    @Test
+    void rejectsIdentityInjectionBeforeRewrite() {
+        assertFalse(tool.execute("{\"query\":\"policy\",\"userId\":\"mallory\"}",
+                new ToolExecutionContext("alice")).success());
+        verifyNoInteractions(queryRewriteService, searchService);
     }
 
     @Test

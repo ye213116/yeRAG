@@ -14,7 +14,7 @@ class AiPropertiesTest {
 
         assertTrue(agent.isEnabled());
         assertTrue(agent.isFallbackEnabled());
-        assertEquals(3, agent.getMaxToolCalls());
+        assertEquals(8, agent.getMaxToolCalls());
         assertEquals(500, agent.getMaxQueryLength());
         assertEquals(5, agent.getDefaultTopK());
         assertEquals(10, agent.getMaxTopK());

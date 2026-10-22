@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yizhaoqi.smartpai.agent.AgentEventListener;
 import com.yizhaoqi.smartpai.agent.AgentRunResult;
 import com.yizhaoqi.smartpai.agent.KnowledgeAgentService;
+import com.yizhaoqi.smartpai.agent.SourceMode;
 import com.yizhaoqi.smartpai.agent.model.AgentMessage;
 import com.yizhaoqi.smartpai.config.AiProperties;
 import org.slf4j.Logger;
@@ -56,6 +57,11 @@ public class ChatHandler {
     }
 
     public void processMessage(String userId, String userMessage, String conversationId, String requestId, WebSocketSession session) {
+        processMessage(userId, userMessage, conversationId, requestId, SourceMode.AUTO, session);
+    }
+
+    public void processMessage(String userId, String userMessage, String conversationId, String requestId,
+                               SourceMode sourceMode, WebSocketSession session) {
         String socketId = session.getId();
         cancelClosedMemoryRuns(Long.parseLong(userId));
         Disposable.Composite group = Disposables.composite();
@@ -91,18 +97,25 @@ public class ChatHandler {
                 final MemoryTypes.Context answerContext = context;
                 AgentEventListener listener = new AgentEventListener() {
                     public void onStatus(String status, String message, Map<String,Object> details) {
-                        if (!group.isDisposed()) sendMemory(session,t,Map.of("type","agent_status","status",status,"message",message));
+                        if (!group.isDisposed()) sendMemory(session,t,Map.of("type","agent_status","status",status,"message",message,"details",details));
                     }
                     public void onChunk(String chunk) {
                         if (group.isDisposed()) return;
                         emitted.set(true); sendMemory(session,t,Map.of("chunk",chunk));
                     }
                 };
-                Mono<AgentRunResult> answer = agentConfig.isEnabled()
-                        ? agentService.run(userId,userMessage,answerContext.messages(),listener)
-                        : memoryFallback(userId,userMessage,answerContext.messages(),listener);
+                Mono<AgentRunResult> answer;
+                if (agentConfig.isEnabled()) {
+                    answer = sourceMode == SourceMode.AUTO
+                            ? agentService.run(userId,userMessage,answerContext.messages(),listener)
+                            : agentService.run(userId,userMessage,answerContext.messages(),sourceMode,listener);
+                } else if (sourceMode == SourceMode.KNOWLEDGE) {
+                    answer = memoryFallback(userId,userMessage,answerContext.messages(),listener);
+                } else {
+                    answer = Mono.error(new IllegalStateException("Agent disabled; choose knowledge-only mode for RAG"));
+                }
                 return answer.onErrorResume(error -> {
-                    if (agentConfig.isEnabled() && agentConfig.isFallbackEnabled() && !emitted.get())
+                    if (sourceMode == SourceMode.KNOWLEDGE && agentConfig.isEnabled() && agentConfig.isFallbackEnabled() && !emitted.get())
                         return memoryFallback(userId,userMessage,answerContext.messages(),listener);
                     return Mono.error(error);
                 }).timeout(agentConfig.getTotalTimeout());
@@ -117,14 +130,16 @@ public class ChatHandler {
                 try {
                     if (!group.isDisposed() && memoryStore.complete(t,result.answer())) {
                         sessionReferenceMappings.put(socketId,result.references());
-                        sendMemory(session,t,Map.of("type","completion","status","finished"));
+                        sendMemory(session,t,Map.of("type","completion","status","finished","sources",result.sources()));
                     } else if (!group.isDisposed()) sendMemory(session,t,Map.of("type","error","error","本轮未能保存完整回答"));
                 } catch (Exception failedSave) { sendMemory(session,t,Map.of("error","回答保存失败，请勿重复发送同一问题；本轮未确认持久化")); }
             }, error -> {
                 Turn t=turnRef.get();
                 if (t!=null) {
                     try { memoryStore.cancel(t,"FAILED"); } catch (Exception ignored) { logger.warn("Cannot mark failed memory turn={}",t.id()); }
-                    sendMemory(session,t,Map.of("error","本轮未完成，可能是上下文过长或服务暂不可用","type","error"));
+                    sendMemory(session,t,Map.of("error",sourceMode == SourceMode.KNOWLEDGE
+                            ? "本轮未完成，可能是上下文过长或服务暂不可用"
+                            : "本轮未完成，Agent 服务暂不可用；如只需内部资料，可选择仅知识库重试", "type","error"));
                 } else sendJson(session,Map.of("type","request_rejected","requestId",requestId,"message",
                         error instanceof org.springframework.web.server.ResponseStatusException r ? Objects.toString(r.getReason(),"请求被拒绝") : "无法开始本轮问答"));
             });

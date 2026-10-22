@@ -1,6 +1,7 @@
 package com.yizhaoqi.smartpai.handler;
 
 import com.yizhaoqi.smartpai.service.ChatHandler;
+import com.yizhaoqi.smartpai.agent.SourceMode;
 import com.yizhaoqi.smartpai.utils.JwtUtils;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.socket.TextMessage;
@@ -35,5 +36,15 @@ class ChatWebSocketHandlerTest {
             {"type":"chat","message":"hello","conversationId":"sid","requestId":"r1"}
             """));
         verify(chat).processMessage("1","hello","sid","r1",socket);
+        handler.handleTextMessage(socket,new TextMessage("""
+            {"type":"chat","message":"latest","conversationId":"sid","requestId":"r2","sourceMode":"web"}
+            """));
+        verify(chat).processMessage("1","latest","sid","r2",SourceMode.WEB,socket);
+        handler.handleTextMessage(socket,new TextMessage("""
+            {"type":"chat","message":"bad","conversationId":"sid","requestId":"r3","sourceMode":"unknown"}
+            """));
+        verify(chat, never()).processMessage(eq("1"),eq("bad"),anyString(),anyString(),any(),any());
+        verify(socket).sendMessage(argThat(message -> message instanceof TextMessage text
+                && text.getPayload().contains("request_rejected") && text.getPayload().contains("r3")));
     }
 }

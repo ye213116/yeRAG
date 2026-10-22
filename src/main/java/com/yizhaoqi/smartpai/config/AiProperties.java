@@ -44,7 +44,9 @@ public class AiProperties {
     public static class Agent {
         private boolean enabled = true;
         private boolean fallbackEnabled = true;
-        private int maxToolCalls = 3;
+        private int maxToolCalls = 8;
+        private boolean queryRewriteEnabled = true;
+        private Duration queryRewriteTimeout = Duration.ofSeconds(2);
         private int maxQueryLength = 500;
         private int defaultTopK = 5;
         private int maxTopK = 10;

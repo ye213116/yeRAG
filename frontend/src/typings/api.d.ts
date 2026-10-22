@@ -168,6 +168,8 @@ declare namespace Api {
   }
 
   namespace Chat {
+    type SourceMode = 'auto' | 'knowledge' | 'web';
+
     interface Input {
       message: string;
       conversationId?: string;
@@ -186,6 +188,7 @@ declare namespace Api {
       content: string;
       status?: 'pending' | 'loading' | 'finished' | 'error';
       timestamp?: string;
+      agentStatus?: string;
     }
 
     interface Token {
