@@ -81,3 +81,14 @@ ai:
       timeout: 1500ms
   web:
     enabled: false
+  mcp:
+    enabled: false
+    connect-timeout: 5s
+    request-timeout: 8s
+    refresh-interval: 5m
+    identity-token-ttl: 30s
+    max-list-pages: 20
+    max-tools-per-server: 200
+    max-argument-characters: 16384
+    max-result-characters: 6000
+    allow-insecure-http: false

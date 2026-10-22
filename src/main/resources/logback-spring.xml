@@ -103,6 +103,8 @@
     <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE"/>
 
     <!-- 第三方库日志级别 -->
+    <!-- SDK diagnostics may contain server instructions or JSON payloads. Use sanitized manager logs. -->
+    <logger name="io.modelcontextprotocol" level="OFF"/>
     <logger name="io.minio" level="WARN"/>
     <logger name="org.apache.kafka" level="WARN"/>
     <logger name="org.elasticsearch" level="WARN"/>
@@ -131,4 +133,4 @@
         <appender-ref ref="FILE"/>
         <appender-ref ref="ERROR_FILE"/>
     </root>
-</configuration> 
+</configuration>
