@@ -46,21 +46,16 @@ public class SearchController {
     @GetMapping("/hybrid")
     public Map<String, Object> hybridSearch(@RequestParam String query,
                                             @RequestParam(defaultValue = "10") int topK,
-                                            @RequestAttribute(value = "userId", required = false) String userId) {
+                                            java.security.Principal principal) {
+        if(principal==null) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED);
+        String userId="name:"+principal.getName();
         LogUtils.PerformanceMonitor monitor = LogUtils.startPerformanceMonitor("HYBRID_SEARCH");
         try {
             LogUtils.logBusiness("HYBRID_SEARCH", userId != null ? userId : "anonymous", 
                     "开始混合检索: query=%s, topK=%d", query, topK);
             
-            List<SearchResult> results;
-            if (userId != null) {
-                // 如果有用户ID，使用带权限的搜索
-                results = hybridSearchService.searchWithPermission(query, userId, topK);
-            } else {
-                // 如果没有用户ID，使用普通搜索（仅公开内容）
-                results = hybridSearchService.search(query, topK);
-            }
-            
+            List<SearchResult> results=hybridSearchService.searchWithPermission(query,userId,topK);
+
             LogUtils.logUserOperation(userId != null ? userId : "anonymous", "HYBRID_SEARCH", 
                     "search_query", "SUCCESS");
             LogUtils.logBusiness("HYBRID_SEARCH", userId != null ? userId : "anonymous", 

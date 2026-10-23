@@ -1,42 +1,40 @@
 package com.yizhaoqi.smartpai.service;
 
-import com.yizhaoqi.smartpai.client.DeepSeekClient;
-import com.yizhaoqi.smartpai.entity.SearchResult;
+import com.yizhaoqi.smartpai.agent.*;
+import com.yizhaoqi.smartpai.agent.model.AgentMessage;
+import com.yizhaoqi.smartpai.rag.*;
+import com.yizhaoqi.smartpai.rag.model.RagTypes.*;
+import com.yizhaoqi.smartpai.config.AiProperties;
 import org.springframework.stereotype.Service;
-
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Consumer;
 import reactor.core.Disposable;
+import reactor.core.publisher.Mono;
+import java.util.*;
+import java.util.function.Consumer;
 
 @Service
 public class RagFallbackService {
-    private final HybridSearchService searchService;
-    private final DeepSeekClient deepSeekClient;
-
-    public RagFallbackService(HybridSearchService searchService, DeepSeekClient deepSeekClient) {
-        this.searchService = searchService;
-        this.deepSeekClient = deepSeekClient;
+    private final RagPipeline pipeline;
+    private final AiProperties config;
+    public RagFallbackService(RagPipeline pipeline,AiProperties config) { this.pipeline=pipeline; this.config=config; }
+    public Mono<AgentRunResult> answer(String user,String question,List<AgentMessage> history,AgentEventListener listener) {
+        return Mono.defer(() -> pipeline.run(pipeline.request(user,question,history,Mode.FIXED_QA,
+            config.getAgent().getDefaultTopK(),0),new RagObserver() {
+                public void progress(String stage) { listener.onStatus("rag_stage",stage,Map.of()); }
+                public void chunk(String text) { listener.onChunk(text); }
+            }).map(result -> {
+                var sources=RagSources.from(result.context(),0);
+                String appendix=sources.isEmpty()?"":"\n\n参考来源：\n"+sources.values().stream().map(SourceReference::markdown).collect(java.util.stream.Collectors.joining("\n"));
+                if(!appendix.isEmpty()) listener.onChunk(appendix);
+                return new AgentRunResult(result.answer()+appendix,result.context().references(),sources);
+            }));
     }
-
-    public Disposable stream(String userId, String userMessage, List<Map<String, String>> history,
-                       Consumer<String> onChunk, Consumer<Map<Integer, String>> onReferences,
-                       Consumer<Throwable> onError, Runnable onComplete) {
-        List<SearchResult> results = searchService.searchWithPermission(userMessage, userId, 5);
-        Map<Integer, String> references = new LinkedHashMap<>();
-        StringBuilder context = new StringBuilder();
-        for (int i = 0; i < results.size(); i++) {
-            SearchResult result = results.get(i);
-            int ref = i + 1;
-            String content = result.getTextContent() == null ? "" : result.getTextContent();
-            if (content.length() > 300) content = content.substring(0, 300) + "…";
-            context.append('[').append(ref).append("] (")
-                    .append(result.getFileName() == null ? "unknown" : result.getFileName())
-                    .append(" | MD5:").append(result.getFileMd5()).append(") ").append(content).append('\n');
-            if (result.getFileMd5() != null) references.put(ref, result.getFileMd5());
-        }
-        onReferences.accept(Map.copyOf(references));
-        return deepSeekClient.streamResponseDisposable(userMessage, context.toString(), history, onChunk, onError, onComplete);
+    public Disposable stream(String user,String question,List<Map<String,String>> history,
+            Consumer<String> onChunk,Consumer<Map<Integer,String>> onReferences,
+            Consumer<Throwable> onError,Runnable onComplete) {
+        List<AgentMessage> messages=history.stream().map(m -> new AgentMessage(m.get("role"),m.get("content"),null,List.of())).toList();
+        return answer(user,question,messages,new AgentEventListener() {
+            public void onStatus(String status,String message,Map<String,Object> details) {}
+            public void onChunk(String text) { onChunk.accept(text); }
+        }).subscribe(result -> onReferences.accept(result.references()),onError,onComplete);
     }
 }

@@ -64,6 +64,8 @@ public class HybridRecallClient {
         executor.shutdownNow();
     }
 
+    protected String indexName() { return INDEX; }
+
     /** 两路召回结果，按各自的排名顺序排列 */
     public record RecallResult(List<SearchResult> bm25, List<SearchResult> knn) {
         public boolean isEmpty() {
@@ -127,7 +129,7 @@ public class HybridRecallClient {
     /** BM25 关键词召回 */
     protected List<SearchResult> bm25Recall(String query, Query acl, int size) throws Exception {
         SearchResponse<EsDocument> response = esClient.search(search -> search
-                .index(INDEX)
+                .index(indexName())
                 .query(queryBuilder -> queryBuilder.bool(bool -> bool
                         .must(must -> must.match(match -> match.field(TEXT_FIELD).query(query)))
                         .filter(acl)))
@@ -139,7 +141,7 @@ public class HybridRecallClient {
     /** KNN 向量召回；权限条件放进 knn.filter 做前置过滤 */
     protected List<SearchResult> knnRecall(String query, List<Float> queryVector, Query acl, int size) throws Exception {
         SearchResponse<EsDocument> response = esClient.search(search -> search
-                .index(INDEX)
+                .index(indexName())
                 .knn(knn -> knn
                         .field(VECTOR_FIELD)
                         .queryVector(queryVector)
@@ -149,6 +151,48 @@ public class HybridRecallClient {
                 .source(source -> source.filter(filter -> filter.excludes(VECTOR_FIELD)))
                 .size(size), EsDocument.class);
         return toResults(response);
+    }
+
+    private List<SearchResult> legacyRecall(String query,List<Float> vector,Query acl,int size) throws Exception {
+        var response=esClient.search(search -> search.index(indexName())
+            .knn(k -> k.field(VECTOR_FIELD).queryVector(vector).k(size).numCandidates(size).filter(acl))
+            .query(q -> q.bool(b -> b.filter(acl).must(m -> m.match(t -> t.field(TEXT_FIELD).query(query)))))
+            .rescore(r -> r.windowSize(size).query(q -> q.queryWeight(0.2).rescoreQueryWeight(1.0)
+                .query(m -> m.match(t -> t.field(TEXT_FIELD).query(query).operator(co.elastic.clients.elasticsearch._types.query_dsl.Operator.And)))))
+            .source(s -> s.filter(f -> f.excludes(VECTOR_FIELD))).size(size),EsDocument.class);
+        return toResults(response);
+    }
+
+    /** Typed cold adapter used by Pipeline; preserves failure versus successful empty recall. */
+    public reactor.core.publisher.Mono<com.yizhaoqi.smartpai.rag.model.RagTypes.RouteResult> recallDetailed(
+            String route,String query,List<Float> vector,Query acl,int size,Duration timeout,
+            java.util.function.Predicate<SearchResult> authorized) {
+        return reactor.core.publisher.Mono.defer(() -> {
+            long started=System.nanoTime();
+            return reactor.core.publisher.Mono.fromCallable(() -> {
+                var hits=switch(route) {
+                    case "bm25" -> bm25Recall(query,acl,size);
+                    case "legacy" -> legacyRecall(query,vector,acl,size);
+                    default -> knnRecall(query,vector,acl,size);
+                };
+                var candidates=new ArrayList<com.yizhaoqi.smartpai.rag.model.RagTypes.Candidate>();
+                for(SearchResult hit:hits) {
+                    if(!authorized.test(hit)) throw new SecurityException("Unauthorized retrieval candidate");
+                    if(hit.getCandidateId()==null || hit.getChunkId()==null) throw new IllegalStateException("Candidate identity missing");
+                    double score=hit.getScore()==null?0:hit.getScore();
+                    if(!Double.isFinite(score)) throw new IllegalStateException("Invalid candidate score");
+                    candidates.add(new com.yizhaoqi.smartpai.rag.model.RagTypes.Candidate(hit.getCandidateId(),hit.getFileMd5(),hit.getChunkId(),
+                        hit.getUserId(),hit.getFileName(),hit.getTextContent(),score,java.util.Map.of(route,score),List.of(hit.getCandidateId())));
+                }
+                return new com.yizhaoqi.smartpai.rag.model.RagTypes.RouteResult(route,
+                    com.yizhaoqi.smartpai.rag.model.RagTypes.Status.SUCCEEDED,candidates,(System.nanoTime()-started)/1_000_000,null);
+            }).subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic()).timeout(timeout)
+            .onErrorResume(error -> {
+                if(error instanceof SecurityException) return reactor.core.publisher.Mono.error(error);
+                return reactor.core.publisher.Mono.just(new com.yizhaoqi.smartpai.rag.model.RagTypes.RouteResult(route,
+                    com.yizhaoqi.smartpai.rag.model.RagTypes.Status.FAILED,List.of(),(System.nanoTime()-started)/1_000_000,error.getClass().getSimpleName()));
+            });
+        });
     }
 
     private interface Recall {
@@ -191,14 +235,16 @@ public class HybridRecallClient {
             if (source == null) {
                 continue;
             }
-            results.add(new SearchResult(
+            SearchResult result=new SearchResult(
                     source.getFileMd5(),
                     source.getChunkId(),
                     source.getTextContent(),
                     hit.score() == null ? 0d : hit.score(),
                     source.getUserId(),
                     source.getOrgTag(),
-                    source.isPublic()));
+                    source.isPublic());
+            result.setCandidateId(hit.index()+":"+hit.id());
+            results.add(result);
         }
         return results;
     }

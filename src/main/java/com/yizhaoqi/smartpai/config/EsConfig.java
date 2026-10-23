@@ -43,6 +43,8 @@ public class EsConfig {
         // 创建低级客户端
         RestClientBuilder builder = RestClient.builder(new HttpHost(host, port, scheme));
 
+        builder.setRequestConfigCallback(config -> config.setConnectTimeout(2000).setConnectionRequestTimeout(2000).setSocketTimeout(5000));
+
         // 设置基本认证
         if (username != null && !username.isEmpty()) {
             BasicCredentialsProvider credsProvider = new BasicCredentialsProvider();

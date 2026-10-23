@@ -26,7 +26,7 @@ class ChatHandlerAgentTest {
         MemoryContextService context=mock(MemoryContextService.class);
         KnowledgeAgentService agent=mock(KnowledgeAgentService.class);
         RagFallbackService fallback=mock(RagFallbackService.class);
-        Disposable fallbackRun=mock(Disposable.class);
+        Runnable fallbackRun=mock(Runnable.class);
         WebSocketSession socket=mock(WebSocketSession.class);
         MemoryTypes.Turn turn=new MemoryTypes.Turn(1,1,"sid","request","question",null,"RUNNING", Instant.now());
         when(socket.getId()).thenReturn("ws-1");
@@ -35,15 +35,15 @@ class ChatHandlerAgentTest {
         when(context.build(turn)).thenReturn(new MemoryTypes.Context(List.of(),false));
         when(agent.run(anyString(),anyString(),anyList(),eq(SourceMode.KNOWLEDGE),any(AgentEventListener.class)))
                 .thenReturn(Mono.error(new IllegalStateException("unsupported tools")));
-        when(fallback.stream(anyString(),anyString(),anyList(),any(),any(),any(),any()))
-                .thenReturn(fallbackRun);
+        when(fallback.answer(anyString(),anyString(),anyList(),any()))
+                .thenReturn(Mono.<com.yizhaoqi.smartpai.agent.AgentRunResult>never().doOnCancel(fallbackRun));
         ChatHandler handler=new ChatHandler(agent,fallback,new AiProperties(),new ObjectMapper(),store,context);
 
         handler.processMessage("1","question","sid","request",SourceMode.KNOWLEDGE,socket);
-        verify(fallback,timeout(3000)).stream(anyString(),anyString(),anyList(),any(),any(),any(),any());
+        verify(fallback,timeout(3000)).answer(anyString(),anyString(),anyList(),any());
         handler.cancelSession("ws-1");
 
-        verify(fallbackRun,timeout(3000)).dispose();
+        verify(fallbackRun,timeout(3000)).run();
         verify(store,never()).complete(any(),anyString());
     }
 

@@ -24,7 +24,7 @@ class MemoryChatIntegrationTest {
         when(fixture.agent.run(anyString(),anyString(),anyList(),any())).thenReturn(Mono.just(new AgentRunResult("完整答案",Map.of())));
         fixture.handler.processMessage("1","问题","sid","request",fixture.socket);
         verify(fixture.store,timeout(3000)).complete(fixture.turn,"完整答案");
-        verify(fixture.fallback,never()).stream(anyString(),anyString(),anyList(),any(),any(),any(),any());
+        verify(fixture.fallback,never()).answer(anyString(),anyString(),anyList(),any());
     }
     @Test void cancellationMarksTurnAndDoesNotSavePartialAnswer() {
         var fixture=new Fixture();
@@ -37,10 +37,8 @@ class MemoryChatIntegrationTest {
     }
     @Test void disabledAgentFallbackStillUsesMemoryCompletionPath() {
         var fixture=new Fixture(); fixture.ai.getAgent().setEnabled(false);
-        when(fixture.fallback.stream(anyString(),anyString(),anyList(),any(),any(),any(),any())).thenAnswer(call -> {
-            java.util.function.Consumer<String> chunk=call.getArgument(3); chunk.accept("降级答案");
-            Runnable complete=call.getArgument(6); complete.run(); return reactor.core.Disposables.disposed();
-        });
+        when(fixture.fallback.answer(anyString(),anyString(),anyList(),any()))
+            .thenReturn(Mono.just(new AgentRunResult("降级答案",Map.of())));
         fixture.handler.processMessage("1","问题","sid","request",SourceMode.KNOWLEDGE,fixture.socket);
         verify(fixture.store,timeout(3000)).complete(fixture.turn,"降级答案");
         verifyNoInteractions(fixture.agent);

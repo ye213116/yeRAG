@@ -109,6 +109,64 @@ public class HybridSearchService {
         }
     }
 
+    /** Pipeline recall boundary. Reranking belongs to RerankStage; all failures remain typed. */
+    public reactor.core.publisher.Mono<com.yizhaoqi.smartpai.rag.model.RagTypes.RetrievalResult> searchWithPermissionDetailed(
+            String query,String identity,int candidateK,double rankConstant) {
+        return reactor.core.publisher.Mono.defer(() -> {
+            User user=resolveUser(identity);
+            List<String> tags=orgTagCacheService.getUserEffectiveOrgTags(user.getUsername());
+            if(tags==null) return reactor.core.publisher.Mono.error(new SecurityException("Permission scope unavailable"));
+            tags=List.copyOf(tags);
+            String owner=user.getId().toString(); Query acl=HybridRecallClient.aclQuery(owner,tags);
+            final List<String> effectiveTags=tags;
+            java.util.function.Predicate<SearchResult> allowed=hit -> owner.equals(hit.getUserId())
+                || Boolean.TRUE.equals(hit.getIsPublic()) || effectiveTags.contains(hit.getOrgTag());
+            int window=Math.min(10000,Math.max(1,candidateK));
+            if(retrieval.getMode()==RetrievalProperties.Mode.LEGACY) {
+                return reactor.core.publisher.Mono.fromCallable(() -> {
+                    var values=embedToVectorList(query); return values==null?List.<Float>of():values;
+                }).subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic()).timeout(retrieval.getRouteTimeout())
+                    .onErrorReturn(List.of()).flatMap(values -> recallClient.recallDetailed(values.isEmpty()?"bm25":"legacy",query,values,acl,window,retrieval.getRouteTimeout(),allowed)
+                        .map(route -> new com.yizhaoqi.smartpai.rag.model.RagTypes.RetrievalResult(
+                            route.status()==com.yizhaoqi.smartpai.rag.model.RagTypes.Status.FAILED?route.status():
+                            values.isEmpty()?com.yizhaoqi.smartpai.rag.model.RagTypes.Status.DEGRADED:
+                            route.candidates().isEmpty()?com.yizhaoqi.smartpai.rag.model.RagTypes.Status.NO_EVIDENCE:com.yizhaoqi.smartpai.rag.model.RagTypes.Status.SUCCEEDED,
+                            List.of(route),route.candidates()))).map(this::attachDetailedNames);
+            }
+            long vectorStarted=System.nanoTime();
+            var text=recallClient.recallDetailed("bm25",query,null,acl,window,retrieval.getRouteTimeout(),allowed);
+            var vector=reactor.core.publisher.Mono.fromCallable(() -> {
+                List<Float> values=embedToVectorList(query);
+                if(values==null || values.isEmpty()) throw new com.yizhaoqi.smartpai.rag.RagFailure(com.yizhaoqi.smartpai.rag.model.RagTypes.Status.FAILED,"EMBEDDING_UNAVAILABLE");
+                return values;
+            }).subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic())
+                .timeout(retrieval.getRouteTimeout())
+                .flatMap(values -> recallClient.recallDetailed("vector",query,values,acl,window,retrieval.getRouteTimeout(),allowed))
+                .map(route -> new com.yizhaoqi.smartpai.rag.model.RagTypes.RouteResult(route.route(),route.status(),route.candidates(),(System.nanoTime()-vectorStarted)/1_000_000,route.reason()))
+                .onErrorResume(error -> {
+                    if(error instanceof SecurityException) return reactor.core.publisher.Mono.error(error);
+                    return reactor.core.publisher.Mono.just(new com.yizhaoqi.smartpai.rag.model.RagTypes.RouteResult("vector",
+                        com.yizhaoqi.smartpai.rag.model.RagTypes.Status.FAILED,List.of(),(System.nanoTime()-vectorStarted)/1_000_000,error instanceof com.yizhaoqi.smartpai.rag.RagFailure?error.getMessage():error.getClass().getSimpleName()));
+                });
+            return reactor.core.publisher.Mono.zip(text,vector).map(pair ->
+                com.yizhaoqi.smartpai.rag.RankFusion.fuse(List.of(pair.getT1(),pair.getT2()),rankConstant,
+                    Map.of("bm25",retrieval.getBm25Weight(),"vector",retrieval.getKnnWeight())))
+                .map(this::attachDetailedNames);
+        }).subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic());
+    }
+
+    private com.yizhaoqi.smartpai.rag.model.RagTypes.RetrievalResult attachDetailedNames(com.yizhaoqi.smartpai.rag.model.RagTypes.RetrievalResult result) {
+        List<SearchResult> labels=result.candidates().stream().map(c -> new SearchResult(c.fileMd5(),c.chunkIndex(),c.text(),c.score(),c.owner(),null,false)).toList();
+        attachFileNames(labels);
+        Map<OwnerDocument,String> names=new java.util.HashMap<>();
+        for(SearchResult label:labels) if(label.getFileName()!=null) names.put(new OwnerDocument(label.getUserId(),label.getFileMd5()),label.getFileName());
+        java.util.function.Function<com.yizhaoqi.smartpai.rag.model.RagTypes.Candidate,com.yizhaoqi.smartpai.rag.model.RagTypes.Candidate> enrich=c ->
+            new com.yizhaoqi.smartpai.rag.model.RagTypes.Candidate(c.id(),c.fileMd5(),c.chunkIndex(),c.owner(),names.get(new OwnerDocument(c.owner(),c.fileMd5())),c.text(),c.score(),c.routeScores(),c.sources());
+        return new com.yizhaoqi.smartpai.rag.model.RagTypes.RetrievalResult(result.status(),result.routes().stream().map(route ->
+            new com.yizhaoqi.smartpai.rag.model.RagTypes.RouteResult(route.route(),route.status(),route.candidates().stream().map(enrich).toList(),route.elapsedMs(),route.reason())).toList(),
+            result.candidates().stream().map(enrich).toList());
+    }
+
     /** Read a bounded chunk range with the same pre-filter ACL as hybrid retrieval. */
     public List<SearchResult> readDocumentWithPermission(String fileMd5, int startChunk, int chunkCount, String userId) {
         if (fileMd5 == null || !fileMd5.matches("[a-fA-F0-9]{32}") || startChunk < 0
@@ -239,7 +297,7 @@ public class HybridSearchService {
                         .field(VECTOR_FIELD)
                         .queryVector(queryVector)
                         .k(recallK)
-                        .numCandidates(recallK));
+                        .numCandidates(recallK).filter(acl));
                 search.query(queryBuilder -> queryBuilder.bool(bool -> bool
                         .must(must -> must.match(match -> match.field(TEXT_FIELD).query(query)))
                         .filter(acl)));
@@ -448,9 +506,7 @@ public class HybridSearchService {
     /** 获取用户的数据库ID用于权限过滤 */
     private String getUserDbId(String userId) {
         try {
-            Long id = Long.parseLong(userId);
-            resolveUser(userId);
-            return id.toString();
+            return resolveUser(userId).getId().toString();
         } catch (NumberFormatException e) {
             // 非数字时按用户名查找，取数据库ID
             User user = userRepository.findByUsername(userId)
@@ -465,6 +521,12 @@ public class HybridSearchService {
     }
 
     private User resolveUser(String userId) {
+        if(userId==null || userId.isBlank()) throw new SecurityException("Authenticated user required");
+        if(userId.startsWith("name:")) return userRepository.findByUsername(userId.substring(5)).orElseThrow(() -> new SecurityException("Unknown user"));
+        if(userId.startsWith("id:")) {
+            try { return userRepository.findById(Long.parseLong(userId.substring(3))).orElseThrow(() -> new SecurityException("Unknown user")); }
+            catch(NumberFormatException invalid) { throw new SecurityException("Invalid user ID"); }
+        }
         try {
             Long userIdLong = Long.parseLong(userId);
             return userRepository.findById(userIdLong)
@@ -474,6 +536,8 @@ public class HybridSearchService {
                     .orElseThrow(() -> new CustomException("User not found: " + userId, HttpStatus.NOT_FOUND));
         }
     }
+
+    private record OwnerDocument(String owner,String md5) {}
 
     private void attachFileNames(List<SearchResult> results) {
         if (results == null || results.isEmpty()) {
@@ -488,9 +552,10 @@ public class HybridSearchService {
                 return;
             }
             List<FileUpload> uploads = fileUploadRepository.findByFileMd5In(new ArrayList<>(md5Set));
-            Map<String, String> md5ToName = uploads.stream()
-                    .collect(Collectors.toMap(FileUpload::getFileMd5, FileUpload::getFileName, (left, right) -> left));
-            results.forEach(result -> result.setFileName(md5ToName.get(result.getFileMd5())));
+            Map<OwnerDocument,String> names=new java.util.HashMap<>();
+            for(FileUpload upload:uploads) if(upload.getFileName()!=null)
+                names.putIfAbsent(new OwnerDocument(upload.getUserId(),upload.getFileMd5()),upload.getFileName());
+            results.forEach(result -> result.setFileName(names.get(new OwnerDocument(result.getUserId(),result.getFileMd5()))));
         } catch (Exception e) {
             logger.error("补充文件名失败", e);
         }

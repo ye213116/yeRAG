@@ -34,6 +34,9 @@ public class KnowledgeAgentService {
             引用证据时使用工具提供的 [来源#编号]，区分内部资料与公开建议。来源链接由系统在答案末尾补齐，不编造来源编号或链接。证据不足或工具预算用尽时说明限制。
             """;
 
+    private com.yizhaoqi.smartpai.rag.trace.ToolTelemetry telemetry;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void configureTelemetry(com.yizhaoqi.smartpai.rag.trace.ToolTelemetry telemetry) { this.telemetry=telemetry; }
     private final AgentLlmClient llmClient;
     private final AgentToolRegistry registry;
     private final AiProperties.Agent config;
@@ -93,9 +96,14 @@ public class KnowledgeAgentService {
         AgentTool tool = state.tools.find(call.name()).orElse(null);
         if (tool == null) return Mono.just(ToolExecutionResult.error("tool_not_allowed", "tool is not available in this source mode"));
         state.listener.onStatus("tool_started", "正在调用工具", Map.of("tool", call.name()));
-        return Mono.fromCallable(() -> tool.execute(call.arguments(), new ToolExecutionContext(state.userId, state.referenceOffset)))
-                .subscribeOn(Schedulers.boundedElastic()).timeout(config.getToolTimeout())
-                .onErrorReturn(ToolExecutionResult.error("tool_failed", "tool is temporarily unavailable; report missing evidence"));
+        var context=new ToolExecutionContext(state.userId,state.referenceOffset,call.id());
+        java.util.function.Supplier<Mono<ToolExecutionResult>> work=() -> tool.executeAsync(call.arguments(),context);
+        return (telemetry==null?Mono.defer(work):telemetry.observe(call.name(),call.arguments(),context,work)).timeout(config.getToolTimeout())
+                .onErrorResume(error -> {
+                    if(error instanceof SecurityException || error instanceof com.yizhaoqi.smartpai.rag.RagFailure
+                            || error instanceof java.util.concurrent.TimeoutException) return Mono.error(error);
+                    return Mono.just(ToolExecutionResult.error("tool_failed", "tool is temporarily unavailable; report missing evidence"));
+                });
     }
 
     private Mono<AgentRunResult> finish(Run state, String answer) {

@@ -35,6 +35,21 @@ public class ChatHandler {
     private final Map<String, Disposable.Composite> activeRuns = new ConcurrentHashMap<>();
     private final Map<String, Map<Integer, String>> sessionReferenceMappings = new ConcurrentHashMap<>();
     private final Map<String, Turn> memoryTurns = new ConcurrentHashMap<>();
+    private com.yizhaoqi.smartpai.rag.trace.QuestionTelemetry telemetry;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void configureTelemetry(com.yizhaoqi.smartpai.rag.trace.QuestionTelemetry telemetry) { this.telemetry=telemetry; }
+    private Mono<AgentRunResult> observe(String user,String question,String conversation,String request,
+            java.util.function.Supplier<Mono<AgentRunResult>> work) {
+        return telemetry==null?Mono.defer(work).timeout(agentConfig.getTotalTimeout()):telemetry.observe("id:"+user,question,conversation,request,work);
+    }
+    private void persisted(AgentRunResult result,String user,boolean saved) {
+        if(telemetry!=null) telemetry.persisted(result.runId(),"id:"+user,saved);
+    }
+    private boolean mayFallback(Throwable error) {
+        if(error instanceof SecurityException || error instanceof java.util.concurrent.TimeoutException) return false;
+        return !(error instanceof com.yizhaoqi.smartpai.rag.RagFailure failure)
+            || failure.status()==com.yizhaoqi.smartpai.rag.model.RagTypes.Status.FAILED;
+    }
     private final MemoryStore memoryStore;
     private final MemoryContextService memoryContext;
     public void cancelClosedMemoryRuns(long userId) {
@@ -97,28 +112,30 @@ public class ChatHandler {
                 final MemoryTypes.Context answerContext = context;
                 AgentEventListener listener = new AgentEventListener() {
                     public void onStatus(String status, String message, Map<String,Object> details) {
-                        if (!group.isDisposed()) sendMemory(session,t,Map.of("type","agent_status","status",status,"message",message,"details",details));
+                        if (!group.isDisposed() && activeRuns.get(socketId)==group) sendMemory(session,t,Map.of("type","agent_status","status",status,"message",message,"details",details));
                     }
                     public void onChunk(String chunk) {
-                        if (group.isDisposed()) return;
+                        if (group.isDisposed() || activeRuns.get(socketId)!=group) return;
                         emitted.set(true); sendMemory(session,t,Map.of("chunk",chunk));
                     }
                 };
+                return observe(userId,userMessage,t.sessionId(),t.requestId(), () -> {
                 Mono<AgentRunResult> answer;
                 if (agentConfig.isEnabled()) {
                     answer = sourceMode == SourceMode.AUTO
-                            ? agentService.run(userId,userMessage,answerContext.messages(),listener)
-                            : agentService.run(userId,userMessage,answerContext.messages(),sourceMode,listener);
+                            ? Mono.defer(() -> agentService.run(userId,userMessage,answerContext.messages(),listener))
+                            : Mono.defer(() -> agentService.run(userId,userMessage,answerContext.messages(),sourceMode,listener));
                 } else if (sourceMode == SourceMode.KNOWLEDGE) {
                     answer = memoryFallback(userId,userMessage,answerContext.messages(),listener);
                 } else {
                     answer = Mono.error(new IllegalStateException("Agent disabled; choose knowledge-only mode for RAG"));
                 }
                 return answer.onErrorResume(error -> {
-                    if (sourceMode == SourceMode.KNOWLEDGE && agentConfig.isEnabled() && agentConfig.isFallbackEnabled() && !emitted.get())
+                    if (sourceMode == SourceMode.KNOWLEDGE && agentConfig.isEnabled() && agentConfig.isFallbackEnabled() && !emitted.get() && mayFallback(error))
                         return memoryFallback(userId,userMessage,answerContext.messages(),listener);
                     return Mono.error(error);
-                }).timeout(agentConfig.getTotalTimeout());
+                });
+                });
             })
             .publishOn(Schedulers.boundedElastic())
             .doFinally(signal -> {
@@ -128,13 +145,18 @@ public class ChatHandler {
             .subscribe(result -> {
                 Turn t=turnRef.get();
                 try {
-                    if (!group.isDisposed() && memoryStore.complete(t,result.answer())) {
+                    if (!group.isDisposed() && activeRuns.get(socketId)==group && memoryStore.complete(t,result.answer())) {
+                        persisted(result,userId,true);
                         sessionReferenceMappings.put(socketId,result.references());
-                        sendMemory(session,t,Map.of("type","completion","status","finished","sources",result.sources()));
-                    } else if (!group.isDisposed()) sendMemory(session,t,Map.of("type","error","error","本轮未能保存完整回答"));
-                } catch (Exception failedSave) { sendMemory(session,t,Map.of("error","回答保存失败，请勿重复发送同一问题；本轮未确认持久化")); }
+                        sendMemory(session,t,Map.of("type","completion","status","finished","sources",result.sources(),"runId",Objects.toString(result.runId(),"")));
+                    } else {
+                        persisted(result,userId,false);
+                        if(!group.isDisposed() && activeRuns.get(socketId)==group) sendMemory(session,t,Map.of("type","error","error","本轮未能保存完整回答"));
+                    }
+                } catch (Exception failedSave) { persisted(result,userId,false); sendMemory(session,t,Map.of("error","回答保存失败，请勿重复发送同一问题；本轮未确认持久化")); }
             }, error -> {
                 Turn t=turnRef.get();
+                if(group.isDisposed() || activeRuns.get(socketId)!=group) return;
                 if (t!=null) {
                     try { memoryStore.cancel(t,"FAILED"); } catch (Exception ignored) { logger.warn("Cannot mark failed memory turn={}",t.id()); }
                     sendMemory(session,t,Map.of("error",sourceMode == SourceMode.KNOWLEDGE
@@ -147,15 +169,7 @@ public class ChatHandler {
     }
 
     private Mono<AgentRunResult> memoryFallback(String user, String question, List<AgentMessage> history, AgentEventListener listener) {
-        return Mono.<AgentRunResult>create(sink -> {
-            StringBuilder answer = new StringBuilder();
-            Map<Integer,String> references = new HashMap<>();
-            List<Map<String,String>> legacy = history.stream().map(m -> Map.of("role",m.role(),"content",m.content())).toList();
-            Disposable d = fallbackService.stream(user,question,legacy,
-                    chunk -> { answer.append(chunk); listener.onChunk(chunk); },references::putAll,sink::error,
-                    () -> sink.success(new AgentRunResult(answer.toString(),Map.copyOf(references))));
-            sink.onCancel(d);
-        }).subscribeOn(Schedulers.boundedElastic());
+        return Mono.defer(() -> fallbackService.answer(user,question,history,listener));
     }
     private void sendMemory(WebSocketSession session, Turn t, Map<String,?> payload) {
         Map<String,Object> tagged = new HashMap<>(payload);

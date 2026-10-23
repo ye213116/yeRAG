@@ -31,27 +31,41 @@ public class QueryRewriteService {
         this.config = properties.getAgent();
     }
 
+    public record RewriteResult(String original,String query,com.yizhaoqi.smartpai.rag.model.RagTypes.Status status,String reason) {}
+
     public String rewrite(String query) {
-        if (!config.isQueryRewriteEnabled()) return query;
-        // Reserve at least half of the tool budget for actual retrieval.
-        Duration timeout = config.getQueryRewriteTimeout();
-        Duration budget = config.getToolTimeout().dividedBy(2);
-        if (timeout.compareTo(budget) > 0) timeout = budget;
-        if (timeout.isZero() || timeout.isNegative()) return query;
-        try {
-            AgentDecision decision = llm.decide(List.of(AgentMessage.system(PROMPT),
-                    AgentMessage.user(query)), List.of()).block(timeout);
-            if (decision == null || decision.requestsTool() || decision.content() == null) return query;
-            JsonNode result = mapper.readTree(decision.content());
-            if (result == null || !result.isObject() || result.size() != 1 || !result.path("query").isTextual()) {
-                return query;
-            }
-            String rewritten = result.path("query").textValue().trim();
-            return rewritten.isEmpty() || rewritten.length() > config.getMaxQueryLength() ? query : rewritten;
-        } catch (RuntimeException | java.io.IOException e) {
-            // Do not turn cancellation of the whole tool into a fresh retrieval.
-            if (Thread.currentThread().isInterrupted()) throw new IllegalStateException("Query rewrite interrupted", e);
-            return query;
-        }
+        RewriteResult result=rewriteDetailed(query,List.of()).block(config.getToolTimeout());
+        return result==null?query:result.query();
+    }
+
+    public reactor.core.publisher.Mono<RewriteResult> rewriteDetailed(String query,List<AgentMessage> history) {
+        return reactor.core.publisher.Mono.deferContextual(view -> {
+            var skipped=new RewriteResult(query,query,com.yizhaoqi.smartpai.rag.model.RagTypes.Status.SKIPPED,"DISABLED");
+            if(!config.isQueryRewriteEnabled()) return reactor.core.publisher.Mono.just(skipped);
+            Duration timeout=config.getQueryRewriteTimeout();
+            Duration budget=config.getToolTimeout().dividedBy(2);
+            if(timeout.compareTo(budget)>0) timeout=budget;
+            if(timeout.isZero() || timeout.isNegative()) return reactor.core.publisher.Mono.just(skipped);
+            var fallback=new RewriteResult(query,query,com.yizhaoqi.smartpai.rag.model.RagTypes.Status.DEGRADED,"REWRITE_FAILED");
+            List<AgentMessage> messages=new java.util.ArrayList<>(); messages.add(AgentMessage.system(PROMPT));
+            messages.addAll(history); messages.add(AgentMessage.user(query));
+            final Duration effectiveTimeout=timeout;
+            return reactor.core.publisher.Mono.defer(() -> llm.decide(List.copyOf(messages),List.of())).timeout(effectiveTimeout)
+                .map(decision -> {
+                    try {
+                        if(decision.requestsTool() || decision.content()==null) return fallback;
+                        JsonNode result=mapper.readTree(decision.content());
+                        if(result==null || !result.isObject() || result.size()!=1 || !result.path("query").isTextual()) return fallback;
+                        String rewritten=result.path("query").asText().trim();
+                        if(rewritten.isEmpty() || rewritten.length()>config.getMaxQueryLength()) return fallback;
+                        return new RewriteResult(query,rewritten,com.yizhaoqi.smartpai.rag.model.RagTypes.Status.SUCCEEDED,"REWRITTEN");
+                    } catch(java.io.IOException invalid) { return fallback; }
+                }).switchIfEmpty(reactor.core.publisher.Mono.just(fallback)).onErrorResume(error -> {
+                    com.yizhaoqi.smartpai.rag.trace.RunContext runtime=view.getOrDefault(com.yizhaoqi.smartpai.rag.trace.RunContext.KEY,null);
+                    if(runtime!=null) runtime.remaining();
+                    if(error instanceof SecurityException) return reactor.core.publisher.Mono.error(error);
+                    return reactor.core.publisher.Mono.just(fallback);
+                });
+        });
     }
 }

@@ -273,3 +273,13 @@ mysql -u root -p yerag < docs/databases/ddl.sql
 推荐将生产环境的 `SPRING_JPA_HIBERNATE_DDL_AUTO` 设为 `validate` 或 `none`，不要依赖 Hibernate 自动更新生产表结构。`MemoryStartupCheck` 会检查五张 memory 表及摘要字段；缺失时应用会拒绝启动。
 
 该 DDL 面向空数据库，不包含 `DROP TABLE`。已有环境先执行 [升级 SQL](migrations/20260927_durable_short_term_memory.sql)，再部署新版本。旧 `conversations` 表保留在现有数据库中，但聊天不再读写它；旧 Redis 有效会话和摘要由可重试迁移任务导入。
+
+## RAG 运行证据（2026-10-23）
+
+默认 `ai.rag.evidence-backend=local`，不访问这三张表。选择 `minio` 时，已有数据库执行 `migrations/20261023_rag_evidence.sql`（不要重跑完整 DDL），并创建私有 MinIO bucket `rag-evidence`。新环境仍使用完整 DDL。
+
+- `rag_run`：运行 ID、父运行、服务端身份、终态、证据完整状态、过期时间和当前对象指针。owner 明确区分 `name:` 与 `id:`，避免纯数字用户名与数据库 ID 混淆。
+- `rag_stage_run`：每个运行的事件顺序、阶段名、耗时和内容 hash；正文保存在对象中。
+- `rag_artifact`：运行产生的全部对象版本，用于追踪和清理。
+
+先上传不可变 `runId/sha256.json`，再在 SQL 事务中发布索引，避免暴露未上传对象。读取同时检查身份、过期时间和对象 hash。对象上传成功而事务失败会留下不可见孤儿对象，bucket 必须配置生命周期过期规则（至少覆盖配置的保留期，建议保留期加 2 天）。应用按小时删除过期运行的已登记对象，然后删除索引；远端删除失败保留索引以便重试。SQL 和 MinIO 不存在跨系统原子事务，不承诺恰好一次上传。证据故障不会把正常问答改成失败；导出的 INCOMPLETE/RUNNING 运行不参与确定归因。

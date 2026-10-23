@@ -41,6 +41,12 @@ yeRAG 是一个面向企业知识库的 Agentic RAG 应用。它把文档处理�
 
 聊天始终使用统一记忆链路。业务会话、完整回合和滚动摘要以 MySQL 为准；Redis 仅保存有 TTL 的缓存。
 
+## RAG Pipeline 与评测证据
+
+知识库工具和固定 RAG 共用 Query、Retrieve、Rerank、Merge、Assemble 阶段；固定 RAG 继续执行 Generate。问答、工具和模型调用通过运行 ID 关联，保存候选变化、裁剪范围与实际模型请求；completion 附带可查询本人证据的 `runId`。
+
+配置、证据接口、MySQL 迁移和 JSONL 评测入口见 [Pipeline 使用文档](docs/rag-pipeline.md)。可离线运行 [合成评测样例](src/test/resources/rag-eval/README.md)，检查关键条款在哪个阶段丢失。
+
 ## Agent 与 Tool Calling
 
 Agent 入口是 `KnowledgeAgentService`，模型客户端通过 `AgentLlmClient` 抽象接入。当前工具由 `AgentToolRegistry` 注册，内置工具为：
