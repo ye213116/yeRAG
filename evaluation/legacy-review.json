@@ -1,0 +1,66 @@
+{
+  "checkedAt": "2026-10-26",
+  "source": "yeRAG-eval/evaluation",
+  "verification": "HISTORICAL_FILES_ONLY",
+  "liveIndexVerified": false,
+  "originalUploadedFilesVerified": false,
+  "cases": [
+    {
+      "id": "midea-001",
+      "goldChunkIds": [
+        "e0a297a56498133e8bea616a3d9dca27:4"
+      ],
+      "status": "PENDING_ORIGINAL_CORPUS_AND_LIVE_INDEX_CHECK"
+    },
+    {
+      "id": "midea-002",
+      "goldChunkIds": [
+        "e0a297a56498133e8bea616a3d9dca27:8"
+      ],
+      "status": "PENDING_ORIGINAL_CORPUS_AND_LIVE_INDEX_CHECK"
+    },
+    {
+      "id": "midea-003",
+      "goldChunkIds": [
+        "e0a297a56498133e8bea616a3d9dca27:10"
+      ],
+      "status": "PENDING_ORIGINAL_CORPUS_AND_LIVE_INDEX_CHECK"
+    },
+    {
+      "id": "midea-004",
+      "goldChunkIds": [
+        "e0a297a56498133e8bea616a3d9dca27:14"
+      ],
+      "status": "PENDING_ORIGINAL_CORPUS_AND_LIVE_INDEX_CHECK"
+    },
+    {
+      "id": "midea-005",
+      "goldChunkIds": [
+        "e0a297a56498133e8bea616a3d9dca27:16"
+      ],
+      "status": "PENDING_ORIGINAL_CORPUS_AND_LIVE_INDEX_CHECK"
+    },
+    {
+      "id": "midea-006",
+      "goldChunkIds": [
+        "e0a297a56498133e8bea616a3d9dca27:36"
+      ],
+      "status": "PENDING_ORIGINAL_CORPUS_AND_LIVE_INDEX_CHECK"
+    }
+  ],
+  "reports": {
+    "300": {
+      "sha256": "8f07547921847b335a108686ede73a0c35cfa4160776257ace6aea789dd1f271",
+      "caseCount": 6
+    },
+    "600": {
+      "sha256": "fd0b2dc18fb3bffc1001716e31f20eefb061de0627ee2a2540bca200aac05f9a",
+      "caseCount": 6
+    },
+    "full": {
+      "sha256": "9671be94d7ef6b55180314969548a2f83d3182af142ecaf1927f65157da74a6f",
+      "caseCount": 6
+    }
+  },
+  "note": "Historical reports are evidence of prior experiments only; no historical score is imported as a current semantic label."
+}

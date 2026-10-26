@@ -5,244 +5,186 @@ import com.fasterxml.jackson.databind.node.*;
 import com.yizhaoqi.smartpai.rag.trace.EvidenceRecorder;
 import java.nio.file.*;
 import java.util.*;
-import java.util.stream.*;
+import static com.yizhaoqi.smartpai.rag.eval.EvaluationArtifacts.*;
 
-/** Offline scoring of frozen runs. Labels are human/test-fixture input, never inferred from an LLM answer. */
+/** Pure offline report: deterministic facts, model opinions and human reviews are separate outputs. */
 public final class EvaluationRunner {
     private final ObjectMapper json=new ObjectMapper();
-    private final Path artifacts;
-    public EvaluationRunner(Path artifacts) { this.artifacts=artifacts.toAbsolutePath(); }
+    private final EvaluationArtifacts artifacts;
+    public EvaluationRunner(Path directory) { artifacts=new EvaluationArtifacts(directory,json); }
     public static void main(String[] args) throws Exception {
-        if(args.length!=3) throw new IllegalArgumentException("Usage: cases.jsonl artifact-directory output-directory");
-        new EvaluationRunner(Path.of(args[1])).run(Path.of(args[0]),Path.of(args[2]));
+        if(args.length<4 || args.length>5) throw new IllegalArgumentException("Usage: dataset-directory preflight.json capture.json output-directory [reviews.jsonl]");
+        Path capture=Path.of(args[2]);
+        new EvaluationRunner(capture.toAbsolutePath().getParent().resolve("artifacts")).run(Path.of(args[0]),Path.of(args[1]),capture,Path.of(args[3]),args.length==5?Path.of(args[4]):null);
     }
-    public void run(Path cases,Path output) throws Exception {
-        List<ObjectNode> rows=new ArrayList<>();
-        for (ObjectNode sample : EvaluationCases.read(cases,json)) rows.add(evaluate(sample));
+    public void run(Path datasetDirectory,Path preflightFile,Path captureFile,Path output,Path reviewsFile) throws Exception {
+        var dataset=EvaluationCases.load(datasetDirectory,json);
+        JsonNode preflight=json.readTree(preflightFile.toFile()),capture=json.readTree(captureFile.toFile());
+        EvaluationPreflight.verify(preflight); EvaluationPreflight.verify(capture);
+        boolean originalLabels=dataset.hash().equals(capture.path("datasetHash").asText());
+        if(!dataset.hash().equals(preflight.path("datasetHash").asText()) || !preflight.path("owner").equals(capture.path("owner"))
+                || !preflight.path("corpusFingerprint").equals(capture.path("corpusFingerprint"))
+                || !preflight.path("corpusVersion").equals(capture.path("corpusVersion"))
+                || (originalLabels && !preflight.path("sha256").equals(capture.path("preflightSha256"))))
+            throw new IllegalArgumentException("Dataset/preflight/capture binding mismatch; revised labels require re-preflight of the same corpus");
+        Map<String,JsonNode> attempts=index(capture.path("cases")),checks=index(preflight.path("cases"));
+        var reviews=new EvaluationReviews(reviewsFile,json); List<ObjectNode> rows=new ArrayList<>();
+        for(ObjectNode sample:dataset.cases()) rows.add(evaluate(sample,checks.get(sample.path("id").asText()),preflight,attempts.get(sample.path("id").asText()),reviews));
+        rows.stream().filter(r -> r.path("eligibility").path("answer").asBoolean() && "correct".equals(r.path("effectiveVerdict").asText())
+                && !r.path("humanReview").has("answer")).sorted(Comparator.comparing(r -> r.path("id").asText())).limit(5)
+            .forEach(r -> { r.put("reviewRequired",true); r.put("fixedPassSample",true); });
         Files.createDirectories(output);
-        Files.write(output.resolve("results.jsonl"),rows.stream().map(JsonNode::toString).toList());
-        ObjectNode summary=json.createObjectNode(); summary.put("total",rows.size());
-        ObjectNode variants=summary.putObject("variants");
-        rows.stream().collect(Collectors.groupingBy(r -> r.path("variant").asText())).forEach((variant,group) -> {
-            ObjectNode metrics=variants.putObject(variant); metrics.put("total",group.size());
-            metrics.put("scored",group.stream().filter(r -> r.path("scored").asBoolean()).count());
-            for(String field:List.of("recall","hit","mrr","ndcg","contextCoverage","answerCorrect","expectedFactsMatch","elapsedMs","degraded","citationPrecision","citationRecall","evidenceSupported","inputTokens","outputTokens","totalTokens","firstAnswerMs","modelElapsedMs")) {
-                var values=group.stream().filter(r -> r.path("scored").asBoolean()).map(r -> r.get(field)).filter(Objects::nonNull).filter(n -> n.isNumber() || n.isBoolean()).mapToDouble(n -> n.isBoolean()?(n.asBoolean()?1:0):n.asDouble()).toArray();
-                if(values.length>0) metrics.put("mean_"+field,Arrays.stream(values).average().orElseThrow());
-                metrics.put("count_"+field,values.length);
-            }
-            ObjectNode diagnoses=metrics.putObject("diagnoses");
-            group.stream().collect(Collectors.groupingBy(r -> r.path("diagnosis").asText(),Collectors.counting())).forEach(diagnoses::put);
-            ObjectNode prefixes=metrics.putObject("prefixGroups");
-            group.stream().filter(r -> r.has("bucket")).collect(Collectors.groupingBy(r -> prefix(r.path("caseId").asText())))
-                .forEach((prefix,casesInGroup) -> {
-                    ObjectNode counts=prefixes.putObject(prefix).put("total",casesInGroup.size());
-                    ObjectNode buckets=counts.putObject("provisionalBuckets");
-                    casesInGroup.stream().collect(Collectors.groupingBy(r -> r.path("bucket").asText(),Collectors.counting())).forEach(buckets::put);
-                    counts.put("retrievalHitCount",casesInGroup.stream().filter(r -> r.path("phraseRetrieval").path("hitAtK").asBoolean()).count());
-                    counts.put("judgeReviewedCount",casesInGroup.stream().filter(r -> r.path("answerCorrect").isBoolean()).count());
-                });
-        });
+        Files.write(output.resolve("results.jsonl"),rows.stream().map(JsonNode::toString).toList(),StandardOpenOption.CREATE_NEW);
+        ObjectNode summary=summarize(rows); summary.put("datasetHash",dataset.hash()).put("captureDatasetHash",capture.path("datasetHash").asText())
+            .put("corpusFingerprint",preflight.path("corpusFingerprint").asText());
         json.writerWithDefaultPrettyPrinter().writeValue(output.resolve("summary.json").toFile(),summary);
+        StringBuilder report=new StringBuilder("# yeRAG 单链路评测\n\n确定性证据、模型判断和人工复核分别保存。指标分母见 summary.json；待人工确认的标注不进入正式指标。\n\n");
+        report.append("总题数：").append(rows.size()).append("；正式检索有效题：").append(summary.path("retrieval").path("count").asInt()).append("；正式答案有效题：").append(summary.path("answers").path("count").asInt()).append("。\n\n");
+        report.append("| 题目 | Top5 覆盖 | 阶段发现 | Judge | 人工标签状态 |\n|---|---|---|---|---|\n");
+        for(JsonNode row:rows) report.append('|').append(row.path("id").asText()).append('|').append(row.path("deterministic").path("top5").path("state").asText("UNAVAILABLE"))
+            .append('|').append(row.path("deterministic").path("findings").toString()).append('|').append(row.path("semantic").path("assessment").path("verdict").asText(row.path("semantic").path("status").asText()))
+            .append('|').append(row.path("humanReview").path("labels").asText()).append("|\n");
+        Files.writeString(output.resolve("report.md"),report);
+        Files.write(output.resolve("review-queue.jsonl"),rows.stream().filter(r -> r.path("reviewRequired").asBoolean()).map(JsonNode::toString).toList());
     }
-    public ObjectNode evaluate(JsonNode sample) {
-        ObjectNode row=json.createObjectNode().put("caseId",sample.path("caseId").asText(sample.path("id").asText()))
-            .put("variant",sample.path("variant").asText("baseline")).put("pipelineRunId",sample.path("pipelineRunId").asText()).put("scored",false);
-        boolean phraseLabels=sample.has("expectedEvidence");
-        var phrases=new PhraseEvidenceEvaluator(json);
-        try { if(phraseLabels) phrases.validate(sample); }
-        catch(IllegalArgumentException invalid) { return row.put("diagnosis","LABELS_INVALID"); }
+    public ObjectNode evaluate(JsonNode sample,JsonNode check,JsonNode preflight,JsonNode attempt,EvaluationReviews reviews) {
+        ObjectNode row=json.createObjectNode().put("id",sample.path("id").asText()).put("type",sample.path("type").asText());
+        String pipelineId=attempt==null?"":attempt.path("pipelineRunId").asText(); row.put("pipelineRunId",pipelineId);
+        ObjectNode deterministic=row.putObject("deterministic"),semantic=row.putObject("semantic").put("status","NOT_RUN");
+        String answer="",context=""; boolean completed=false,available=false;
         try {
-            JsonNode pipeline=read(sample.path("pipelineRunId").asText());
-            if(!Set.of("SUCCEEDED","DEGRADED","NO_EVIDENCE").contains(pipeline.path("status").asText()))
-                return row.put("diagnosis","RUN_"+pipeline.path("status").asText("UNKNOWN"));
-            JsonNode request=event(pipeline,"request");
-            if(sample.hasNonNull("corpusVersion") && !sample.get("corpusVersion").asText().equals(pipeline.path("corpusVersion").asText()))
-                return row.put("diagnosis","CORPUS_VERSION_MISMATCH");
-            JsonNode retrieval=stage(pipeline,"RETRIEVE"), rerank=stage(pipeline,"RERANK"), merge=stage(pipeline,"MERGE"), context=stage(pipeline,"ASSEMBLE");
-            Map<String,Integer> relevance=new LinkedHashMap<>();
-            sample.path("relevance").fields().forEachRemaining(e -> { if(e.getValue().asInt()>0) relevance.put(e.getKey(),e.getValue().asInt()); });
-            if(relevance.isEmpty() && !phraseLabels) return row.put("diagnosis","LABELS_MISSING");
-            int k=sample.path("k").asInt(request.path("topK").asInt(5));
-            if(k<1) throw new IllegalArgumentException("Invalid K");
-            if(phraseLabels && k>request.path("topK").asInt(5)) return row.put("diagnosis","TOP_K_MISMATCH");
-            List<String> recalled=ids(retrieval.path("candidates")), ranked=ids(rerank.path("candidates"));
-            row.put("k",k).put("scored",true).put("elapsedMs",pipeline.path("elapsedMs").asLong())
-                .put("degraded","DEGRADED".equals(pipeline.path("status").asText()));
-            if(!relevance.isEmpty()) {
-                metrics(recalled,relevance,k).fields().forEachRemaining(e -> row.set(e.getKey(),e.getValue()));
-                row.set("rerank",metrics(ranked,relevance,k));
-                ObjectNode routes=row.putObject("routes");
-                for(JsonNode route:retrieval.path("routes")) {
-                    if("SUCCEEDED".equals(route.path("status").asText())) routes.set(route.path("route").asText(),metrics(ids(route.path("candidates")),relevance,k));
-                    else routes.putObject(route.path("route").asText()).put("status",route.path("status").asText());
-                }
+            if(check==null || !"READY".equals(check.path("status").asText())) throw new IllegalStateException("DATASET_INVALID");
+            if(attempt==null) throw new IllegalStateException("NOT_RUN");
+            if(!attempt.path("corpusVerified").asBoolean()) throw new IllegalStateException("CORPUS_OR_PERMISSION_CHANGED");
+            JsonNode pipeline=artifacts.read(pipelineId),request=event(pipeline,"request");
+            if(!"pipeline".equals(pipeline.path("kind").asText()) || !preflight.path("owner").equals(pipeline.path("owner"))
+                    || !preflight.path("corpusVersion").equals(pipeline.path("corpusVersion")) || !sample.path("question").equals(request.path("question"))
+                    || !"FIXED_QA".equals(request.path("mode").asText()) || request.path("topK").asInt()!=5
+                    || !request.path("history").isArray() || !request.path("history").isEmpty())
+                throw new IllegalStateException("PIPELINE_BINDING_MISMATCH");
+            JsonNode top=topFive(pipeline),retrieval=stage(pipeline,"RETRIEVE"),units=check.path("units");
+            if(!retrieval.path("candidates").isArray()) throw new IllegalStateException("RETRIEVAL_UNAVAILABLE");
+            // Detect changed indexed originals rather than silently interpreting them as a miss.
+            for(JsonNode unit:units) for(JsonNode anchor:unit.path("anchors")) for(JsonNode candidate:retrieval.path("candidates"))
+                if(anchor.path("sourceId").equals(candidate.path("id")) && !anchor.path("sourceHash").asText().equals(EvidenceRecorder.hash(candidate.path("text").asText())))
+                    throw new IllegalStateException("CORPUS_CHANGED");
+            deterministic.put("status","AVAILABLE").put("pipelineStatus",pipeline.path("status").asText());
+            deterministic.put("degraded","DEGRADED".equals(pipeline.path("status").asText()) || "DEGRADED".equals(event(pipeline,"RERANK").path("outcome").path("status").asText()));
+            deterministic.set("retrievalPool",EvidencePositions.candidates(json,units,retrieval.path("candidates")));
+            deterministic.set("top5",EvidencePositions.candidates(json,units,top));
+            available=true;
+            JsonNode merged=stage(pipeline,"MERGE"),assembled=stage(pipeline,"ASSEMBLE");
+            ArrayNode findings=deterministic.putArray("findings");
+            losses(findings,units,deterministic.path("retrievalPool"),deterministic.path("top5"),"RERANK_OR_TOP5_WINDOW_LOSS");
+            for(JsonNode id:deterministic.path("retrievalPool").path("missingUnits")) finding(findings,"RETRIEVAL_MISS",id.asText());
+            if(merged.path("passages").isArray()) {
+                deterministic.set("merged",EvidencePositions.passages(json,units,merged.path("passages")));
+                losses(findings,units,deterministic.path("top5"),deterministic.path("merged"),"MERGE_LOSS");
             }
-            if(phraseLabels) row.set("phraseRetrieval",phrases.metrics(sample,rerank.path("candidates"),k));
-            Double mergeCoverage=coverage(sample.path("ranges"),merge.path("passages"));
-            Double contextCoverage=coverage(sample.path("ranges"),context.path("passages"));
-            if(contextCoverage!=null) row.put("contextCoverage",contextCoverage);
-            row.put("budgetDropRate",budgetDropRate(context.path("decisions")));
-            Set<String> required=new HashSet<>();
-            for(JsonNode id:sample.path("requiredIds")) required.add(id.asText());
-            if(required.isEmpty()) for(JsonNode range:sample.path("ranges")) required.add(range.path("sourceId").asText());
-            String diagnosis;
-            if(required.isEmpty()) diagnosis="REQUIRED_LABELS_MISSING";
-            else if(sample.path("queryDrift").asBoolean()) diagnosis="QUERY_DRIFT_REVIEWED";
-            else if(!new HashSet<>(recalled).containsAll(required)) diagnosis="RETRIEVAL_MISS";
-            else if(!new HashSet<>(ranked).containsAll(required)) diagnosis="RERANK_DROP";
-            else if(mergeCoverage!=null && mergeCoverage<1) diagnosis="MERGE_LOSS";
-            else if(contextCoverage!=null && contextCoverage<1) diagnosis="CONTEXT_LOSS";
-            else diagnosis=contextCoverage==null?"RANGE_LABELS_MISSING":"CONTEXT_RETAINED";
-            if(phraseLabels && required.isEmpty()) diagnosis=phrases.diagnosis(sample,retrieval.path("candidates"),rerank.path("candidates"),merge.path("passages"),context.path("passages"),k);
-            boolean verifiedAnswer=false;
-            if(sample.hasNonNull("modelRunId")) {
-                JsonNode model=read(sample.get("modelRunId").asText());
-                if(!"SUCCEEDED".equals(model.path("status").asText())) return row.put("scored",false).put("diagnosis","MODEL_"+model.path("status").asText());
-                if(!model.path("owner").equals(pipeline.path("owner")) || !rootId(model).equals(rootId(pipeline)))
-                    throw new IllegalStateException("Model/pipeline lineage mismatch");
-                JsonNode wire=event(model,"request");
-                event(model,"dispatch");
-                String sent=StreamSupport.stream(wire.path("messages").spliterator(),false).map(m -> m.path("content").asText()).collect(Collectors.joining("\n"));
-                // Tool observations contain escaped JSON, so check the exact observation too.
-                String observation=context.path("observation").asText();
-                boolean seen=!context.path("passages").isEmpty() && ((!context.path("content").asText().isEmpty() && sent.contains(context.path("content").asText())) || (!observation.isEmpty() && sent.contains(observation)));
-                row.put("wireContextConfirmed",seen);
-                JsonNode generation=optionalEvent(model,"generation");
-                row.put("modelElapsedMs",model.path("elapsedMs").asLong());
-                if(generation.path("firstAnswerMs").isNumber()) row.set("firstAnswerMs",generation.get("firstAnswerMs"));
-                JsonNode usage=generation.get("usage");
-                if(usage==null || usage.isNull()) usage=optionalEvent(model,"response").get("usage");
-                row.put("usageStatus",usage==null || usage.isNull()?"UNAVAILABLE":"REPORTED");
-                if(usage!=null && !usage.isNull()) {
-                    for(var mapping:Map.of("prompt_tokens","inputTokens","completion_tokens","outputTokens","total_tokens","totalTokens").entrySet())
-                        if(usage.path(mapping.getKey()).isNumber()) row.set(mapping.getValue(),usage.get(mapping.getKey()));
-                }
-                String answer=generation.path("answer").asText(null);
-                if(answer==null) answer=optionalEvent(model,"response").path("choices").path(0).path("message").path("content").asText("");
-                verifiedAnswer=!answer.isBlank();
-                if(sample.path("expectedFacts").isArray() && !sample.get("expectedFacts").isEmpty()) {
-                    int matches=0; for(JsonNode fact:sample.get("expectedFacts")) if(answer.contains(fact.asText())) matches++;
-                    row.put("expectedFactsMatch",(double)matches/sample.get("expectedFacts").size());
-                }
-                if(sample.path("evidenceSupported").isBoolean()) row.put("evidenceSupported",sample.get("evidenceSupported").asBoolean());
-                Set<Integer> expectedCitations=new HashSet<>();
-                for(JsonNode citation:sample.path("expectedCitations")) expectedCitations.add(citation.asInt());
-                if(!expectedCitations.isEmpty()) {
-                    Set<Integer> actual=new HashSet<>();
-                    var matcher=java.util.regex.Pattern.compile("\\[(?:来源#)?([0-9]+)\\]").matcher(answer);
-                    while(matcher.find()) actual.add(Integer.parseInt(matcher.group(1)));
-                    long correct=actual.stream().filter(expectedCitations::contains).count();
-                    row.put("citationPrecision",actual.isEmpty()?0:(double)correct/actual.size());
-                    row.put("citationRecall",(double)correct/expectedCitations.size());
-                }
-                if(sample.path("answerCorrect").isBoolean()) {
-                    row.put("answerCorrect",sample.get("answerCorrect").asBoolean());
-                    if(diagnosis.equals("CONTEXT_RETAINED") && seen && !sample.get("answerCorrect").asBoolean()) diagnosis="GENERATION_ERROR_REVIEWED";
-                }
-                if(diagnosis.equals("CONTEXT_RETAINED") && !seen) diagnosis="WIRE_CONTEXT_UNCONFIRMED";
-            } else {
-                row.put("wireContextConfirmed",false);
-                JsonNode generated=optionalEvent(pipeline,"GENERATE").path("outcome");
-                verifiedAnswer="NO_EVIDENCE".equals(generated.path("status").asText())
-                    && "FIXED_ABSTENTION".equals(generated.path("reason").asText())
-                    && context.path("passages").isArray() && context.path("passages").isEmpty()
-                    && !generated.path("evidence").path("answer").asText().isBlank();
+            if(assembled.path("passages").isArray()) {
+                context=assembled.path("content").asText();
+                for(JsonNode passage:assembled.path("passages")) if(passage.path("text").asText().isBlank() || !context.contains(passage.path("text").asText()))
+                    throw new IllegalStateException("ASSEMBLED_CONTENT_SOURCE_MISMATCH");
+                deterministic.set("assembled",EvidencePositions.passages(json,units,assembled.path("passages")));
+                deterministic.set("assemblyDecisions",assembled.path("decisions"));
+                losses(findings,units,deterministic.has("merged")?deterministic.path("merged"):deterministic.path("top5"),deterministic.path("assembled"),"ASSEMBLY_LOSS");
             }
-            if(phraseLabels) {
-                if(verifiedAnswer) {
-                    JsonNode verdict=sample.path("judge").path("verdict");
-                    if(!verdict.isMissingNode()) {
-                        if(!Set.of("correct","partial","wrong").contains(verdict.asText())) return row.put("scored",false).put("diagnosis","LABELS_INVALID");
-                        boolean correct="correct".equals(verdict.asText());
-                        if(sample.path("answerCorrect").isBoolean() && sample.get("answerCorrect").asBoolean()!=correct)
-                            return row.put("scored",false).put("diagnosis","LABELS_CONFLICT");
-                        row.put("judgeVerdict",verdict.asText()).put("answerCorrect",correct);
-                    } else if(sample.path("answerCorrect").isBoolean()) row.set("answerCorrect",sample.get("answerCorrect"));
-                    if(diagnosis.equals("CONTEXT_RETAINED") && row.path("wireContextConfirmed").asBoolean()
-                            && row.path("answerCorrect").isBoolean() && !row.get("answerCorrect").asBoolean()) diagnosis="GENERATION_ERROR_REVIEWED";
-                } else row.remove("answerCorrect");
-                phrases.classify(sample,row,request);
+            answer=answer(pipeline);
+            JsonNode generation=event(pipeline,"GENERATE").path("outcome");
+            boolean terminal=Set.of("SUCCEEDED","DEGRADED","NO_EVIDENCE").contains(pipeline.path("status").asText()) && !answer.isBlank();
+            if(attempt.hasNonNull("modelRunId")) {
+                try {
+                    JsonNode model=artifacts.read(attempt.path("modelRunId").asText()),wire=event(model,"request");
+                    if(!pipelineId.equals(model.path("parentRunId").asText()) || !pipeline.path("owner").equals(model.path("owner"))
+                            || !wire.path("stream").asBoolean() || !EvidenceRecorder.hash(wire.toString()).equals(event(model,"dispatch").path("requestSha256").asText())) throw new IllegalStateException("WIRE_BINDING_MISMATCH");
+                    boolean seen=false;
+                    for(JsonNode message:wire.path("messages")) if("user".equals(message.path("role").asText()) && !context.isBlank()
+                            && message.path("content").asText().contains("参考资料：\n"+context+"\n问题："+sample.path("question").asText())) seen=true;
+                    deterministic.put("wireContextConfirmed",seen);
+                    if(seen && deterministic.has("assembled")) deterministic.set("wire",deterministic.get("assembled").deepCopy());
+                    else finding(findings,"WIRE_CONTEXT_UNCONFIRMED","");
+                    completed=terminal && seen && "SUCCEEDED".equals(model.path("status").asText()) && answer.equals(event(model,"generation").path("answer").asText());
+                } catch(Exception wireFailure) { deterministic.put("wireStatus","UNAVAILABLE"); finding(findings,"WIRE_CONTEXT_UNCONFIRMED",""); }
+            } else if(terminal && "FIXED_ABSTENTION".equals(generation.path("reason").asText()) && assembled.path("passages").isArray() && assembled.path("passages").isEmpty()) {
+                deterministic.put("wireStatus","NOT_SENT_FIXED_ABSTENTION"); completed=true;
             }
-            return row.put("diagnosis",diagnosis);
-        } catch(Exception missing) {
-            // Avoid using partially calculated metrics when any required artifact is missing/corrupt.
-            ObjectNode incomplete=json.createObjectNode();
-            incomplete.set("caseId",row.get("caseId")); incomplete.set("variant",row.get("variant"));
-            incomplete.set("pipelineRunId",row.get("pipelineRunId"));
-            return incomplete.put("scored",false).put("diagnosis","EVIDENCE_INCOMPLETE");
+            deterministic.put("generationComplete",completed);
+            if(completed && "acl".equals(sample.path("type").asText())) {
+                ArrayNode leaked=deterministic.putArray("forbiddenQuoteMatches");
+                for(JsonNode quote:sample.path("forbiddenQuotes")) if(!EvidencePositions.locate(answer,quote.asText()).isEmpty()) leaked.add(quote.asText());
+                deterministic.put("aclExactLeakDetected",!leaked.isEmpty());
+            }
+        } catch(Exception failure) {
+            if(!available) { deterministic.removeAll(); deterministic.put("status","UNAVAILABLE").put("reason",safeReason(failure)); }
+            else deterministic.put("downstreamEvidenceStatus","UNAVAILABLE").put("downstreamReason",safeReason(failure));
         }
-    }
-    private static String prefix(String id) {
-        for(String prefix:List.of("cross-doc","conflict","multi","fact","para","neg","acl"))
-            if(id.startsWith(prefix+"-")) return prefix;
-        return "other";
-    }
-    private String rootId(JsonNode run) throws Exception {
-        Set<String> seen=new HashSet<>(); String owner=run.path("owner").asText();
-        while(run.hasNonNull("parentRunId") && !run.path("parentRunId").asText().isBlank()) {
-            if(!seen.add(run.path("runId").asText())) throw new IllegalStateException("Cyclic run lineage");
-            run=read(run.path("parentRunId").asText());
-            if(!owner.equals(run.path("owner").asText())) throw new IllegalStateException("Owner mismatch");
-        }
-        return run.path("runId").asText();
-    }
-    private JsonNode read(String id) throws Exception {
-        UUID.fromString(id);
-        JsonNode document=json.readTree(artifacts.resolve(id+".json").toFile());
-        if(!id.equals(document.path("runId").asText()) || !"COMPLETE".equals(document.path("evidenceStatus").asText())) throw new IllegalStateException("Incomplete evidence");
-        for(JsonNode event:document.path("events")) if(!EvidenceRecorder.hash(event.path("data").toString()).equals(event.path("sha256").asText())) throw new IllegalStateException("Corrupt evidence");
-        return document;
-    }
-    private static JsonNode optionalEvent(JsonNode document,String name) {
-        for(JsonNode event:document.path("events")) if(name.equals(event.path("name").asText())) return event.path("data");
-        return MissingNode.getInstance();
-    }
-    private static JsonNode event(JsonNode document,String name) {
-        JsonNode data=optionalEvent(document,name);
-        if(data.isMissingNode()) throw new IllegalStateException("Missing stage: "+name);
-        return data;
-    }
-    private static JsonNode stage(JsonNode document,String name) {
-        JsonNode stage=event(document,name).path("outcome").path("evidence");
-        if(stage.isMissingNode()) throw new IllegalStateException("Missing outcome");
-        return stage;
-    }
-    private static List<String> ids(JsonNode candidates) {
-        if(!candidates.isArray()) throw new IllegalStateException("Missing candidates");
-        return StreamSupport.stream(candidates.spliterator(),false).map(c -> c.path("id").asText()).distinct().toList();
-    }
-    public ObjectNode metrics(List<String> ranking,Map<String,Integer> relevance,int k) {
-        var selected=ranking.stream().distinct().limit(k).toList();
-        long hits=selected.stream().filter(relevance::containsKey).count(); double reciprocal=0,dcg=0;
-        for(int i=0;i<selected.size();i++) { int grade=relevance.getOrDefault(selected.get(i),0); if(grade>0 && reciprocal==0) reciprocal=1.0/(i+1); dcg+=(Math.pow(2,grade)-1)/log2(i+2); }
-        var ideal=relevance.values().stream().sorted(Comparator.reverseOrder()).limit(k).toList(); double idcg=0;
-        for(int i=0;i<ideal.size();i++) idcg+=(Math.pow(2,ideal.get(i))-1)/log2(i+2);
-        return json.createObjectNode().put("recall",(double)hits/relevance.size()).put("hit",hits>0?1:0).put("mrr",reciprocal).put("ndcg",idcg==0?0:dcg/idcg);
-    }
-    private static double log2(int value) { return Math.log(value)/Math.log(2); }
-    public static Double coverage(JsonNode expected,JsonNode passages) {
-        if(!expected.isArray() || expected.isEmpty()) return null;
-        long total=0,covered=0;
-        for(JsonNode range:expected) {
-            int start=range.path("start").asInt(),end=range.path("end").asInt();
-            if(start<0 || end<=start) throw new IllegalArgumentException("Invalid UTF-16 range");
-            List<int[]> spans=new ArrayList<>();
-            for(JsonNode passage:passages) for(JsonNode source:passage.path("sources"))
-                if(source.path("sourceId").asText().equals(range.path("sourceId").asText())
-                        && (!range.hasNonNull("sourceHash") || range.path("sourceHash").equals(source.path("sourceHash")))) {
-                    int left=Math.max(start,source.path("sourceStart").asInt()),right=Math.min(end,source.path("sourceEnd").asInt());
-                    if(left<right) spans.add(new int[]{left,right});
+        // All model/human processing below is intentionally unable to modify deterministic.
+        if(completed && attempt!=null && attempt.hasNonNull("judgeRunId")) {
+            try {
+                JsonNode judge=artifacts.read(attempt.path("judgeRunId").asText()),request=event(judge,"request");
+                if(!"judge".equals(judge.path("kind").asText()) || !preflight.path("owner").equals(judge.path("owner"))
+                        || !pipelineId.equals(judge.path("parentRunId").asText())
+                        || !sample.path("id").equals(request.path("caseId")) || !EvidenceRecorder.hash(answer).equals(request.path("answerSha256").asText())
+                        || !EvidenceRecorder.hash(context).equals(request.path("contextSha256").asText())) throw new IllegalStateException("JUDGE_BINDING_MISMATCH");
+                semantic.put("runId",judge.path("runId").asText());
+                if(!preflight.path("datasetHash").equals(request.path("datasetHash"))) semantic.put("status","LABEL_VERSION_CHANGED_REJUDGE_REQUIRED");
+                else if(!"SUCCEEDED".equals(judge.path("status").asText())) semantic.put("status","JUDGE_FAILED");
+                else {
+                    JsonNode assessment=event(judge,"assessment"); EvaluationJudge.parse(json,assessment.toString());
+                    semantic.put("status","ASSESSED").set("assessment",assessment);
                 }
-            spans.sort(Comparator.comparingInt(a -> a[0])); int cursor=start;
-            for(int[] span:spans) { covered+=Math.max(0,span[1]-Math.max(cursor,span[0])); cursor=Math.max(cursor,span[1]); }
-            total+=end-start;
+            } catch(Exception failed) { semantic.put("status","JUDGE_EVIDENCE_INVALID"); }
+        } else semantic.put("status",completed?"JUDGE_NOT_RUN":"GENERATION_INCOMPLETE");
+        ObjectNode review=reviews.forCase(preflight.path("datasetHash").asText(),sample.path("id").asText(),pipelineId,EvidenceRecorder.hash(answer));
+        row.set("humanReview",review);
+        boolean labels="APPROVED".equals(review.path("labels").asText());
+        ObjectNode eligibility=row.putObject("eligibility");
+        eligibility.put("retrieval",labels && available && "answerable".equals(sample.path("type").asText()));
+        JsonNode human=review.get("answer");
+        boolean disputed=human!=null && "disputed".equals(human.path("verdict").asText());
+        boolean needsReview=semantic.path("assessment").path("reviewRequired").asBoolean() || deterministic.path("aclExactLeakDetected").asBoolean();
+        eligibility.put("answer",labels && completed && !disputed && ((human!=null) || ("ASSESSED".equals(semantic.path("status").asText()) && !needsReview)));
+        if(!eligibility.path("retrieval").asBoolean()) eligibility.put("retrievalExcludedReason",!labels?"LABELS_"+review.path("labels").asText():!"answerable".equals(sample.path("type").asText())?"NOT_APPLICABLE":deterministic.path("reason").asText("EVIDENCE_UNAVAILABLE"));
+        if(!eligibility.path("answer").asBoolean()) eligibility.put("answerExcludedReason",!labels?"LABELS_"+review.path("labels").asText():!completed?"GENERATION_INCOMPLETE":disputed?"HUMAN_DISPUTE":needsReview?"REQUIRES_HUMAN_REVIEW":semantic.path("status").asText());
+        if(human!=null && !disputed) row.put("effectiveVerdict",human.path("verdict").asText());
+        else if("ASSESSED".equals(semantic.path("status").asText())) row.put("effectiveVerdict",semantic.path("assessment").path("verdict").asText());
+        row.put("reviewRequired",!labels || disputed || needsReview || !"correct".equals(row.path("effectiveVerdict").asText()));
+        return row;
+    }
+    private ObjectNode summarize(List<ObjectNode> rows) {
+        ObjectNode summary=json.createObjectNode().put("total",rows.size());
+        ObjectNode retrieval=summary.putObject("retrieval"),answers=summary.putObject("answers"),states=retrieval.putObject("states");
+        var eligible=rows.stream().filter(r -> r.path("eligibility").path("retrieval").asBoolean()).toList();
+        retrieval.put("count",eligible.size()).put("excludedPositive",rows.stream().filter(r -> "answerable".equals(r.path("type").asText())).count()-eligible.size());
+        if(!eligible.isEmpty()) {
+            retrieval.put("hitAt5",eligible.stream().mapToDouble(r -> r.path("deterministic").path("top5").path("hit").asDouble()).average().orElseThrow());
+            retrieval.put("coverageAt5",eligible.stream().mapToDouble(r -> r.path("deterministic").path("top5").path("coverage").asDouble()).average().orElseThrow());
         }
-        return (double)covered/total;
+        for(String state:List.of("NONE","PARTIAL","FULL")) states.put(state,eligible.stream().filter(r -> state.equals(r.path("deterministic").path("top5").path("state").asText())).count());
+        var judged=rows.stream().filter(r -> r.path("eligibility").path("answer").asBoolean()).toList();
+        answers.put("count",judged.size()).put("excluded",rows.size()-judged.size());
+        for(String verdict:List.of("correct","partial","wrong")) answers.put(verdict,judged.stream().filter(r -> verdict.equals(r.path("effectiveVerdict").asText())).count());
+        ObjectNode negative=summary.putObject("negativeCases");
+        for(String type:List.of("unanswerable","acl")) {
+            var group=rows.stream().filter(r -> type.equals(r.path("type").asText())).toList();
+            negative.putObject(type).put("total",group.size()).put("reviewed",group.stream().filter(r -> r.path("eligibility").path("answer").asBoolean()).count())
+                .put("correct",group.stream().filter(r -> r.path("eligibility").path("answer").asBoolean() && "correct".equals(r.path("effectiveVerdict").asText())).count());
+        }
+        summary.put("pendingOrDisputedLabels",rows.stream().filter(r -> !"APPROVED".equals(r.path("humanReview").path("labels").asText())).count());
+        summary.put("reviewQueue",rows.stream().filter(r -> r.path("reviewRequired").asBoolean()).count());
+        summary.put("degraded",rows.stream().filter(r -> r.path("deterministic").path("degraded").asBoolean()).count());
+        summary.put("aclExactLeaks",rows.stream().filter(r -> r.path("deterministic").path("aclExactLeakDetected").asBoolean()).count());
+        return summary;
     }
-    private static double budgetDropRate(JsonNode decisions) {
-        if(decisions.isEmpty()) return 0;
-        long count=StreamSupport.stream(decisions.spliterator(),false).filter(d -> "TOKEN_BUDGET".equals(d.path("reason").asText()) || "LEGACY_CHAR_LIMIT".equals(d.path("reason").asText())).count();
-        return (double)count/decisions.size();
+    private static Map<String,JsonNode> index(JsonNode rows) {
+        Map<String,JsonNode> result=new HashMap<>();
+        for(JsonNode row:rows) if(result.put(row.path("id").asText(),row)!=null) throw new IllegalArgumentException("Duplicate captured case");
+        return result;
     }
+    private void losses(ArrayNode findings,JsonNode units,JsonNode before,JsonNode after,String reason) {
+        Set<String> present=new HashSet<>(); for(JsonNode id:before.path("coveredUnits")) present.add(id.asText());
+        for(JsonNode id:after.path("missingUnits")) if(present.contains(id.asText())) finding(findings,reason,id.asText());
+    }
+    private void finding(ArrayNode findings,String reason,String unit) { findings.addObject().put("reason",reason).put("unit",unit); }
+    private static String safeReason(Exception error) { return error instanceof IllegalStateException?Objects.toString(error.getMessage(),"EVIDENCE_INVALID"):"EVIDENCE_INVALID"; }
 }

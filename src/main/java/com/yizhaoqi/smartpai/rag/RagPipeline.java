@@ -53,6 +53,13 @@ public class RagPipeline {
                         .doOnNext(outcome -> {
                             if (outcome.status()==Status.DEGRADED) degraded.set(true);
                             evidence.event(stage.key().name(),Map.of("elapsedMs",(System.nanoTime()-started)/1_000_000,"outcome",outcome));
+                            if(stage.key()==StageKey.RERANK) {
+                                String scoreKind=outcome.status()==Status.SUCCEEDED?"RERANK":retrieval.getMode()==com.yizhaoqi.smartpai.config.RetrievalProperties.Mode.LEGACY?"ES":"RRF";
+                                var top=context.state().rerank().candidates().stream().limit(request.topK()).toList();
+                                List<RankedChunk> snapshot=new ArrayList<>();
+                                for(int i=0;i<top.size();i++) snapshot.add(RankedChunk.of(top.get(i),i+1,scoreKind));
+                                evidence.event("TOP_K",Map.of("k",request.topK(),"candidates",snapshot));
+                            }
                             if (outcome.status()==Status.FAILED) throw new RagFailure(Status.FAILED,outcome.reason());
                         })
                         .doOnError(error -> evidence.event(stage.key().name(),Map.of("status",RagFailure.status(error),

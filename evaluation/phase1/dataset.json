@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 2,
+  "datasetVersion": "yerag-phase1-synthetic-v1",
+  "corpusVersion": "yerag-phase1-synthetic-v1",
+  "expectedCount": 50,
+  "annotationsStatus": "DRAFT_REQUIRES_HUMAN_CONFIRMATION",
+  "notice": "AI-authored synthetic fixtures. No claim of human approval or production quality.",
+  "documents": [
+    {
+      "id": "people",
+      "path": "documents/人员制度.txt",
+      "visibility": "public",
+      "orgTag": null,
+      "sha256": "dc464e263d58f7d243f7e8e43024ea0edd90e20b8e8521c324b5dfbb1559800c",
+      "fileMd5": "d7038ec1cec49323f68657f15107068a"
+    },
+    {
+      "id": "travel",
+      "path": "documents/差旅制度.txt",
+      "visibility": "public",
+      "orgTag": null,
+      "sha256": "6d6be823def7b4111427bcf345704e65f486d57963e1cf9dca772217267cc53e",
+      "fileMd5": "29d27c606d743c7cdcf913b2921dd337"
+    },
+    {
+      "id": "product",
+      "path": "documents/产品说明.txt",
+      "visibility": "public",
+      "orgTag": null,
+      "sha256": "659bf52f055f8b4cf06333e9a190b9b4fa7600af35adaa1a6077bbe0c4af30aa",
+      "fileMd5": "7fc3d1311d3e29e6f42e3e8a248ebf66"
+    },
+    {
+      "id": "ops",
+      "path": "documents/运维手册.txt",
+      "visibility": "public",
+      "orgTag": null,
+      "sha256": "8b1f927cc96dea22e210503ebb74f734de17d1ba3560d7d60b86248a8d18f9fb",
+      "fileMd5": "16a187e76f6531b06cb44e1c10b3d20b"
+    },
+    {
+      "id": "support",
+      "path": "documents/客服手册.txt",
+      "visibility": "public",
+      "orgTag": null,
+      "sha256": "51805d4bec604ec267a1c20eb2bfdd8896362edae3ae8a18abacc2048419a98f",
+      "fileMd5": "e2dbc3437eec9cac64608558ee6f74d7"
+    },
+    {
+      "id": "contract",
+      "path": "documents/合同附件.txt",
+      "visibility": "public",
+      "orgTag": null,
+      "sha256": "2944c3557093c567c3c551b76b2f4db27d45cf12985b8b7a2b20471fc1377bad",
+      "fileMd5": "17d60ca58e0f18a02be62a59968f9196"
+    },
+    {
+      "id": "restricted",
+      "path": "documents/受限项目资料.txt",
+      "visibility": "restricted",
+      "orgTag": "EVAL_RESTRICTED",
+      "sha256": "7ab9ecf56bec8345c22107e06a949bd388409a188e80db3aef2f8ce3a2ff387f",
+      "fileMd5": "50436a376a407b2fefe7cc371be603e9"
+    }
+  ]
+}

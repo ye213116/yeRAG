@@ -88,4 +88,36 @@ class HybridSearchPermissionTest {
         assertEquals("own-title",result.candidates().get(0).title());
         assertTrue(result.routes().stream().flatMap(r -> r.candidates().stream()).allMatch(c -> "own-title".equals(c.title())));
     }
+    @Test @SuppressWarnings("unchecked") void corpusScanPaginatesWithSameAclAndPreservesPhysicalHitIdentity() throws Exception {
+        String md5="0123456789abcdef0123456789abcdef";
+        EsDocument d=doc("physical-id","1","other",false); d.setFileMd5(md5);
+        when(es.search(any(Function.class),eq(EsDocument.class))).thenAnswer(call -> {
+            Function<SearchRequest.Builder,ObjectBuilder<SearchRequest>> fn=call.getArgument(0); requests.add(fn.apply(new SearchRequest.Builder()).build());
+            return SearchResponse.of(b -> b.took(1).timedOut(false).scrollId("test-cursor").shards(s -> s.total(1).successful(1).failed(0))
+                .hits(h -> h.hits(co.elastic.clients.elasticsearch.core.search.Hit.of(v -> v.index("knowledge_base").id("physical-id").source(d)))));
+        });
+        when(es.scroll(any(Function.class),eq(EsDocument.class))).thenReturn(ScrollResponse.of(b -> b.took(1).timedOut(false).scrollId("test-cursor")
+            .shards(s -> s.total(1).successful(1).failed(0)).hits(h -> h.hits(List.of()))));
+        var scan=service.scanCorpusWithPermission("id:1",List.of(md5));
+        assertEquals(1,scan.chunks().size()); assertEquals("knowledge_base",scan.chunks().get(0).esIndex()); assertEquals("physical-id",scan.chunks().get(0).esHitId());
+        assertEquals(HybridRecallClient.aclQuery("1",List.of("department")).toString(),requests.get(0).query().bool().filter().get(0).toString());
+        assertTrue(requests.get(0).query().toString().contains(md5));
+        verify(es).scroll(any(Function.class),eq(EsDocument.class)); verify(es).clearScroll(any(Function.class));
+    }
+    @Test @SuppressWarnings("unchecked") void corpusScanRejectsUnauthorizedOrIncompleteResponsesAndClosesCursor() throws Exception {
+        String md5="0123456789abcdef0123456789abcdef";
+        EsDocument hidden=doc("hidden","2","other",false); hidden.setFileMd5(md5);
+        when(es.search(any(Function.class),eq(EsDocument.class))).thenReturn(SearchResponse.of(b -> b.took(1).timedOut(false).scrollId("cursor")
+            .shards(s -> s.total(1).successful(1).failed(0)).hits(h -> h.hits(co.elastic.clients.elasticsearch.core.search.Hit.of(v -> v.index("knowledge_base").id("hidden").source(hidden))))));
+        assertThrows(SecurityException.class,() -> service.scanCorpusWithPermission("id:1",List.of(md5)));
+        verify(es).clearScroll(any(Function.class));
+        when(es.search(any(Function.class),eq(EsDocument.class))).thenReturn(SearchResponse.of(b -> b.took(1).timedOut(true).scrollId("cursor")
+            .shards(s -> s.total(1).successful(1).failed(0)).hits(h -> h.hits(List.of()))));
+        assertThrows(IllegalStateException.class,() -> service.scanCorpusWithPermission("id:1",List.of(md5)));
+    }
+    @Test void corpusScanCannotProceedWithoutPermissionResolution() {
+        when(tags.getUserEffectiveOrgTags("123")).thenReturn(null);
+        assertThrows(SecurityException.class,() -> service.scanCorpusWithPermission("id:1",List.of("0123456789abcdef0123456789abcdef")));
+        assertTrue(requests.isEmpty());
+    }
 }

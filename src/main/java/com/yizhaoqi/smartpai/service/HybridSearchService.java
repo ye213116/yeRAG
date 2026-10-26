@@ -161,10 +161,53 @@ public class HybridSearchService {
         Map<OwnerDocument,String> names=new java.util.HashMap<>();
         for(SearchResult label:labels) if(label.getFileName()!=null) names.put(new OwnerDocument(label.getUserId(),label.getFileMd5()),label.getFileName());
         java.util.function.Function<com.yizhaoqi.smartpai.rag.model.RagTypes.Candidate,com.yizhaoqi.smartpai.rag.model.RagTypes.Candidate> enrich=c ->
-            new com.yizhaoqi.smartpai.rag.model.RagTypes.Candidate(c.id(),c.fileMd5(),c.chunkIndex(),c.owner(),names.get(new OwnerDocument(c.owner(),c.fileMd5())),c.text(),c.score(),c.routeScores(),c.sources());
+            new com.yizhaoqi.smartpai.rag.model.RagTypes.Candidate(c.id(),c.fileMd5(),c.chunkIndex(),c.owner(),names.get(new OwnerDocument(c.owner(),c.fileMd5())),c.text(),c.score(),c.routeScores(),c.sources(),c.esIndex(),c.esHitId());
         return new com.yizhaoqi.smartpai.rag.model.RagTypes.RetrievalResult(result.status(),result.routes().stream().map(route ->
             new com.yizhaoqi.smartpai.rag.model.RagTypes.RouteResult(route.route(),route.status(),route.candidates().stream().map(enrich).toList(),route.elapsedMs(),route.reason())).toList(),
             result.candidates().stream().map(enrich).toList());
+    }
+
+    public record CorpusScan(java.util.List<com.yizhaoqi.smartpai.rag.model.RagTypes.Candidate> chunks,String permissionFingerprint) {}
+
+    /** Trusted offline preflight only: scan selected files, with the same fail-closed route ACL. */
+    public CorpusScan scanCorpusWithPermission(String identity,java.util.List<String> md5s) {
+        if(md5s.isEmpty() || md5s.size()>100 || md5s.stream().anyMatch(v -> !v.matches("[a-fA-F0-9]{32}")))
+            throw new IllegalArgumentException("Bounded corpus MD5 list required");
+        User user=resolveUser(identity);
+        java.util.List<String> tags=orgTagCacheService.getUserEffectiveOrgTags(user.getUsername());
+        if(tags==null) throw new SecurityException("Permission scope unavailable");
+        tags=java.util.List.copyOf(tags);
+        String owner=user.getId().toString(); Query acl=HybridRecallClient.aclQuery(owner,tags);
+        java.util.List<com.yizhaoqi.smartpai.rag.model.RagTypes.Candidate> chunks=new java.util.ArrayList<>();
+        String scroll=null;
+        try {
+            var values=md5s.stream().map(co.elastic.clients.elasticsearch._types.FieldValue::of).toList();
+            SearchResponse<EsDocument> response=esClient.search(s -> s.index(INDEX).size(500).scroll(t -> t.time("1m"))
+                .source(src -> src.filter(f -> f.excludes(VECTOR_FIELD)))
+                .query(q -> q.bool(b -> b.filter(acl).filter(f -> f.terms(t -> t.field("fileMd5").terms(v -> v.value(values)))))),EsDocument.class);
+            while(true) {
+                scroll=response.scrollId();
+                if(response.timedOut() || response.shards().failed().longValue()>0) throw new IllegalStateException("Incomplete corpus search response");
+                for(var hit:response.hits().hits()) {
+                    EsDocument d=hit.source();
+                    if(d==null || d.getChunkId()==null || d.getTextContent()==null) throw new IllegalStateException("Incomplete corpus chunk");
+                    if(!md5s.contains(d.getFileMd5()) || !(owner.equals(d.getUserId()) || d.isPublic() || tags.contains(d.getOrgTag())))
+                        throw new SecurityException("Unauthorized corpus scan result");
+                    chunks.add(new com.yizhaoqi.smartpai.rag.model.RagTypes.Candidate(hit.index()+":"+hit.id(),d.getFileMd5(),d.getChunkId(),d.getUserId(),null,d.getTextContent(),0,java.util.Map.of(),java.util.List.of(),hit.index(),hit.id()));
+                    if(chunks.size()>10000) throw new IllegalStateException("Corpus scan exceeds 10000 chunks");
+                }
+                if(response.hits().hits().isEmpty()) break;
+                if(scroll==null) throw new IllegalStateException("Missing corpus scroll cursor");
+                final String cursor=scroll;
+                var next=esClient.scroll(s -> s.scrollId(cursor).scroll(t -> t.time("1m")),EsDocument.class);
+                response=new SearchResponse.Builder<EsDocument>().took(next.took()).timedOut(next.timedOut()).shards(next.shards()).hits(next.hits()).scrollId(next.scrollId()).build();
+            }
+        } catch(java.io.IOException unavailable) { throw new IllegalStateException("Corpus scan unavailable",unavailable); }
+        finally {
+            if(scroll!=null) try { final String cursor=scroll; esClient.clearScroll(c -> c.scrollId(cursor)); }
+            catch(Exception ignored) { logger.warn("Could not close evaluation scroll"); }
+        }
+        return new CorpusScan(java.util.List.copyOf(chunks),com.yizhaoqi.smartpai.rag.trace.EvidenceRecorder.hash(owner+":"+String.join(",",tags.stream().sorted().toList())));
     }
 
     /** Read a bounded chunk range with the same pre-filter ACL as hybrid retrieval. */

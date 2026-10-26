@@ -57,7 +57,7 @@ class RagPipelineTest {
         assertTrue(first.context().observation().contains("untrusted_content"));
         assertEquals("file",first.context().references().get(1));
         JsonNode trace=store.read(first.runId(),"name:alice");
-        assertEquals(List.of("request","retrievalConfig","QUERY","RETRIEVE","RERANK","MERGE","ASSEMBLE"),
+        assertEquals(List.of("request","retrievalConfig","QUERY","RETRIEVE","RERANK","TOP_K","MERGE","ASSEMBLE"),
             java.util.stream.StreamSupport.stream(trace.path("events").spliterator(),false).map(e -> e.get("name").asText()).toList());
         verifyNoInteractions(llm,reranker);
     }

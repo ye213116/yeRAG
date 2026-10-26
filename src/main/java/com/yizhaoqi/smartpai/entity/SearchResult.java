@@ -5,6 +5,8 @@ import lombok.Data;
 @Data
 public class SearchResult {
     private String candidateId; // index + Elasticsearch hit ID; populated by recall adapters
+    private String esIndex;
+    private String esHitId;
     private String fileMd5;    // 文件指纹
     private Integer chunkId;   // 文本分块序号
     private String textContent; // 文本内容

@@ -10,18 +10,29 @@ public final class RagTypes {
     public enum Mode { RETRIEVE_ONLY, FIXED_QA }
     public record Candidate(String id, String fileMd5, int chunkIndex, String owner, String title,
                             String text, double score, Map<String, Double> routeScores,
-                            List<String> sources) {
+                            List<String> sources, String esIndex, String esHitId) {
         public Candidate {
             Objects.requireNonNull(id); text = Objects.requireNonNullElse(text, "");
             title = Objects.requireNonNullElse(title, "unknown"); owner = Objects.requireNonNullElse(owner, "");
             routeScores = Map.copyOf(routeScores); sources = List.copyOf(sources);
         }
+        public Candidate(String id,String md5,int chunk,String owner,String title,String text,double score,
+                         Map<String,Double> routeScores,List<String> sources) {
+            this(id,md5,chunk,owner,title,text,score,routeScores,sources,null,null);
+        }
         public Candidate scored(double value, Map<String, Double> scores) {
-            return new Candidate(id, fileMd5, chunkIndex, owner, title, text, value, scores, sources);
+            return new Candidate(id, fileMd5, chunkIndex, owner, title, text, value, scores, sources,esIndex,esHitId);
         }
     }
     public record RouteResult(String route, Status status, List<Candidate> candidates, long elapsedMs, String reason) {
         public RouteResult { candidates = List.copyOf(candidates); }
+    }
+    public record RankedChunk(String id,String owner,String fileMd5,int chunkId,String esIndex,String esHitId,
+                              String text,String sourceHash,double score,String scoreKind,int rank) {
+        public static RankedChunk of(Candidate c,int rank,String kind) {
+            return new RankedChunk(c.id(),c.owner(),c.fileMd5(),c.chunkIndex(),c.esIndex(),c.esHitId(),
+                c.text(),com.yizhaoqi.smartpai.rag.trace.EvidenceRecorder.hash(c.text()),c.score(),kind,rank);
+        }
     }
     public record RetrievalResult(Status status, List<RouteResult> routes, List<Candidate> candidates) {
         public RetrievalResult { routes = List.copyOf(routes); candidates = List.copyOf(candidates); }

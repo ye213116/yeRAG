@@ -182,7 +182,7 @@ public class HybridRecallClient {
                     double score=hit.getScore()==null?0:hit.getScore();
                     if(!Double.isFinite(score)) throw new IllegalStateException("Invalid candidate score");
                     candidates.add(new com.yizhaoqi.smartpai.rag.model.RagTypes.Candidate(hit.getCandidateId(),hit.getFileMd5(),hit.getChunkId(),
-                        hit.getUserId(),hit.getFileName(),hit.getTextContent(),score,java.util.Map.of(route,score),List.of(hit.getCandidateId())));
+                        hit.getUserId(),hit.getFileName(),hit.getTextContent(),score,java.util.Map.of(route,score),List.of(hit.getCandidateId()),hit.getEsIndex(),hit.getEsHitId()));
                 }
                 return new com.yizhaoqi.smartpai.rag.model.RagTypes.RouteResult(route,
                     com.yizhaoqi.smartpai.rag.model.RagTypes.Status.SUCCEEDED,candidates,(System.nanoTime()-started)/1_000_000,null);
@@ -244,6 +244,7 @@ public class HybridRecallClient {
                     source.getOrgTag(),
                     source.isPublic());
             result.setCandidateId(hit.index()+":"+hit.id());
+            result.setEsIndex(hit.index()); result.setEsHitId(hit.id());
             results.add(result);
         }
         return results;

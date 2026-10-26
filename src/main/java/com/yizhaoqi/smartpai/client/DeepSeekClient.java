@@ -42,8 +42,23 @@ public class DeepSeekClient implements AgentLlmClient {
     public void configureRag(RagProperties properties,EvidenceRecorder recorder) { this.rag=properties; this.recorder=recorder; }
 
     @Override public Mono<AgentDecision> decide(List<AgentMessage> messages,List<Map<String,Object>> tools) {
+        return decideInternal(messages,tools,null,null);
+    }
+    /** Independent semantic review, sharing transport, completion validation and evidence capture. */
+    public Mono<String> judgeCompletion(List<AgentMessage> messages) {
+        return judgeCompletion(messages,null);
+    }
+    public Mono<String> judgeCompletion(List<AgentMessage> messages,String judgeModel) {
+        return decideInternal(messages,List.of(),0.0,judgeModel).map(decision -> {
+            if(decision.requestsTool()) throw new RagFailure(Status.FAILED,"JUDGE_TOOL_CALL_FORBIDDEN");
+            return decision.content();
+        });
+    }
+    private Mono<AgentDecision> decideInternal(List<AgentMessage> messages,List<Map<String,Object>> tools,Double temperature,String modelOverride) {
         return Mono.deferContextual(view -> {
             Map<String,Object> request=request(messages,false);
+            if(temperature!=null) request.put("temperature",temperature);
+            if(modelOverride!=null && !modelOverride.isBlank()) request.put("model",modelOverride);
             if(!tools.isEmpty()) { request.put("tools",tools); request.put("tool_choice","auto"); }
             var run=start(view,request);
             return Mono.fromRunnable(() -> dispatch(request,run)).then(webClient.post().uri("/chat/completions")

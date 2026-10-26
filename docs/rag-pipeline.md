@@ -1,6 +1,6 @@
 # yeRAG Agent Pipeline 与证据评测
 
-实现工作区：`/home/zyh/projects/yeRAG-agent`，分支 `agent`。基线：`dc1dc0c270394b16b5a5e36f395649ce02ebd38b`。日期：2026-10-23。
+实现工作区：`/home/zyh/projects/yeRAG-agent`，分支 `agent`。基线：`dc1dc0c270394b16b5a5e36f395649ce02ebd38b`。初版日期：2026-10-23；评测更新：2026-10-26。
 
 ## 执行路径
 
@@ -99,60 +99,16 @@ SSE 按事件解析，保留跨网络分片的 JSON。只有有效 finish reason
 
 终态：SUCCEEDED、DEGRADED、NO_EVIDENCE、FAILED、CANCELLED、TIMED_OUT、TRUNCATED。阶段终态和 question 终态含义不同：question 成功表示生成完整答案，不等于检索质量达标，也不等于数据库持久化成功。
 
-## 冻结工件评测
+## 单链路评测：事实、评审与复核分离
 
-不启动应用、不访问模型的合成演示：
+第一阶段每题只调用一次 `RagPipeline.run(FIXED_QA)`，不拆执行入口、不实现相邻块扩展。题集格式、50 题资料、上传/预检、真实运行和离线重算命令统一见 [评测说明](../evaluation/README.md)，设计主文档见 [第一阶段设计](superpowers/specs/2026-10-21-yerag-eval-v1-design.md)。
 
-```bash
-scripts/rag-eval.sh src/test/resources/rag-eval/cases.jsonl src/test/resources/rag-eval/artifacts /tmp/yerag-eval-demo
-```
+程序依据必要证据单元、原文 SHA-256 和 UTF-16 位置，检查候选池、重排后 Top5、合并、组装和实际请求。Hit@5 表示至少命中一个单元，Coverage@5 表示必要单元覆盖比例；NONE/PARTIAL/FULL 区分完整性，负例不计算正例指标。Top5 作为 RERANK 后的 `TOP_K` 事件冻结，保留上传者、文件、块号、独立 ES index/hit ID、原文/哈希、分数类型及名次，不新增阶段。
 
-输出逐题 `results.jsonl` 与按 variant 聚合的 `summary.json`。样例只验证“召回了例外，但旧裁剪把它删掉”的诊断，不证明生产质量提升。
+Judge 通过现有模型客户端的独立请求评估完整答案、遗漏、无依据与矛盾陈述，保留原始响应与模型调用工件；它不定位证据或修改 Hit/Coverage。人工复核采用追加记录，处理标注争议和判断修订；新标注版本重新预检、重新计算，旧 Judge/批准不自动沿用。
 
-每行 JSONL 的字段：
+当前合成题集为待人工确认的草稿；程序会显示观测覆盖，但不把待审核或争议题填成正式零分。真实服务、身份和语料未就绪时，正式 50 题验收必须保持待验证。旧 A/B/C 与 ID 相关度并行评分入口已收敛，旧数据只做一次性模板转换。
 
-| 字段 | 用途 |
-|---|---|
-| caseId、variant | 同一问题的单变量实验标识 |
-| pipelineRunId、modelRunId | 冻结运行；可省略模型运行，此时不能确认真实入模或评分答案 |
-| corpusVersion | 与 manifest 的固定语料版本匹配 |
-| relevance | `{ "索引:ES文档ID": 相关度 }`，用于 Recall/Hit/MRR/nDCG |
-| requiredIds | 必需证据 ID；省略时取 ranges 中的 sourceId，不把所有相关候选都当作必需 |
-| ranges | `{sourceId, sourceHash?, start, end}`，UTF-16 原文坐标，用于检查文字是否保留 |
-| answerCorrect、evidenceSupported | 可选的人工/独立评审标注，不能由字符串命中自动推断 |
-| expectedFacts | 可选的精确子串匹配，仅作辅助信号 |
-| expectedCitations | 可选的预期引用编号集合 |
+## 验证记录
 
-报告包含各路与融合的召回/排序指标、重排后指标、原文覆盖率、预算损失率、引用编号匹配率、延迟与降级率。归因检查 QUERY_DRIFT_REVIEWED → RETRIEVAL_MISS → RERANK_DROP → MERGE_LOSS → CONTEXT_LOSS；只有最终请求确认含证据且有“答案错误”标注，才输出 GENERATION_ERROR_REVIEWED。缺少/损坏工件、跨运行混配、版本不匹配、服务失败单独报告。
-
-这些是定位线索。相关度标注、必需证据范围、评审标注是否可靠，以及不同实验是否使用同一语料，仍由评测操作者保证。此处不接入未经提供的外部评审服务，也不把 usage 换算成未配置的货币成本。
-
-### 调用实际服务的实验
-
-仅在受控本地进程显式启用 `ai.rag.eval.enabled=true` 时，`RagExperimentRunner` 读取 JSONL 并执行 FIXED_QA：
-
-```yaml
-ai:
-  rag:
-    eval:
-      enabled: true
-      cases: /tmp/yerag-eval/input.jsonl
-      output: /tmp/yerag-eval/run-001
-```
-
-输入在上述标注字段外提供 `identity: "id:测试用户ID"`、`question` 和可选 `options: {rewrite, rerank, merge, legacyClipping}`。身份由可信评测操作者指定，绝不作为 HTTP 或模型可覆盖的身份入口。Runner 生成新 UUID、导出 question 与子工件，输出 captured-cases.jsonl 后执行同一离线评分器。模型运行调用真实服务，可能产生调用费用；默认关闭。
-
-真实企业评测集与现有 `yeRAG-eval` 的数据接口未在本工作区提供，本实现交付 JSONL 契约与显式实验入口。未配置真实服务时，只能验证测试替身和合成样例，不能报告真实召回率/答案正确率改善。
-
-
-## 实施验证记录（2026-10-23）
-
-工作区 `yeRAG-agent`，分支 `agent`，HEAD 仍为 `dc1dc0c270394b16b5a5e36f395649ce02ebd38b`，实现为未提交改动。
-
-- `mvn -q test`：本次执行通过。205 个测试，195 通过、10 跳过，失败/错误均为 0。包含 Spring 应用启动、多来源 Agent、Memory、阶段顺序/隔离、双路 ACL 参数与越权防御、同 MD5 不同上传者文件名、legacy ACL、生成完成/断流/截断、总期限、证据授权/大小/过期、MinIO 存储契约及评测。
-- 跳过的 10 项为 9 项 `MemoryDocumentMySqlTest` 和 1 项 `HybridRecallElasticsearchTest`，本次未配置对应真实服务测试环境。前者用 `MEMORY_MYSQL_TEST_URL` 启用；后者用 `RAG_ES_TEST_URL` 和可选 `RAG_ES_TEST_USER` / `RAG_ES_TEST_PASSWORD` 启用，使用随机临时索引并在结束时删除该索引。
-- `DeepSeekTransportTest` 使用本地 HTTP 服务和实际 WebClient/SSE 解析；没有调用真实供应商模型。`MinioEvidenceStoreTest` 使用 H2 执行完整 DDL、实际 SQL 事务和模拟对象服务，不等于真实 MySQL/MinIO 联调。
-- `scripts/rag-eval.sh src/test/resources/rag-eval/cases.jsonl src/test/resources/rag-eval/artifacts /tmp/yerag-agent-eval-demo`：本次执行通过。旧裁剪样例 `CONTEXT_LOSS`、区间覆盖率 0；保留正文样例 `CONTEXT_RETAINED`、覆盖率 1。它们是合成验证，不是实际模型质量结论。
-- `git diff --check`、`bash -n scripts/rag-eval.sh`、完整 DDL 与增量迁移一致性检查：本次执行通过。
-
-尚待部署验证：实际 ES 版本和权限语义、MySQL 并发与 MinIO 网络行为、真实供应商结束协议、配置后的 Token 估计偏差和企业评测质量。没有提交、推送或执行数据库迁移。
+当前实现与验收结果见 [评测说明](../evaluation/README.md#5-验证范围)。2026-10-23 的 Pipeline 初版测试记录不代表本次评测版本已通过真实服务验收。真实 MySQL / ES 测试仍由对应环境变量启用；模拟 ES、H2 或本地 HTTP 提供的测试证据不能替代真实 ES / MySQL / MinIO / 模型联调。

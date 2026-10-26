@@ -1,0 +1,50 @@
+{
+  "checkedAt": "2026-10-26",
+  "workspace": "yeRAG-agent",
+  "branch": "agent",
+  "head": "7f1c7c51e5a47fd0cd07f9c3b10705f13fbea9ae",
+  "changes": "working tree; this task did not commit or migrate databases",
+  "tests": {
+    "command": "mvn -q test",
+    "total": 232,
+    "passed": 222,
+    "failures": 0,
+    "errors": 0,
+    "skipped": [
+      {
+        "suite": "com.yizhaoqi.smartpai.memory.MemoryDocumentMySqlTest",
+        "count": 9
+      },
+      {
+        "suite": "com.yizhaoqi.smartpai.service.HybridRecallElasticsearchTest",
+        "count": 1
+      }
+    ]
+  },
+  "dataset": {
+    "fileValidation": "PASSED",
+    "caseCount": 50,
+    "annotationReview": "PENDING_HUMAN_CONFIRMATION",
+    "sha256": "d7439251f66c39398de8412758692294602496265044ab6465a31d8bf7c9f455"
+  },
+  "simulation": {
+    "pipeline": "real implementation",
+    "es": "test double",
+    "provider": "local HTTP test double",
+    "caseCount": 50,
+    "pipelineRuns": 50,
+    "generations": 50,
+    "judgeCalls": 50,
+    "injectedJudgeFailures": 1,
+    "offlineDeterministicReplay": "50 rows exactly equal",
+    "qualityClaim": false
+  },
+  "liveAcceptance": {
+    "status": "NOT_ACCEPTED",
+    "preflightAttempt": "Stopped before contacting services because AI_RAG_EVAL_IDENTITY was not supplied",
+    "liveIndexVerified": false,
+    "providerVerified": false,
+    "fiftyCaseLiveRun": false
+  },
+  "legacyAudit": "6 legacy cases and 3 historical reports found; current source/index unverified; historical scores not reused"
+}
