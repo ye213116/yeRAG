@@ -15,7 +15,6 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
@@ -100,127 +99,6 @@ public class AdminController {
         }
     }
 
-    /**
-     * 添加知识库文档
-     */
-    @PostMapping("/knowledge/add")
-    public ResponseEntity<?> addKnowledgeDocument(
-            @RequestHeader("Authorization") String token,
-            @RequestParam("file") MultipartFile file,
-            @RequestParam("description") String description) {
-        
-        String adminUsername = jwtUtils.extractUsernameFromToken(token.replace("Bearer ", ""));
-        validateAdmin(adminUsername);
-        
-        try {
-            // 这里应该调用知识库管理服务来处理文档
-            // knowledgeService.addDocument(file, description);
-            
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "文档已成功添加到知识库");
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            LogUtils.logBusinessError("ADMIN_ADD_KNOWLEDGE", adminUsername, "添加知识库文档失败", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "添加文档失败: " + e.getMessage()));
-        }
-    }
-
-    /**
-     * 删除知识库文档
-     */
-    @DeleteMapping("/knowledge/{documentId}")
-    public ResponseEntity<?> deleteKnowledgeDocument(
-            @RequestHeader("Authorization") String token,
-            @PathVariable("documentId") String documentId) {
-        
-        String adminUsername = jwtUtils.extractUsernameFromToken(token.replace("Bearer ", ""));
-        validateAdmin(adminUsername);
-        
-        try {
-            // 这里应该调用知识库管理服务来删除文档
-            // knowledgeService.deleteDocument(documentId);
-            
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "文档已成功从知识库中删除");
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            LogUtils.logBusinessError("ADMIN_DELETE_KNOWLEDGE", adminUsername, "删除知识库文档失败", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "删除文档失败: " + e.getMessage()));
-        }
-    }
-
-    /**
-     * 获取系统状态
-     */
-    @GetMapping("/system/status")
-    public ResponseEntity<?> getSystemStatus(@RequestHeader("Authorization") String token) {
-        String adminUsername = jwtUtils.extractUsernameFromToken(token.replace("Bearer ", ""));
-        validateAdmin(adminUsername);
-        
-        try {
-            // 这里应该调用系统监控服务来获取系统状态
-            // SystemStatus status = monitoringService.getSystemStatus();
-            
-            // 模拟系统状态数据
-            Map<String, Object> status = new HashMap<>();
-            status.put("cpu_usage", "30%");
-            status.put("memory_usage", "45%");
-            status.put("disk_usage", "60%");
-            status.put("active_users", 15);
-            status.put("total_documents", 250);
-            status.put("total_conversations", 1200);
-            
-            return ResponseEntity.ok(Map.of("data", status));
-        } catch (Exception e) {
-            LogUtils.logBusinessError("ADMIN_GET_SYSTEM_STATUS", adminUsername, "获取系统状态失败", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "获取系统状态失败: " + e.getMessage()));
-        }
-    }
-
-    /**
-     * 获取用户活动日志
-     */
-    @GetMapping("/user-activities")
-    public ResponseEntity<?> getUserActivities(
-            @RequestHeader("Authorization") String token,
-            @RequestParam(required = false) String username,
-            @RequestParam(required = false) String start_date,
-            @RequestParam(required = false) String end_date) {
-        
-        String adminUsername = jwtUtils.extractUsernameFromToken(token.replace("Bearer ", ""));
-        validateAdmin(adminUsername);
-        
-        try {
-            // 这里应该调用用户活动监控服务来获取活动日志
-            // List<UserActivity> activities = activityService.getUserActivities(username, startDate, endDate);
-            
-            // 模拟用户活动数据
-            List<Map<String, Object>> activities = List.of(
-                Map.of(
-                    "username", "user1",
-                    "action", "LOGIN",
-                    "timestamp", "2023-03-01T10:15:30",
-                    "ip_address", "192.168.1.100"
-                ),
-                Map.of(
-                    "username", "user2",
-                    "action", "UPLOAD_FILE",
-                    "timestamp", "2023-03-01T11:20:45",
-                    "ip_address", "192.168.1.101"
-                )
-            );
-            
-            return ResponseEntity.ok(Map.of("data", activities));
-        } catch (Exception e) {
-            LogUtils.logBusinessError("ADMIN_GET_USER_ACTIVITIES", adminUsername, "获取用户活动失败", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "获取用户活动失败: " + e.getMessage()));
-        }
-    }
-    
     /**
      * 创建管理员用户
      */

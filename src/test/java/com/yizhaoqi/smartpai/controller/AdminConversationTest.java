@@ -90,6 +90,21 @@ class AdminConversationTest {
         verifyNoInteractions(memory);
     }
 
+    @Test void obsoletePlaceholderEndpointsAreNotPublished() throws Exception {
+        var requests = List.of(
+                get("/api/v1/admin/system/status"),
+                get("/api/v1/admin/user-activities"),
+                org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/v1/admin/knowledge/unused"),
+                org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/api/v1/admin/knowledge/add")
+                        .file(new org.springframework.mock.web.MockMultipartFile("file", "fixture.txt", "text/plain", "fixture".getBytes()))
+                        .param("description", "fixture"));
+        for (var request : requests) {
+            mvc.perform(request.with(user("admin").roles("ADMIN"))
+                            .header("Authorization", "Bearer admin-token"))
+                    .andExpect(status().isNotFound());
+        }
+    }
+
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder history() {
         return get("/api/v1/admin/conversation").header("Authorization", "Bearer admin-token")
                 .param("userid", "2").param("start_date", "2026-10-20").param("end_date", "2026-10-28");
