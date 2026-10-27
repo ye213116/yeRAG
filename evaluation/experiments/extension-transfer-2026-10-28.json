@@ -1,0 +1,14 @@
+{
+  "status": "BUNDLE_READY_NOT_OFFSITE",
+  "file": "/home/zyh/yerag-eval-archive/20261028-extensions-transfer.tar.gz",
+  "bytes": 20554084,
+  "sha256": "1a3b51d5ca1e682b40d82b10503afcc10c2cda96fc39f42c84b40d6c8750fbce",
+  "archiveManifestSha256": "820cc51f120429ff3eab280b60a847f0e97b2f6bcb3cb69e42e97294412e0922",
+  "files": 231,
+  "restore": {
+    "status": "UNPACK_VERIFIED",
+    "files": 231,
+    "archiveManifestSha256": "820cc51f120429ff3eab280b60a847f0e97b2f6bcb3cb69e42e97294412e0922"
+  },
+  "offsiteTransferred": false
+}

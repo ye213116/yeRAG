@@ -85,6 +85,8 @@ before(async () => {
       return;
     }
     if (path === '/api/v1/users/me') {
+      // Let the new token connect before profile loading finishes.
+      if (owner === 'alice') await delay(600);
       send({
         id: owner === 'admin' ? 1 : 2,
         username: owner,

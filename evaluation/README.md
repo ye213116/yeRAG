@@ -631,9 +631,9 @@ python3 scripts/rag-eval-benchmark-smoke.py target/benchmark-sources target/NEW_
   --python /path/to/isolated/python
 ```
 
-50项Python测试在带原生评分依赖的独立环境中全部通过，覆盖缺失查询、TREC分级增益、评分脚本替换拒绝、人工记录绑定、备份恢复及费用缺失值。启用真实MySQL/ES后，后端267项本次全部通过、0跳过（后续权限删除修复另行记录）。
+50项Python测试在带原生评分依赖的独立环境中全部通过，覆盖缺失查询、TREC分级增益、评分脚本替换拒绝、人工记录绑定、备份恢复及费用缺失值。此阶段启用真实MySQL/ES后，后端267项全部通过、0跳过；随后文档删除权限修复的最终验收为272项全部通过、0跳过，详见[最终工程验证](../docs/verification/final-checks-2026-10-28.json)。
 
-新增扩展材料已持久保存至 `/home/zyh/yerag-eval-archive/2026-10-28-extensions`，见 [扩展归档证明](experiments/extension-archive-2026-10-28.json)：包含两次Agent运行、两次完整原生评分运行、一次模型调用前中止的检查器尝试、原始数据包/许可与固定评分脚本、对应源码归档。源码来自 `7862444`，main Java/pom字节指纹与实测 `a851773c...` 完整匹配。仅用归档输入与脚本离线重算6份原生评分，JSON数值逐项一致，未访问模型服务。评分依赖版本已记录，未包装成无依赖的离线Python环境；仍是本机备份，异机目标待提供。
+新增扩展材料已持久保存至 `/home/zyh/yerag-eval-archive/2026-10-28-extensions`，见 [扩展归档证明](experiments/extension-archive-2026-10-28.json)：包含两次Agent运行、两次完整原生评分运行、一次模型调用前中止的检查器尝试、原始数据包/许可与固定评分脚本、对应源码归档。源码来自 `7862444`，main Java/pom字节指纹与实测 `a851773c...` 完整匹配。仅用归档输入与脚本离线重算6份原生评分，JSON数值逐项一致，未访问模型服务。评分依赖版本已记录，未包装成无依赖的离线Python环境；仍是本机备份，异机目标待提供。 扩展材料另已封装为 `/home/zyh/yerag-eval-archive/20261028-extensions-transfer.tar.gz`（20554084字节），独立解包231文件逐项校验通过，见[扩展传输包证明](experiments/extension-transfer-2026-10-28.json)。与原491MB包配套待传输，未宣称已异机备份。
 
 ### 11.7 可核对用量与费用边界
 

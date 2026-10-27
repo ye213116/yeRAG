@@ -28,5 +28,23 @@
     "checks": 10,
     "status": "PASS"
   },
-  "scope": "Focused deletion regression first failed and then passed; real 2-owner shared MinIO lifecycle verified; optional MySQL/ES tests explicitly enabled. No concurrent upload/delete atomicity assertion."
+  "scope": "Focused deletion regression first failed and then passed; real 2-owner shared MinIO lifecycle verified; optional MySQL/ES tests explicitly enabled. No concurrent upload/delete atomicity assertion.",
+  "frontendChecks": {
+    "typecheck": "PASS",
+    "requestCancellationUnitTest": "1/1 PASS",
+    "lint": "0 errors, 18 existing warnings",
+    "build": "PASS",
+    "commands": [
+      "pnpm --dir frontend typecheck",
+      "pnpm --dir frontend test",
+      "pnpm --dir frontend lint",
+      "pnpm --dir frontend build"
+    ]
+  },
+  "additionalAccountSwitchCase": {
+    "delayedUsersMeMs": 600,
+    "result": "PASS",
+    "command": "node --test --test-name-pattern='signing out' frontend/tests/browser/chat.test.mjs",
+    "purpose": "Allow new-token socket to connect while profile loading is delayed; verify account state and chat remain usable"
+  }
 }
