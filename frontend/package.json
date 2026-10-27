@@ -34,6 +34,7 @@
     "preview": "vite preview",
     "release": "sa release",
     "test": "tsx --test tests/*.test.cts",
+    "test:browser": "node --test --test-concurrency=1 tests/browser/*.test.mjs",
     "typecheck": "vue-tsc --noEmit --skipLibCheck",
     "update-pkg": "sa update-pkg"
   },
@@ -92,6 +93,7 @@
     "eslint": "9.26.0",
     "eslint-plugin-vue": "10.1.0",
     "kolorist": "1.8.0",
+    "puppeteer-core": "25.14.0",
     "sass": "1.88.0",
     "simple-git-hooks": "2.13.0",
     "tsx": "4.19.4",

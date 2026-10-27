@@ -98,3 +98,7 @@ nginx.conf
 *~
 *.bak
 *.tmp
+
+# Python test caches
+__pycache__/
+*.py[cod]

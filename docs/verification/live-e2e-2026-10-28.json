@@ -1,0 +1,21 @@
+{
+  "startedAt": "2026-10-27T16:21:56.706Z",
+  "checks": [
+    "browser upload → MinIO → Kafka → parsing → embedding/index → authorized retrieval",
+    "cross-user private-document retrieval isolation",
+    "authenticated preview and real MinIO download",
+    "real Agent tool retrieval, streaming answer and durable complete turn",
+    "cross-user durable-session isolation",
+    "reconnect restores persisted answer",
+    "real multi-turn recent memory preserves the preceding fact",
+    "new conversation isolation and cancellation never persists a partial answer"
+  ],
+  "timings": {
+    "uploadToSearchMs": 5651,
+    "chatMs": 7228
+  },
+  "status": "PASS",
+  "finishedAt": "2026-10-27T16:22:26.028Z",
+  "scope": "Single local production-path smoke; not a production SLO or full model-quality benchmark",
+  "fixtureCleanup": "Completed: scoped accounts, document, sessions and caches removed"
+}

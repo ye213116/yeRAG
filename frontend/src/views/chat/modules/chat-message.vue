@@ -82,8 +82,7 @@ async function resolveFileMd5(fileInfo: { fileMd5?: string; referenceNumber: num
   if (!props.sessionId) return undefined;
   const { error, data } = await request<Api.Document.ReferenceMd5Response>({
     url: 'documents/reference-md5',
-    params: { sessionId: props.sessionId, referenceNumber: String(fileInfo.referenceNumber) },
-    baseURL: '/proxy-api'
+    params: { sessionId: props.sessionId, referenceNumber: String(fileInfo.referenceNumber) }
   });
   return error ? undefined : data?.fileMd5;
 }
@@ -91,8 +90,7 @@ async function resolveFileMd5(fileInfo: { fileMd5?: string; referenceNumber: num
 async function downloadSource(fileName: string, fileMd5?: string) {
   const { error, data } = await request<Api.Document.DownloadResponse>({
     url: fileMd5 ? 'documents/download-by-md5' : 'documents/download',
-    params: { ...(fileMd5 ? { fileMd5 } : { fileName }), token: authStore.token },
-    baseURL: '/proxy-api'
+    params: fileMd5 ? { fileMd5 } : { fileName }
   });
   return error ? undefined : data;
 }

@@ -67,7 +67,7 @@ const handleSend = async () => {
   if (sendable.value) return;
   //  判断是否正在发送, 如果发送中，则停止ai继续响应
   if (isSending.value) {
-    const { error, data } = await request<Api.Chat.Token>({ url: 'chat/websocket-token', baseURL: 'proxy-api' });
+    const { error, data } = await request<Api.Chat.Token>({ url: 'chat/websocket-token' });
     if (error) return;
 
     chatStore.wsSend(JSON.stringify({ type: 'stop', _internal_cmd_token: data.cmdToken }));
@@ -159,7 +159,14 @@ const handShortcut = (e: KeyboardEvent) => {
         <icon-fluent:plug-connected-checkmark-20-filled v-else-if="wsStatus === 'OPEN'" class="color-green" />
         <icon-tabler:plug-connected-x v-else class="color-red" />
       </div>
-      <NButton :disabled="sendable" strong circle type="primary" @click="handleSend">
+      <NButton
+        :disabled="sendable"
+        :aria-label="isSending ? '停止生成' : '发送消息'"
+        strong
+        circle
+        type="primary"
+        @click="handleSend"
+      >
         <template #icon>
           <icon-material-symbols:stop-rounded v-if="isSending" />
           <icon-guidance:send v-else />

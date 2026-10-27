@@ -81,9 +81,31 @@ export const useChatStore = defineStore(SetupStoreId.Chat, () => {
     send: wsSend,
     open: wsOpen,
     close: wsClose
-  } = useWebSocket(`${otherBaseURL.ws.replace(/\/$/, '')}/chat/${store.token}`, {
-    autoReconnect: true
-  });
+  } = useWebSocket(
+    computed(() => (store.token ? `${otherBaseURL.ws.replace(/\/$/, '')}/chat/${store.token}` : undefined)),
+    {
+      autoReconnect: true
+    }
+  );
+
+  // Invalidate outstanding history loads and clear private state when identity changes.
+  watch(
+    () => store.userInfo.id,
+    () => {
+      historyRevision += 1;
+      conversationId.value = '';
+      memoryReady.value = false;
+      activeRequestId.value = '';
+      memoryNotice.value = '';
+      historyReadOnly.value = false;
+      sessionOptions.value = [];
+      sessionId.value = '';
+      list.value = [];
+      input.value = { message: '' };
+      sourceMode.value = 'auto';
+    },
+    { flush: 'sync' }
+  );
 
   // 监听WebSocket消息，捕获sessionId
   watch(wsData, val => {
