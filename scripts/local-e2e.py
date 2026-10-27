@@ -66,6 +66,7 @@ COMMIT;''')
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--cleanup', type=Path, help='Retry cleanup of a failed run without creating new fixtures')
+    parser.add_argument('--load', action='store_true', help='Run the bounded four-user performance scenario')
     args = parser.parse_args()
     if args.cleanup:
         cleanup(args.cleanup)
@@ -79,7 +80,7 @@ def main():
         browser = str(browsers[-1])
     print(f'Run output: {folder}', flush=True)
     try:
-        result = subprocess.run(['node', 'frontend/tests/live-e2e.mjs'], cwd=ROOT,
+        result = subprocess.run(['node', 'frontend/tests/live-load.mjs' if args.load else 'frontend/tests/live-e2e.mjs'], cwd=ROOT,
                                 env={**os.environ, 'YERAG_E2E_OUTPUT': str(folder), 'BROWSER_EXECUTABLE_PATH': browser})
     finally:
         cleanup(folder)

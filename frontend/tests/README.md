@@ -13,3 +13,5 @@ python3 scripts/local-e2e.py
 默认连接前端 9527、后端 8081；可设置 `YERAG_E2E_FRONTEND` / `YERAG_E2E_BACKEND`。要求本地 `pai_smart` 的 mysql、redis、Kafka、ES、MinIO 及模型配置可用。脚本创建随机临时账号和私有文档，经过浏览器上传、解析检索、MinIO 预览下载、真实模型回答、多轮追问、会话恢复、权限隔离与取消持久化检查，最后删除自己的文档、账号、会话和缓存。报告写入独立 `/tmp/yerag-live-e2e-*` 目录；成功清理后删除账号凭据文件。
 
 如清理失败，保留该目录，通过 `python3 scripts/local-e2e.py --cleanup /tmp/yerag-live-e2e-...` 重试。清理器仅接受本脚本格式的精确账号名；仍存在文档时拒绝删除账号。真实测试会产生模型调用，耗时结果只代表本地样本，不是容量或生产 SLO。
+
+`python3 scripts/local-e2e.py --load`运行固定四用户并发协议，独立记录检索、首字和完成时延，门槛及结果说明见 `evaluation/README.md`。

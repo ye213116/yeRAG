@@ -1,0 +1,77 @@
+{
+  "startedAt": "2026-10-27T17:15:53.040Z",
+  "protocol": {
+    "version": "yerag-local-performance-v1",
+    "workers": 4,
+    "retrievalRequestsPerWorker": 3,
+    "retrievalQuestion": "知识管理",
+    "chatQuestion": "你好，请用一句简短的中文问候，不需要查询资料。",
+    "chatTimeoutMs": 60000,
+    "developmentGates": {
+      "retrievalP95Ms": 5000,
+      "chatP95Ms": 60000
+    },
+    "notice": "Fixed before this run. Generous local smoke timeouts, not measured capacity or production SLO. Four distinct fixture identities; existing authorized corpus; zero request errors required."
+  },
+  "scope": "Bounded local smoke; not production capacity or sustained-load SLO",
+  "retrieval": [
+    {
+      "worker": 1,
+      "request": 0,
+      "ms": 2056.563558,
+      "hits": 5
+    },
+    {
+      "worker": 3,
+      "request": 0,
+      "ms": 2128.15991,
+      "hits": 5
+    },
+    {
+      "worker": 2,
+      "request": 0,
+      "ms": 2137.751215,
+      "hits": 5
+    },
+    {
+      "worker": 3,
+      "request": 1,
+      "ms": 588.2538470000009,
+      "hits": 5
+    },
+    {
+      "worker": 2,
+      "request": 1,
+      "ms": 613.5618750000003,
+      "hits": 5
+    },
+    {
+      "worker": 1,
+      "request": 1,
+      "ms": 758.4097229999998,
+      "hits": 5
+    },
+    {
+      "worker": 3,
+      "request": 2,
+      "ms": 610.66471,
+      "hits": 5
+    },
+    {
+      "worker": 2,
+      "request": 2,
+      "ms": 598.9098190000004,
+      "hits": 5
+    },
+    {
+      "worker": 1,
+      "request": 2,
+      "ms": 581.0556639999995,
+      "hits": 5
+    }
+  ],
+  "chat": [],
+  "status": "FAIL",
+  "error": "The operation was aborted due to timeout",
+  "finishedAt": "2026-10-27T17:16:26.511Z"
+}

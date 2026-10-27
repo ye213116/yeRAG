@@ -148,6 +148,26 @@ class HybridSearchServiceRetrievalTest {
     }
 
     @Test
+    void slowQueryEmbeddingFallsBackWithinRetrievalBudget() {
+        retrieval.setRouteTimeout(java.time.Duration.ofMillis(50));
+        when(embeddingClient.embed(anyList())).thenAnswer(call -> {
+            Thread.sleep(1000);
+            return List.of(new float[]{1f, 0f});
+        });
+        SearchResult allowed = hit("md5-allowed", 1);
+        when(recallClient.recallBm25(eq("policy"), any(Query.class), anyInt(), any()))
+                .thenReturn(List.of(allowed));
+        org.junit.jupiter.api.Assertions.assertTimeoutPreemptively(java.time.Duration.ofMillis(500), () -> {
+            assertEquals(List.of("md5-allowed"), md5s(service.searchWithPermission("policy", "42", 1)));
+        });
+        verify(recallClient).recallBm25(eq("policy"), org.mockito.ArgumentMatchers.argThat(acl -> {
+            String text = acl.toString();
+            return text.contains("42") && text.contains("isPublic") && text.contains("orgTag");
+        }), anyInt(), eq(java.time.Duration.ofMillis(50)));
+        verify(recallClient, never()).recallBoth(anyString(), anyList(), any(Query.class), anyInt(), any());
+    }
+
+    @Test
     void clampsTopKAndRecallsEnoughCandidatesForRerank() {
         List<SearchResult> hits = new ArrayList<>();
         for (int i = 1; i <= 60; i++) {

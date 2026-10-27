@@ -1,0 +1,10 @@
+{
+  "version": "yerag-local-performance-v1",
+  "workers": 4,
+  "retrievalRequestsPerWorker": 3,
+  "retrievalQuestion": "知识管理",
+  "chatQuestion": "你好，请用一句简短的中文问候，不需要查询资料。",
+  "chatTimeoutMs": 60000,
+  "developmentGates": {"retrievalP95Ms": 5000, "chatP95Ms": 60000},
+  "notice": "Fixed before this run. Generous local smoke timeouts, not measured capacity or production SLO. Four distinct fixture identities; existing authorized corpus; zero request errors required."
+}

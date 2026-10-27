@@ -289,7 +289,7 @@ public class HybridSearchService {
         Query acl = HybridRecallClient.aclQuery(userDbId, userEffectiveTags);
         int window = topK * Math.max(1, retrieval.getRecallMultiplier());
 
-        final List<Float> queryVector = embedToVectorList(query);
+        final List<Float> queryVector = queryVectorWithinBudget(query);
         HybridRecallClient.RecallResult recall;
         if (queryVector == null) {
             logger.warn("向量生成失败，本次只走 BM25 路（仍会做重排序）");
@@ -362,7 +362,7 @@ public class HybridSearchService {
     private List<SearchResult> legacySearchWithPermission(String query, String userDbId,
                                                           List<String> userEffectiveTags, int topK) {
         try {
-            final List<Float> queryVector = embedToVectorList(query);
+            final List<Float> queryVector = queryVectorWithinBudget(query);
             if (queryVector == null) {
                 logger.warn("向量生成失败，仅使用文本匹配进行搜索");
                 return textOnlySearchWithPermission(query, userDbId, userEffectiveTags, topK);
@@ -542,6 +542,17 @@ public class HybridSearchService {
     }
 
     /** 生成查询向量，返回 List<Float>，失败时返回 null */
+    /** Bound interactive query embedding; ingestion retains its separate batch timeout. */
+    private List<Float> queryVectorWithinBudget(String query) {
+        return reactor.core.publisher.Mono.fromCallable(() -> embedToVectorList(query))
+                .subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic())
+                .timeout(retrieval.getRouteTimeout())
+                .onErrorResume(error -> {
+                    logger.warn("查询向量超过检索预算或不可用，回退权限过滤的BM25: {}", error.getClass().getSimpleName());
+                    return reactor.core.publisher.Mono.empty();
+                }).block();
+    }
+
     private List<Float> embedToVectorList(String text) {
         try {
             List<float[]> vectors = embeddingClient.embed(List.of(text));

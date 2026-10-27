@@ -1,0 +1,163 @@
+{
+  "startedAt": "2026-10-27T17:21:17.021Z",
+  "protocol": {
+    "version": "yerag-local-performance-v1",
+    "workers": 4,
+    "retrievalRequestsPerWorker": 3,
+    "retrievalQuestion": "知识管理",
+    "chatQuestion": "你好，请用一句简短的中文问候，不需要查询资料。",
+    "chatTimeoutMs": 60000,
+    "developmentGates": {
+      "retrievalP95Ms": 5000,
+      "chatP95Ms": 60000
+    },
+    "notice": "Fixed before this run. Generous local smoke timeouts, not measured capacity or production SLO. Four distinct fixture identities; existing authorized corpus; zero request errors required."
+  },
+  "scope": "Bounded local smoke; not production capacity or sustained-load SLO",
+  "retrieval": [
+    {
+      "worker": 0,
+      "request": 0,
+      "ms": 1449.5803740000001,
+      "hits": 5
+    },
+    {
+      "worker": 2,
+      "request": 0,
+      "ms": 1449.85558,
+      "hits": 5
+    },
+    {
+      "worker": 3,
+      "request": 0,
+      "ms": 1605.9845610000002,
+      "hits": 5
+    },
+    {
+      "worker": 1,
+      "request": 0,
+      "ms": 1712.1890919999998,
+      "hits": 5
+    },
+    {
+      "worker": 2,
+      "request": 1,
+      "ms": 509.0359400000002,
+      "hits": 5
+    },
+    {
+      "worker": 0,
+      "request": 1,
+      "ms": 557.6314860000002,
+      "hits": 5
+    },
+    {
+      "worker": 3,
+      "request": 1,
+      "ms": 560.3388479999999,
+      "hits": 5
+    },
+    {
+      "worker": 1,
+      "request": 1,
+      "ms": 599.8129260000001,
+      "hits": 5
+    },
+    {
+      "worker": 2,
+      "request": 2,
+      "ms": 517.9034220000003,
+      "hits": 5
+    },
+    {
+      "worker": 0,
+      "request": 2,
+      "ms": 538.9121019999998,
+      "hits": 5
+    },
+    {
+      "worker": 3,
+      "request": 2,
+      "ms": 444.24886700000025,
+      "hits": 5
+    },
+    {
+      "worker": 1,
+      "request": 2,
+      "ms": 434.21177099999977,
+      "hits": 5
+    }
+  ],
+  "chat": [
+    {
+      "worker": 1,
+      "firstChunkMs": 556.0063,
+      "completeMs": 583.1680930000002,
+      "chunks": 1,
+      "answerCharacters": 20
+    },
+    {
+      "worker": 0,
+      "firstChunkMs": 565.332101,
+      "completeMs": 584.5702069999998,
+      "chunks": 1,
+      "answerCharacters": 20
+    },
+    {
+      "worker": 2,
+      "firstChunkMs": 747.5883290000002,
+      "completeMs": 763.9383850000004,
+      "chunks": 1,
+      "answerCharacters": 20
+    },
+    {
+      "worker": 3,
+      "firstChunkMs": 759.2595179999998,
+      "completeMs": 774.9732369999992,
+      "chunks": 1,
+      "answerCharacters": 20
+    }
+  ],
+  "metrics": {
+    "retrievalMs": {
+      "count": 12,
+      "p50": 557.6314860000002,
+      "p95": 1712.1890919999998,
+      "max": 1712.1890919999998,
+      "mean": 864.9754140833335,
+      "percentileMethod": "NEAREST_RANK"
+    },
+    "firstChunkMs": {
+      "count": 4,
+      "p50": 565.332101,
+      "p95": 759.2595179999998,
+      "max": 759.2595179999998,
+      "mean": 657.046562,
+      "percentileMethod": "NEAREST_RANK"
+    },
+    "completeMs": {
+      "count": 4,
+      "p50": 584.5702069999998,
+      "p95": 774.9732369999992,
+      "max": 774.9732369999992,
+      "mean": 676.6624804999999,
+      "percentileMethod": "NEAREST_RANK"
+    }
+  },
+  "developmentGate": {
+    "zeroErrors": true,
+    "retrievalP95": true,
+    "chatP95": true
+  },
+  "status": "PASS",
+  "billing": {
+    "status": "UNAVAILABLE",
+    "reason": "WebSocket protocol does not expose complete Agent tool/decision/answer usage; no price or money inferred"
+  },
+  "finishedAt": "2026-10-27T17:21:21.847Z",
+  "fixtureCleanup": "Completed",
+  "codeBaseline": "7c1f3bb4a2316f70de95871e5bb88222130b8c0a",
+  "javaSourceSha256": "d94eabc773a2ba1950fe0bea4a2082684324dd100e587fc56d76bc3151847f2e",
+  "worktree": "Uncommitted embedding-budget fix at run time; committed with this report",
+  "protocolSha256": "123e28dd908941aac37ffd1c996e9de6eae01a7c614589c25e8fe5ab556a88d1"
+}
