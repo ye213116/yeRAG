@@ -1,0 +1,45 @@
+{
+  "version": "yerag-extensions-archive-v1",
+  "status": "LOCAL_ARCHIVE_VERIFIED_NOT_OFFSITE",
+  "sourceCommit": "7862444",
+  "verifiedMainJavaAndPomSha256": "a851773c59451602e4f75dbbd7d3c87fc21ca49bdd03b25c844a98f855569552",
+  "nativeScoresReplayed": [
+    {
+      "run": "001",
+      "task": "dureader",
+      "jsonValuesIdentical": true
+    },
+    {
+      "run": "001",
+      "task": "HYBRID",
+      "jsonValuesIdentical": true
+    },
+    {
+      "run": "001",
+      "task": "BM25",
+      "jsonValuesIdentical": true
+    },
+    {
+      "run": "003",
+      "task": "dureader",
+      "jsonValuesIdentical": true
+    },
+    {
+      "run": "003",
+      "task": "HYBRID",
+      "jsonValuesIdentical": true
+    },
+    {
+      "run": "003",
+      "task": "BM25",
+      "jsonValuesIdentical": true
+    }
+  ],
+  "modelServicesContactedForReplay": false,
+  "replayRequires": "Python and versions from scoring-environment.json; no Spring/Maven/services required. Dependencies are recorded but not bundled as an airgap environment.",
+  "privateCredentialsIncluded": false,
+  "interrupted002": "Pre-model readiness checker attempt retained, no score to replay",
+  "archive": "/home/zyh/yerag-eval-archive/2026-10-28-extensions",
+  "archiveManifestSha256": "820cc51f120429ff3eab280b60a847f0e97b2f6bcb3cb69e42e97294412e0922",
+  "fileCount": 231
+}

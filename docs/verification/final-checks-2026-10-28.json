@@ -1,0 +1,32 @@
+{
+  "date": "2026-10-28",
+  "branch": "agent",
+  "baseHead": "7862444d61d84391a559f3c775e95217d00af238",
+  "mainJavaAndPomSha256": "7c42981032daad4c84cd71de326642ecec23765c78e22dc92b3b9fe118f2d0ec",
+  "sourceStateAtExecution": "Deletion fix uncommitted during validation; committed with this evidence",
+  "backend": {
+    "command": "mvn -q test; then mvn -q surefire:test with explicit MEMORY_MYSQL_TEST_* and RAG_ES_TEST_*",
+    "latestWithRealServices": {
+      "tests": 272,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "browser": {
+    "command": "pnpm --dir frontend test:browser",
+    "tests": 4,
+    "failures": 0
+  },
+  "frontendLint": {
+    "command": "pnpm --dir frontend lint",
+    "errors": 0,
+    "existingWarnings": 18
+  },
+  "liveE2E": {
+    "report": "live-e2e-shared-delete-2026-10-28.json",
+    "checks": 10,
+    "status": "PASS"
+  },
+  "scope": "Focused deletion regression first failed and then passed; real 2-owner shared MinIO lifecycle verified; optional MySQL/ES tests explicitly enabled. No concurrent upload/delete atomicity assertion."
+}

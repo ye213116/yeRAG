@@ -10,6 +10,7 @@ import java.util.List;
 
 public interface DocumentVectorRepository extends JpaRepository<DocumentVector, Long> {
     List<DocumentVector> findByFileMd5(String fileMd5); // 查询某文件的所有分块
+    void deleteByFileMd5AndUserId(String fileMd5, String userId);
     
     /**
      * 删除指定文件MD5的所有文档向量记录

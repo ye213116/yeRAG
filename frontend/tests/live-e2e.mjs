@@ -1,5 +1,6 @@
 /* eslint-disable no-await-in-loop -- Polling and fixture cleanup must be sequential. */
 import process from 'node:process';
+import { Buffer } from 'node:buffer';
 import assert from 'node:assert/strict';
 import { createHash, randomBytes } from 'node:crypto';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -65,9 +66,10 @@ async function clickText(page, text, root = 'body') {
 }
 let browser;
 let owner;
+let outsider;
 try {
   owner = await account();
-  const outsider = await account();
+  outsider = await account();
   const marker = `YERAG-${randomBytes(4).toString('hex')}`;
   const fileName = `e2e-${marker}.txt`;
   const contents = `联调验收文档 ${marker}\n本项目的验收口令为 ${marker}。\n费用上限为37元。交付日期是2027年1月15日。\n这是自动化联调的私有资料，只允许上传者访问。\n`;
@@ -191,7 +193,8 @@ try {
   await page.type('textarea', '请写一篇详细介绍知识管理的长文，分十个部分，每部分至少三百字。');
   await page.keyboard.press('Enter');
   await page.waitForSelector('button[aria-label="停止生成"]');
-  await page.$eval('button[aria-label="停止生成"]', b => b.click());
+  await page.focus('button[aria-label="停止生成"]');
+  await page.keyboard.press('Enter');
   await page.waitForSelector('button[aria-label="发送消息"]');
   await delay(1500);
   const stoppedSession = (await request('memory/sessions/current', owner.token)).body.data.conversationId;
@@ -201,6 +204,54 @@ try {
     'cancelled answer must not be saved as complete'
   );
   report.checks.push('new conversation isolation and cancellation never persists a partial answer');
+  // The same physical bytes may have multiple upload owners. One owner must not delete another copy.
+  const form = new FormData();
+  for (const [key, value] of Object.entries({
+    fileMd5: md5,
+    chunkIndex: '0',
+    totalSize: String(Buffer.byteLength(contents)),
+    fileName,
+    totalChunks: '1',
+    isPublic: 'false',
+    orgTag: `PRIVATE_${outsider.username}`
+  }))
+    form.append(key, value);
+  form.append('file', new Blob([contents], { type: 'text/plain' }), fileName);
+  const secondUpload = await fetch(`${api}/upload/chunk`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${outsider.token}` },
+    body: form,
+    signal: AbortSignal.timeout(30000)
+  });
+  assert.equal((await secondUpload.json()).code, 200);
+  assert.equal((await request('upload/merge', outsider.token, 'POST', { fileMd5: md5, fileName })).body.code, 200);
+  await waitFor(
+    async () => {
+      const result = await request(`search/hybrid?query=${encodeURIComponent(marker)}&topK=5`, outsider.token);
+      return result.body?.data?.some(hit => hit.fileMd5 === md5 && hit.userId === String(outsider.id));
+    },
+    'second owner copy indexed',
+    120000
+  );
+  assert.equal((await request(`documents/${md5}`, owner.token, 'DELETE')).status, 200);
+  const surviving = await request(`documents/download-by-md5?fileMd5=${md5}`, outsider.token);
+  assert.equal(surviving.status, 200);
+  assert.equal(
+    await (await fetch(surviving.body.data.downloadUrl)).text(),
+    contents,
+    'shared MinIO object survives another owner deletion'
+  );
+  const survivingHits = await request(`search/hybrid?query=${encodeURIComponent(marker)}&topK=5`, outsider.token);
+  assert.ok(
+    survivingHits.body.data.some(hit => hit.fileMd5 === md5),
+    'other owner ES copy survives'
+  );
+  const deletedHits = await request(`search/hybrid?query=${encodeURIComponent(marker)}&topK=5`, owner.token);
+  assert.ok(!deletedHits.body.data.some(hit => hit.fileMd5 === md5), 'deleted private copy is no longer visible');
+  report.checks.push('same-MD5 owner deletion preserves another user metadata, index and physical download');
+  assert.equal((await request(`documents/${md5}`, outsider.token, 'DELETE')).status, 200);
+  assert.equal((await fetch(surviving.body.data.downloadUrl)).status, 404, 'last owner removal deletes MinIO object');
+  report.checks.push('last owner removal deletes shared object and obsolete upload metadata');
   report.status = 'PASS';
 } catch (error) {
   report.status = 'FAIL';
@@ -208,8 +259,8 @@ try {
   process.exitCode = 1;
 } finally {
   await browser?.close();
-  if (owner) {
-    for (const document of fixtures.documents) await request(`documents/${document.fileMd5}`, owner.token, 'DELETE');
+  for (const user of [owner, outsider].filter(Boolean)) {
+    for (const document of fixtures.documents) await request(`documents/${document.fileMd5}`, user.token, 'DELETE');
   }
   report.finishedAt = new Date().toISOString();
   writeFileSync(resolve(output, 'report.json'), JSON.stringify(report, null, 2));

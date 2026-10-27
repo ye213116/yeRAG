@@ -519,7 +519,7 @@ scripts/rag-eval.sh review --dataset evaluation/phase1 --output /tmp/labels-revi
 
 ## 11. 本轮收工清单与后续顺序
 
-以用户确认的四项为本轮范围，**4/4完成**，最终归档恢复检查通过。任务完成不等于所有回答满分：企业2题partial、新100题的逐题退化均照实保留。中文、BEIR、更多英文基准及Agent/多轮扩展保留为后续储备，不在本轮增加任务。
+以下为2026-10-27原收工范围：用户确认四项，**4/4完成**，最终归档恢复检查通过。企业2题partial和新100题逐题退化照实保留。2026-10-28按后续指令增加的中文、BEIR、Agent/改写、并发及备份工具见11.4–11.7，不能把原4/4延伸为所有后续事项均已外部验收。
 
 | 项目 | 优先级 | 当前状态 | 验收条件 |
 |---|---|---|---|
@@ -633,6 +633,8 @@ python3 scripts/rag-eval-benchmark-smoke.py target/benchmark-sources target/NEW_
 
 50项Python测试在带原生评分依赖的独立环境中全部通过，覆盖缺失查询、TREC分级增益、评分脚本替换拒绝、人工记录绑定、备份恢复及费用缺失值。启用真实MySQL/ES后，后端267项本次全部通过、0跳过（后续权限删除修复另行记录）。
 
+新增扩展材料已持久保存至 `/home/zyh/yerag-eval-archive/2026-10-28-extensions`，见 [扩展归档证明](experiments/extension-archive-2026-10-28.json)：包含两次Agent运行、两次完整原生评分运行、一次模型调用前中止的检查器尝试、原始数据包/许可与固定评分脚本、对应源码归档。源码来自 `7862444`，main Java/pom字节指纹与实测 `a851773c...` 完整匹配。仅用归档输入与脚本离线重算6份原生评分，JSON数值逐项一致，未访问模型服务。评分依赖版本已记录，未包装成无依赖的离线Python环境；仍是本机备份，异机目标待提供。
+
 ### 11.7 可核对用量与费用边界
 
 新增 `rag-eval-cost.py ARTIFACTS NEW_OUTPUT [--rates RATES_JSON]`，按唯一模型run聚合供应商返回的prompt/completion/total，不用字符估算代替usage。第二次Agent/改写6次调用与中文5次调用均有完整供应商用量，详情随各自机器证据保存；检索部分没有生成调用。未报告的usage仍记missing，价格缺失不记零。
@@ -658,7 +660,7 @@ python3 scripts/rag-eval-benchmark-smoke.py target/benchmark-sources target/NEW_
 
 ### 13.1 项目与个人工作范围的表述
 
-yeRAG是带用户/组织权限的企业RAG服务，技术栈为Spring Boot、Elasticsearch、MinIO、Kafka与兼容模型API。本文可用于说明本项目已完成的设计、实验和缺陷修复；本批仍有未提交变更，不推断提交作者。本地隔离环境里的真实模型调用不是生产流量，未证明线上业务收益或已经生产部署。
+yeRAG是带用户/组织权限的企业RAG服务，技术栈为Spring Boot、Elasticsearch、MinIO、Kafka与兼容模型API。本文可用于说明本项目已完成的设计、实验和缺陷修复；评测与扩展按任务分项提交，不推断提交作者；运行版本仍以各自源码指纹为准。本地隔离环境里的真实模型调用不是生产流量，未证明线上业务收益或已经生产部署。
 
 **约90秒口述稿：**
 

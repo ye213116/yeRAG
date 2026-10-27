@@ -39,6 +39,9 @@ public class DocumentService {
     private DocumentVectorRepository documentVectorRepository;
 
     @Autowired
+    private com.yizhaoqi.smartpai.repository.ChunkInfoRepository chunkInfoRepository;
+
+    @Autowired
     private MinioClient minioClient;
 
     @Autowired
@@ -62,68 +65,23 @@ public class DocumentService {
      */
     @Transactional
     public void deleteDocument(String fileMd5, String userId) {
-        logger.info("开始删除文档: {}", fileMd5);
-        
-        try {
-            // 获取文件信息以获取文件名
-            FileUpload fileUpload = fileUploadRepository.findByFileMd5AndUserId(fileMd5, userId)
-                    .orElseThrow(() -> new RuntimeException("文件不存在"));
-            
-            // 1. 删除Elasticsearch中的数据
+        FileUpload own = fileUploadRepository.findByFileMd5AndUserId(fileMd5, userId)
+                .orElseThrow(() -> new RuntimeException("文件不存在"));
+        boolean shared = fileUploadRepository.countByFileMd5(fileMd5) > 1;
+        // External failures remain failures, so metadata stays available for an idempotent retry.
+        elasticsearchService.deleteByFileMd5AndUserId(fileMd5, userId);
+        documentVectorRepository.deleteByFileMd5AndUserId(fileMd5, userId);
+        if (!shared) {
             try {
-                elasticsearchService.deleteByFileMd5(fileMd5);
-                logger.info("成功从Elasticsearch删除文档: {}", fileMd5);
-            } catch (Exception e) {
-                logger.error("从Elasticsearch删除文档时出错: {}", fileMd5, e);
-                // 继续删除其他数据
+                minioClient.removeObject(RemoveObjectArgs.builder().bucket("uploads")
+                        .object("merged/" + own.getFileMd5()).build());
+            } catch (Exception failure) {
+                throw new RuntimeException("删除文档对象失败", failure);
             }
-            
-            // 2. 删除MinIO中的文件（使用MD5作为对象路径）
-            try {
-                String objectName = "merged/" + fileUpload.getFileMd5();
-                minioClient.removeObject(
-                        RemoveObjectArgs.builder()
-                                .bucket("uploads")
-                                .object(objectName)
-                                .build()
-                );
-                logger.info("成功从MinIO删除文件: {}", objectName);
-            } catch (Exception e) {
-                logger.warn("使用MD5路径删除文件失败，尝试使用文件名路径: {}", fileMd5);
-                // 降级：尝试使用旧的文件名路径（兼容旧数据）
-                try {
-                    String oldObjectName = "merged/" + fileUpload.getFileName();
-                    minioClient.removeObject(
-                            RemoveObjectArgs.builder()
-                                    .bucket("uploads")
-                                    .object(oldObjectName)
-                                    .build()
-                    );
-                    logger.info("使用旧路径成功从MinIO删除文件: {}", oldObjectName);
-                } catch (Exception ex) {
-                    logger.error("从MinIO删除文件时出错（新旧路径都失败）: {}", fileMd5, ex);
-                    // 继续删除其他数据
-                }
-            }
-            
-            // 3. 删除DocumentVector记录
-            try {
-                documentVectorRepository.deleteByFileMd5(fileMd5);
-                logger.info("成功删除文档向量记录: {}", fileMd5);
-            } catch (Exception e) {
-                logger.error("删除文档向量记录时出错: {}", fileMd5, e);
-                // 继续删除其他数据
-            }
-            
-            // 4. 删除FileUpload记录
-            fileUploadRepository.deleteByFileMd5(fileMd5);
-            logger.info("成功删除文件上传记录: {}", fileMd5);
-            
-            logger.info("文档删除完成: {}", fileMd5);
-        } catch (Exception e) {
-            logger.error("删除文档过程中发生错误: {}", fileMd5, e);
-            throw new RuntimeException("删除文档失败: " + e.getMessage(), e);
+            chunkInfoRepository.deleteByFileMd5(fileMd5);
         }
+        fileUploadRepository.deleteByFileMd5AndUserId(fileMd5, userId);
+        logger.info("当前用户文档已删除: fileMd5={}, userId={}, shared={}", fileMd5, userId, shared);
     }
     
     /**

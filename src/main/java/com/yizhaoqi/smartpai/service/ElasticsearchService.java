@@ -83,4 +83,19 @@ public class ElasticsearchService {
             throw new RuntimeException("删除文档失败", e);
         }
     }
+
+    /** Remove only the authenticated uploader's indexed copy of a shared file. */
+    public void deleteByFileMd5AndUserId(String fileMd5, String userId) {
+        try {
+            var response = esClient.deleteByQuery(d -> d.index("knowledge_base").refresh(true)
+                    .query(q -> q.bool(b -> b
+                            .filter(f -> f.term(t -> t.field("fileMd5").value(fileMd5)))
+                            .filter(f -> f.term(t -> t.field("userId").value(userId))))));
+            if (response.timedOut() || !response.failures().isEmpty()) {
+                throw new IllegalStateException("Scoped index deletion did not complete");
+            }
+        } catch (Exception failure) {
+            throw new RuntimeException("删除当前用户的文档索引失败", failure);
+        }
+    }
 }

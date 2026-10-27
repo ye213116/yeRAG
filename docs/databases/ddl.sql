@@ -50,6 +50,8 @@ CREATE TABLE organization_tags (
 -- File upload and document metadata
 -- ---------------------------------------------------------------------------
 
+-- Delete upload/vector/index records by (file_md5, user_id). The merged MD5 object is shared;
+-- preserve it while another upload owner remains; remove upload-part metadata only for the last owner.
 CREATE TABLE file_upload (
     id BIGINT NOT NULL AUTO_INCREMENT COMMENT 'Upload record primary key',
     file_md5 VARCHAR(32) NOT NULL COMMENT 'MD5 of the complete file',

@@ -332,7 +332,8 @@ test('stop generation works without the development proxy', async () => {
     const previous = state.stopped;
     await sendMessage(page, 'slow');
     await page.waitForSelector('button[aria-label="停止生成"]');
-    await page.$eval('button[aria-label="停止生成"]', b => b.click());
+    await page.focus('button[aria-label="停止生成"]');
+    await page.keyboard.press('Enter');
     await waitFor(() => state.stopped > previous, 'stop reaches the WebSocket');
     await delay(2200);
     assert.equal(state.stopped, previous + 1);

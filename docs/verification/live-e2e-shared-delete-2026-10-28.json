@@ -1,0 +1,23 @@
+{
+  "startedAt": "2026-10-27T17:50:33.978Z",
+  "checks": [
+    "browser upload → MinIO → Kafka → parsing → embedding/index → authorized retrieval",
+    "cross-user private-document retrieval isolation",
+    "authenticated preview and real MinIO download",
+    "real Agent tool retrieval, streaming answer and durable complete turn",
+    "cross-user durable-session isolation",
+    "reconnect restores persisted answer",
+    "real multi-turn recent memory preserves the preceding fact",
+    "new conversation isolation and cancellation never persists a partial answer",
+    "same-MD5 owner deletion preserves another user metadata, index and physical download",
+    "last owner removal deletes shared object and obsolete upload metadata"
+  ],
+  "timings": {
+    "uploadToSearchMs": 15020,
+    "chatMs": 3985
+  },
+  "status": "PASS",
+  "finishedAt": "2026-10-27T17:51:29.575Z",
+  "fixtureCleanup": "Both exact accounts, uploads, vectors, index, shared object, upload-part metadata and caches removed",
+  "scope": "Single local lifecycle and same-MD5 multi-owner deletion smoke; no concurrent upload/delete atomicity claim"
+}
