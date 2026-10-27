@@ -34,7 +34,7 @@ function handleFilePreview(fileName: string, fileMd5: string) {
   console.log('[知识库] 点击预览按钮:', {
     fileName,
     fileMd5,
-    '完整信息': { fileName, fileMd5 }
+    完整信息: { fileName, fileMd5 }
   });
 
   previewFileName.value = fileName;
@@ -63,7 +63,7 @@ const { columns, columnChecks, data, getData, loading } = useTable({
           {renderIcon(row.fileName)}
           <NEllipsis lineClamp={2} tooltip>
             <span
-              class="cursor-pointer hover:text-primary transition-colors"
+              class="cursor-pointer transition-colors hover:text-primary"
               onClick={() => handleFilePreview(row.fileName, row.fileMd5)}
             >
               {row.fileName}
@@ -79,7 +79,7 @@ const { columns, columnChecks, data, getData, loading } = useTable({
       render: row => (
         <NEllipsis tooltip>
           <span
-            class="cursor-pointer hover:text-primary transition-colors font-mono text-3"
+            class="cursor-pointer text-3 font-mono transition-colors hover:text-primary"
             onClick={() => {
               navigator.clipboard.writeText(row.fileMd5);
               window.$message?.success('MD5已复制');
@@ -128,12 +128,7 @@ const { columns, columnChecks, data, getData, loading } = useTable({
       render: row => (
         <div class="flex gap-4">
           {renderResumeUploadButton(row)}
-          <NButton
-            type="primary"
-            ghost
-            size="small"
-            onClick={() => handleFilePreview(row.fileName, row.fileMd5)}
-          >
+          <NButton type="primary" ghost size="small" onClick={() => handleFilePreview(row.fileName, row.fileMd5)}>
             预览
           </NButton>
           <NPopconfirm onPositiveClick={() => handleDelete(row.fileMd5)}>
@@ -180,7 +175,7 @@ async function getList() {
   }
 
   // 遍历获取到的数据，以处理每个项目
-  data.value.forEach((item, dataIndex) => {
+  data.value.forEach(item => {
     // 检查项目状态是否为已完成
     if (item.status === UploadStatus.Completed) {
       // 查找任务列表中是否有匹配的文件MD5
@@ -356,9 +351,9 @@ async function onBeforeUpload(
     </NCard>
     <UploadDialog v-model:visible="uploadVisible" />
     <SearchDialog v-model:visible="searchVisible" />
-    
+
     <!-- 文件预览弹窗 -->
-    <NModal v-model:show="previewVisible" preset="card" title="文件预览" style="width: 80%; max-width: 1000px;">
+    <NModal v-model:show="previewVisible" preset="card" title="文件预览" style="width: 80%; max-width: 1000px">
       <FilePreview
         :file-name="previewFileName"
         :file-md5="previewFileMd5"

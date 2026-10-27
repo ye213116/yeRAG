@@ -197,6 +197,12 @@ declare namespace Api {
   }
 
   namespace Document {
+    interface PreviewResponse {
+      fileName: string;
+      content: string;
+      fileSize: number;
+    }
+
     interface DownloadResponse {
       fileName: string;
       downloadUrl: string;

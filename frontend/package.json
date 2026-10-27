@@ -15,14 +15,7 @@
   "bugs": {
     "url": "https://github.com/ye213116/yeRAG/issues"
   },
-  "keywords": [
-    "ai",
-    "rag",
-    "llm",
-    "chat",
-    "yerag",
-    "knowledge-base"
-  ],
+  "keywords": ["ai", "rag", "llm", "chat", "yerag", "knowledge-base"],
   "engines": {
     "node": ">=18.20.0",
     "pnpm": ">=8.7.0"
@@ -40,6 +33,7 @@
     "prepare": "simple-git-hooks",
     "preview": "vite preview",
     "release": "sa release",
+    "test": "tsx --test tests/*.test.cts",
     "typecheck": "vue-tsc --noEmit --skipLibCheck",
     "update-pkg": "sa update-pkg"
   },

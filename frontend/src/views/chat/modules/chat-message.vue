@@ -151,7 +151,7 @@ async function handleSourceFileClick(fileInfo: { fileName: string; referenceNumb
     <div v-else-if="msg.role === 'user'" class="ml-12 mt-2">
       <div class="user-bubble text-4">{{ content }}</div>
     </div>
-    <NDivider class="ml-12 w-[calc(100%-3rem)] mb-0! mt-2! opacity-40" />
+    <NDivider class="ml-12 w-[calc(100%-3rem)] opacity-40 mb-0! mt-2!" />
     <div class="ml-12 flex gap-4">
       <NButton quaternary @click="handleCopy(msg.content)">
         <template #icon>

@@ -36,7 +36,7 @@ function createCommonRequest<ResponseData = any>(
     // set request id
     let requestId = config.headers.get(REQUEST_ID_KEY) as string;
     if (!requestId) {
-      const requestId = nanoid();
+      requestId = nanoid();
       config.headers.set(REQUEST_ID_KEY, requestId);
     }
 
