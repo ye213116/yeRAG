@@ -574,6 +574,16 @@ AI_RAG_EVAL_IDENTITY=id:1 RAG_EVAL_SKIP_BUILD=1 python3 scripts/rag-eval-holdout
 
 ### 11.4 后续工作顺序
 
+2026-10-28增量：分支 `agent`，工程闭环核对基线 `241a34394edaa220b15dfe0d73ba6e5935c660a7`；历史数据、标签和分数未覆盖。已生成 [11题完整复核材料](reviews/calibration-20261028/review.html) 与 [冻结JSON](reviews/calibration-20261028/packet.json)，包含企业2题partial＋5题既定抽查、公开4个异常案例。页面逐题填写标签充分性、答案质量、理由与真实复核人后导出 `human-decisions.json`，仍全部处于 `PENDING_HUMAN_REVIEW`。材料已交付，尚未收到答案批准。
+
+```bash
+python3 scripts/rag-eval-calibrate.py score \
+  evaluation/reviews/calibration-20261028/packet.json /path/to/human-decisions.json /path/to/new-calibration-report.json
+```
+
+校准器校验整包与条目哈希、逐题唯一决定、复核人及理由，只生成独立一致率/分歧报告，不改旧标签和结果。7条企业Judge比较与4条公开标注复核分开；抽样来自既定复核队列，一致率不能外推全部题集。4项新增校准单元测试及全部40项Python测试本次通过。
+
+
 1. **先校准标签和Judge。** 人工复核企业2道partial、5道固定通过抽查及公开4个异常样本，分别记录标签充分性与答案质量；当前技术复核不冒充人工批准。若完整性标准变更，发新标签版本并重算，保留旧分数。
 2. **有明确假设再优化。** 将桥接证据排第6/7的问题作为开发案例，单独检验候选覆盖或排序策略；先冻结单变量配置与门禁，再取全新题验证，不能继续用这100题选参。
 3. **按业务需求扩展。** 中文、BEIR纯检索、Agent/多轮Memory分别定义指标和权限断言；建立实际并发与成本数据后，再制定生产SLO和上线阈值。异机备份另行处理；本批评测已随 `5cffc82` 提交，尚未作为生产发布部署。

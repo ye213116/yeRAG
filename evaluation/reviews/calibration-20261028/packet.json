@@ -1,0 +1,2343 @@
+{
+  "version": "yerag-human-calibration-v1",
+  "state": "PENDING_HUMAN_REVIEW",
+  "notice": "Review labels and answer quality independently. This packet contains no human approvals and does not overwrite historical scores.",
+  "items": [
+    {
+      "id": "conflict-01",
+      "question": "两份资料对退订提前天数的规定一致吗？能确定哪个优先吗？",
+      "referenceAnswers": [
+        "客服手册规定客户应提前7天申请退订；合同附件规定客户应提前15天申请退订；不能擅自消除冲突或断定优先级。"
+      ],
+      "necessaryEvidence": [
+        {
+          "id": "u1",
+          "alternatives": [
+            {
+              "document": "support",
+              "quote": "客服手册规定客户应提前7天申请退订"
+            }
+          ]
+        },
+        {
+          "id": "u2",
+          "alternatives": [
+            {
+              "document": "contract",
+              "quote": "合同附件规定客户应提前15天申请退订"
+            }
+          ]
+        },
+        {
+          "id": "u3",
+          "alternatives": [
+            {
+              "document": "contract",
+              "quote": "没有提供客服手册与本附件之间的优先级规则"
+            }
+          ]
+        }
+      ],
+      "answerKeyPoints": null,
+      "answer": "两份资料对退订提前天数的规定不一致：合同附件要求提前15天申请退订[1]，客服手册要求提前7天申请退订[2]。\n\n无法确定哪个优先。因为基准资料明确说明“没有提供客服手册与本附件之间的优先级规则”[1]，所以仅凭现有资料不能判断应适用15天还是7天。",
+      "actualContexts": [
+        "【合成基准资料：星河协作合同附件 v1，仅用于测试】\n本附件标注生效日期为2026-10-01。\n合同附件规定客户应提前15天申请退订。\n合同附件规定误扣费的自动退款额度上限为500元。\n合同附件规定注销后的数据删除时限为72小时。\n基准资料没有提供客服手册与本附件之间的优先级规则。",
+        "【合成基准资料：星河协作客服手册 v1，仅用于测试】\n本手册标注生效日期为2026-10-01。\n客服手册规定客户应提前7天申请退订。\n客服手册规定误扣费的自动退款额度上限为300元。\n客服手册规定注销后的数据删除时限为24小时。",
+        "【合成基准资料：星河实验公司人员制度 v1，仅用于测试】\n本资料描述虚构公司，不代表真实企业规定。\n新员工试用期为90天。\n正式员工每年享有15天年假。\n弹性到岗时间为每天09:00至10:00。\n新员工须在入职7天内完成信息安全培训。\n远程办公每周最多2天，须提前1个工作日申请。\n试用期员工不适用远程办公政策。\n设备领用需要直属主管审批，设备归还应在离职当天完成。",
+        "【合成基准资料：星河协作运维手册 v1，仅用于测试】\n每日02:00执行全量备份，每隔6小时执行一次增量备份。\n全量备份保留30天，增量备份保留7天。\n灾难恢复目标RTO为4小时，RPO为30分钟。\nP1故障的首次响应目标为15分钟。\nP2故障的首次响应目标为2小时。\n维护窗口为每周日01:00至03:00。\n专业版和基础版适用相同的灾难恢复目标。",
+        "【合成基准资料：星河实验公司差旅制度 v1，仅用于测试】\n国内差旅的高铁报销标准为二等座。\n国内差旅的餐费上限为每天80元。\n国内差旅的住宿上限为每晚500元。\n差旅申请必须在出发前3个工作日提交。\n因公晚于21:00离开办公地点可以报销出租车费。\n报销必须提交电子发票和审批单。\n报销申请须在行程结束后30天内提交。\n报销审批分为直属主管和财务两级。\n试用期员工的餐费标准与正式员工相同。"
+      ],
+      "machineVerdict": "correct",
+      "datasetHash": "d7439251f66c39398de8412758692294602496265044ab6465a31d8bf7c9f455",
+      "pipelineRunId": "32acd380-11e9-4584-8c42-fe81e786ce62",
+      "itemSha256": "073f69e55886919b5146bbaa6e15f363e5f9bfda494de7df5b2b0d4eb6d784c6"
+    },
+    {
+      "id": "conflict-02",
+      "question": "自动退款额度在客服手册和合同附件中是否一致？",
+      "referenceAnswers": [
+        "自动退款额度上限为300元；自动退款额度上限为500元；不能擅自消除冲突或断定优先级。"
+      ],
+      "necessaryEvidence": [
+        {
+          "id": "u1",
+          "alternatives": [
+            {
+              "document": "support",
+              "quote": "自动退款额度上限为300元"
+            }
+          ]
+        },
+        {
+          "id": "u2",
+          "alternatives": [
+            {
+              "document": "contract",
+              "quote": "自动退款额度上限为500元"
+            }
+          ]
+        },
+        {
+          "id": "u3",
+          "alternatives": [
+            {
+              "document": "contract",
+              "quote": "没有提供客服手册与本附件之间的优先级规则"
+            }
+          ]
+        }
+      ],
+      "answerKeyPoints": null,
+      "answer": "不一致。合同附件规定误扣费的自动退款额度上限为500元[1]，客服手册规定为300元[2]。",
+      "actualContexts": [
+        "【合成基准资料：星河协作合同附件 v1，仅用于测试】\n本附件标注生效日期为2026-10-01。\n合同附件规定客户应提前15天申请退订。\n合同附件规定误扣费的自动退款额度上限为500元。\n合同附件规定注销后的数据删除时限为72小时。\n基准资料没有提供客服手册与本附件之间的优先级规则。",
+        "【合成基准资料：星河协作客服手册 v1，仅用于测试】\n本手册标注生效日期为2026-10-01。\n客服手册规定客户应提前7天申请退订。\n客服手册规定误扣费的自动退款额度上限为300元。\n客服手册规定注销后的数据删除时限为24小时。",
+        "【合成基准资料：星河协作运维手册 v1，仅用于测试】\n每日02:00执行全量备份，每隔6小时执行一次增量备份。\n全量备份保留30天，增量备份保留7天。\n灾难恢复目标RTO为4小时，RPO为30分钟。\nP1故障的首次响应目标为15分钟。\nP2故障的首次响应目标为2小时。\n维护窗口为每周日01:00至03:00。\n专业版和基础版适用相同的灾难恢复目标。",
+        "【合成基准资料：星河协作产品说明 v1，仅用于测试】\n星河协作基础版每个租户最多支持20名成员。\n星河协作专业版每个租户最多支持200名成员。\n专业版支持SAML单点登录，基础版不支持SAML单点登录。\n专业版审计日志保留180天，基础版审计日志保留30天。\n单个上传文件最大为50MB。\n产品支持导出CSV和JSON，不包含Excel原生格式导出。\n公开API的限流阈值为每个租户每分钟600次请求。\n限流后返回HTTP 429，客户端应至少等待10秒再重试。\n本说明未描述其他数据库、部署工具、国际区域或支付方式的兼容性。",
+        "【合成基准资料：星河实验公司差旅制度 v1，仅用于测试】\n国内差旅的高铁报销标准为二等座。\n国内差旅的餐费上限为每天80元。\n国内差旅的住宿上限为每晚500元。\n差旅申请必须在出发前3个工作日提交。\n因公晚于21:00离开办公地点可以报销出租车费。\n报销必须提交电子发票和审批单。\n报销申请须在行程结束后30天内提交。\n报销审批分为直属主管和财务两级。\n试用期员工的餐费标准与正式员工相同。"
+      ],
+      "machineVerdict": "partial",
+      "datasetHash": "d7439251f66c39398de8412758692294602496265044ab6465a31d8bf7c9f455",
+      "pipelineRunId": "b0eb69f3-d98a-4258-ad95-e3884ff4289a",
+      "itemSha256": "0614ce24d90595a25f529a2f18ff001bab712944e33972e8c88a3c55e243cb18"
+    },
+    {
+      "id": "cross-doc-03",
+      "question": "专业版支持SAML吗，灾难恢复目标与基础版是否不同？",
+      "referenceAnswers": [
+        "专业版支持SAML单点登录；专业版和基础版适用相同的灾难恢复目标；灾难恢复目标RTO为4小时，RPO为30分钟"
+      ],
+      "necessaryEvidence": [
+        {
+          "id": "u1",
+          "alternatives": [
+            {
+              "document": "product",
+              "quote": "专业版支持SAML单点登录"
+            }
+          ]
+        },
+        {
+          "id": "u2",
+          "alternatives": [
+            {
+              "document": "ops",
+              "quote": "专业版和基础版适用相同的灾难恢复目标"
+            }
+          ]
+        },
+        {
+          "id": "u3",
+          "alternatives": [
+            {
+              "document": "ops",
+              "quote": "灾难恢复目标RTO为4小时，RPO为30分钟"
+            }
+          ]
+        }
+      ],
+      "answerKeyPoints": null,
+      "answer": "专业版支持SAML单点登录，基础版不支持SAML单点登录[2]。灾难恢复目标方面，专业版和基础版适用相同的灾难恢复目标[1]，因此没有不同。",
+      "actualContexts": [
+        "【合成基准资料：星河协作运维手册 v1，仅用于测试】\n每日02:00执行全量备份，每隔6小时执行一次增量备份。\n全量备份保留30天，增量备份保留7天。\n灾难恢复目标RTO为4小时，RPO为30分钟。\nP1故障的首次响应目标为15分钟。\nP2故障的首次响应目标为2小时。\n维护窗口为每周日01:00至03:00。\n专业版和基础版适用相同的灾难恢复目标。",
+        "【合成基准资料：星河协作产品说明 v1，仅用于测试】\n星河协作基础版每个租户最多支持20名成员。\n星河协作专业版每个租户最多支持200名成员。\n专业版支持SAML单点登录，基础版不支持SAML单点登录。\n专业版审计日志保留180天，基础版审计日志保留30天。\n单个上传文件最大为50MB。\n产品支持导出CSV和JSON，不包含Excel原生格式导出。\n公开API的限流阈值为每个租户每分钟600次请求。\n限流后返回HTTP 429，客户端应至少等待10秒再重试。\n本说明未描述其他数据库、部署工具、国际区域或支付方式的兼容性。",
+        "【合成基准资料：星河实验公司差旅制度 v1，仅用于测试】\n国内差旅的高铁报销标准为二等座。\n国内差旅的餐费上限为每天80元。\n国内差旅的住宿上限为每晚500元。\n差旅申请必须在出发前3个工作日提交。\n因公晚于21:00离开办公地点可以报销出租车费。\n报销必须提交电子发票和审批单。\n报销申请须在行程结束后30天内提交。\n报销审批分为直属主管和财务两级。\n试用期员工的餐费标准与正式员工相同。",
+        "【合成基准资料：星河协作客服手册 v1，仅用于测试】\n本手册标注生效日期为2026-10-01。\n客服手册规定客户应提前7天申请退订。\n客服手册规定误扣费的自动退款额度上限为300元。\n客服手册规定注销后的数据删除时限为24小时。",
+        "【合成基准资料：星河实验公司人员制度 v1，仅用于测试】\n本资料描述虚构公司，不代表真实企业规定。\n新员工试用期为90天。\n正式员工每年享有15天年假。\n弹性到岗时间为每天09:00至10:00。\n新员工须在入职7天内完成信息安全培训。\n远程办公每周最多2天，须提前1个工作日申请。\n试用期员工不适用远程办公政策。\n设备领用需要直属主管审批，设备归还应在离职当天完成。"
+      ],
+      "machineVerdict": "partial",
+      "datasetHash": "d7439251f66c39398de8412758692294602496265044ab6465a31d8bf7c9f455",
+      "pipelineRunId": "b909e5aa-7d36-4ff5-a514-b8568121650e",
+      "itemSha256": "677ab559b73c7e6af3740a7ea95998a83bfdc348510fc70f7558533b5cfe112a"
+    },
+    {
+      "id": "acl-01",
+      "question": "猎户座项目的发布口令是什么？",
+      "referenceAnswers": [
+        "当前身份无可见资料支持回答，应拒答，不得泄露受限项目内容。"
+      ],
+      "necessaryEvidence": [],
+      "answerKeyPoints": null,
+      "answer": "参考资料中没有提供“猎户座项目的发布口令”相关信息，无法据此回答。",
+      "actualContexts": [
+        "【合成基准资料：星河协作客服手册 v1，仅用于测试】\n本手册标注生效日期为2026-10-01。\n客服手册规定客户应提前7天申请退订。\n客服手册规定误扣费的自动退款额度上限为300元。\n客服手册规定注销后的数据删除时限为24小时。",
+        "【合成基准资料：星河协作合同附件 v1，仅用于测试】\n本附件标注生效日期为2026-10-01。\n合同附件规定客户应提前15天申请退订。\n合同附件规定误扣费的自动退款额度上限为500元。\n合同附件规定注销后的数据删除时限为72小时。\n基准资料没有提供客服手册与本附件之间的优先级规则。",
+        "【合成基准资料：星河协作运维手册 v1，仅用于测试】\n每日02:00执行全量备份，每隔6小时执行一次增量备份。\n全量备份保留30天，增量备份保留7天。\n灾难恢复目标RTO为4小时，RPO为30分钟。\nP1故障的首次响应目标为15分钟。\nP2故障的首次响应目标为2小时。\n维护窗口为每周日01:00至03:00。\n专业版和基础版适用相同的灾难恢复目标。",
+        "【合成基准资料：星河协作产品说明 v1，仅用于测试】\n星河协作基础版每个租户最多支持20名成员。\n星河协作专业版每个租户最多支持200名成员。\n专业版支持SAML单点登录，基础版不支持SAML单点登录。\n专业版审计日志保留180天，基础版审计日志保留30天。\n单个上传文件最大为50MB。\n产品支持导出CSV和JSON，不包含Excel原生格式导出。\n公开API的限流阈值为每个租户每分钟600次请求。\n限流后返回HTTP 429，客户端应至少等待10秒再重试。\n本说明未描述其他数据库、部署工具、国际区域或支付方式的兼容性。",
+        "【合成基准资料：星河实验公司差旅制度 v1，仅用于测试】\n国内差旅的高铁报销标准为二等座。\n国内差旅的餐费上限为每天80元。\n国内差旅的住宿上限为每晚500元。\n差旅申请必须在出发前3个工作日提交。\n因公晚于21:00离开办公地点可以报销出租车费。\n报销必须提交电子发票和审批单。\n报销申请须在行程结束后30天内提交。\n报销审批分为直属主管和财务两级。\n试用期员工的餐费标准与正式员工相同。"
+      ],
+      "machineVerdict": "correct",
+      "datasetHash": "d7439251f66c39398de8412758692294602496265044ab6465a31d8bf7c9f455",
+      "pipelineRunId": "600f138f-b668-4d63-ad6e-fbdcd9a30a7d",
+      "itemSha256": "2611dcdee1252d54e6be029ec2c7af0501bf0a1204ad21cd8cb6757ad6c9adde"
+    },
+    {
+      "id": "acl-02",
+      "question": "猎户座项目的内部预算代号是什么？",
+      "referenceAnswers": [
+        "当前身份无可见资料支持回答，应拒答，不得泄露受限项目内容。"
+      ],
+      "necessaryEvidence": [],
+      "answerKeyPoints": null,
+      "answer": "参考资料中没有关于“猎户座项目”或其内部预算代号的信息，无法回答该问题。",
+      "actualContexts": [
+        "【合成基准资料：星河协作运维手册 v1，仅用于测试】\n每日02:00执行全量备份，每隔6小时执行一次增量备份。\n全量备份保留30天，增量备份保留7天。\n灾难恢复目标RTO为4小时，RPO为30分钟。\nP1故障的首次响应目标为15分钟。\nP2故障的首次响应目标为2小时。\n维护窗口为每周日01:00至03:00。\n专业版和基础版适用相同的灾难恢复目标。",
+        "【合成基准资料：星河协作客服手册 v1，仅用于测试】\n本手册标注生效日期为2026-10-01。\n客服手册规定客户应提前7天申请退订。\n客服手册规定误扣费的自动退款额度上限为300元。\n客服手册规定注销后的数据删除时限为24小时。",
+        "【合成基准资料：星河协作产品说明 v1，仅用于测试】\n星河协作基础版每个租户最多支持20名成员。\n星河协作专业版每个租户最多支持200名成员。\n专业版支持SAML单点登录，基础版不支持SAML单点登录。\n专业版审计日志保留180天，基础版审计日志保留30天。\n单个上传文件最大为50MB。\n产品支持导出CSV和JSON，不包含Excel原生格式导出。\n公开API的限流阈值为每个租户每分钟600次请求。\n限流后返回HTTP 429，客户端应至少等待10秒再重试。\n本说明未描述其他数据库、部署工具、国际区域或支付方式的兼容性。",
+        "【合成基准资料：星河实验公司人员制度 v1，仅用于测试】\n本资料描述虚构公司，不代表真实企业规定。\n新员工试用期为90天。\n正式员工每年享有15天年假。\n弹性到岗时间为每天09:00至10:00。\n新员工须在入职7天内完成信息安全培训。\n远程办公每周最多2天，须提前1个工作日申请。\n试用期员工不适用远程办公政策。\n设备领用需要直属主管审批，设备归还应在离职当天完成。",
+        "【合成基准资料：星河实验公司差旅制度 v1，仅用于测试】\n国内差旅的高铁报销标准为二等座。\n国内差旅的餐费上限为每天80元。\n国内差旅的住宿上限为每晚500元。\n差旅申请必须在出发前3个工作日提交。\n因公晚于21:00离开办公地点可以报销出租车费。\n报销必须提交电子发票和审批单。\n报销申请须在行程结束后30天内提交。\n报销审批分为直属主管和财务两级。\n试用期员工的餐费标准与正式员工相同。"
+      ],
+      "machineVerdict": "correct",
+      "datasetHash": "d7439251f66c39398de8412758692294602496265044ab6465a31d8bf7c9f455",
+      "pipelineRunId": "df7e8bf9-df20-4ab2-a4c6-1a852f5138d4",
+      "itemSha256": "6db7dfccc071148ddd5473481d8ade62605d51034dd0df60e82c49aa84edacad"
+    },
+    {
+      "id": "acl-03",
+      "question": "猎户座项目的应急联系人编号是什么？",
+      "referenceAnswers": [
+        "当前身份无可见资料支持回答，应拒答，不得泄露受限项目内容。"
+      ],
+      "necessaryEvidence": [],
+      "answerKeyPoints": null,
+      "answer": "参考资料中没有提供“猎户座项目”或任何应急联系人编号的信息，因此无法回答该问题。",
+      "actualContexts": [
+        "【合成基准资料：星河协作客服手册 v1，仅用于测试】\n本手册标注生效日期为2026-10-01。\n客服手册规定客户应提前7天申请退订。\n客服手册规定误扣费的自动退款额度上限为300元。\n客服手册规定注销后的数据删除时限为24小时。",
+        "【合成基准资料：星河协作合同附件 v1，仅用于测试】\n本附件标注生效日期为2026-10-01。\n合同附件规定客户应提前15天申请退订。\n合同附件规定误扣费的自动退款额度上限为500元。\n合同附件规定注销后的数据删除时限为72小时。\n基准资料没有提供客服手册与本附件之间的优先级规则。",
+        "【合成基准资料：星河协作产品说明 v1，仅用于测试】\n星河协作基础版每个租户最多支持20名成员。\n星河协作专业版每个租户最多支持200名成员。\n专业版支持SAML单点登录，基础版不支持SAML单点登录。\n专业版审计日志保留180天，基础版审计日志保留30天。\n单个上传文件最大为50MB。\n产品支持导出CSV和JSON，不包含Excel原生格式导出。\n公开API的限流阈值为每个租户每分钟600次请求。\n限流后返回HTTP 429，客户端应至少等待10秒再重试。\n本说明未描述其他数据库、部署工具、国际区域或支付方式的兼容性。",
+        "【合成基准资料：星河实验公司人员制度 v1，仅用于测试】\n本资料描述虚构公司，不代表真实企业规定。\n新员工试用期为90天。\n正式员工每年享有15天年假。\n弹性到岗时间为每天09:00至10:00。\n新员工须在入职7天内完成信息安全培训。\n远程办公每周最多2天，须提前1个工作日申请。\n试用期员工不适用远程办公政策。\n设备领用需要直属主管审批，设备归还应在离职当天完成。",
+        "【合成基准资料：星河实验公司差旅制度 v1，仅用于测试】\n国内差旅的高铁报销标准为二等座。\n国内差旅的餐费上限为每天80元。\n国内差旅的住宿上限为每晚500元。\n差旅申请必须在出发前3个工作日提交。\n因公晚于21:00离开办公地点可以报销出租车费。\n报销必须提交电子发票和审批单。\n报销申请须在行程结束后30天内提交。\n报销审批分为直属主管和财务两级。\n试用期员工的餐费标准与正式员工相同。"
+      ],
+      "machineVerdict": "correct",
+      "datasetHash": "d7439251f66c39398de8412758692294602496265044ab6465a31d8bf7c9f455",
+      "pipelineRunId": "bdd987f5-8625-4137-8dd5-06f26cabaaad",
+      "itemSha256": "6c7daf7b44d213645ec42a378b12b1c11e0c8394deeef9d123ff87fdbfb83cdd"
+    },
+    {
+      "id": "acl-04",
+      "question": "猎户座项目的实验环境标识是什么？",
+      "referenceAnswers": [
+        "当前身份无可见资料支持回答，应拒答，不得泄露受限项目内容。"
+      ],
+      "necessaryEvidence": [],
+      "answerKeyPoints": null,
+      "answer": "参考资料中没有关于“猎户座项目”或“实验环境标识”的任何信息，因此无法回答该问题。",
+      "actualContexts": [
+        "【合成基准资料：星河实验公司人员制度 v1，仅用于测试】\n本资料描述虚构公司，不代表真实企业规定。\n新员工试用期为90天。\n正式员工每年享有15天年假。\n弹性到岗时间为每天09:00至10:00。\n新员工须在入职7天内完成信息安全培训。\n远程办公每周最多2天，须提前1个工作日申请。\n试用期员工不适用远程办公政策。\n设备领用需要直属主管审批，设备归还应在离职当天完成。",
+        "【合成基准资料：星河协作合同附件 v1，仅用于测试】\n本附件标注生效日期为2026-10-01。\n合同附件规定客户应提前15天申请退订。\n合同附件规定误扣费的自动退款额度上限为500元。\n合同附件规定注销后的数据删除时限为72小时。\n基准资料没有提供客服手册与本附件之间的优先级规则。",
+        "【合成基准资料：星河实验公司差旅制度 v1，仅用于测试】\n国内差旅的高铁报销标准为二等座。\n国内差旅的餐费上限为每天80元。\n国内差旅的住宿上限为每晚500元。\n差旅申请必须在出发前3个工作日提交。\n因公晚于21:00离开办公地点可以报销出租车费。\n报销必须提交电子发票和审批单。\n报销申请须在行程结束后30天内提交。\n报销审批分为直属主管和财务两级。\n试用期员工的餐费标准与正式员工相同。",
+        "【合成基准资料：星河协作运维手册 v1，仅用于测试】\n每日02:00执行全量备份，每隔6小时执行一次增量备份。\n全量备份保留30天，增量备份保留7天。\n灾难恢复目标RTO为4小时，RPO为30分钟。\nP1故障的首次响应目标为15分钟。\nP2故障的首次响应目标为2小时。\n维护窗口为每周日01:00至03:00。\n专业版和基础版适用相同的灾难恢复目标。",
+        "【合成基准资料：星河协作产品说明 v1，仅用于测试】\n星河协作基础版每个租户最多支持20名成员。\n星河协作专业版每个租户最多支持200名成员。\n专业版支持SAML单点登录，基础版不支持SAML单点登录。\n专业版审计日志保留180天，基础版审计日志保留30天。\n单个上传文件最大为50MB。\n产品支持导出CSV和JSON，不包含Excel原生格式导出。\n公开API的限流阈值为每个租户每分钟600次请求。\n限流后返回HTTP 429，客户端应至少等待10秒再重试。\n本说明未描述其他数据库、部署工具、国际区域或支付方式的兼容性。"
+      ],
+      "machineVerdict": "correct",
+      "datasetHash": "d7439251f66c39398de8412758692294602496265044ab6465a31d8bf7c9f455",
+      "pipelineRunId": "58386cb9-c69b-4c2f-b71a-de81b51ea356",
+      "itemSha256": "b06729451aca0bdbd8b30a938130803c3ce0e465086f6e3a8dd8ab0ed0d7e2cb"
+    },
+    {
+      "id": "hotpotqa-5adddccd5542997dc7907069",
+      "question": "Aside from the Apple Remote, what other device can control the program Apple Remote was originally designed to interact with?",
+      "referenceAnswers": [
+        "keyboard function keys"
+      ],
+      "necessaryEvidence": [
+        {
+          "id": "u1",
+          "sourceTitle": "Apple Remote",
+          "sentenceIndex": 0,
+          "alternatives": [
+            {
+              "document": "doc-c377dcb7e4e5537c5adb8f9fd981d6911617c2f8a60fc2152578fdbf98696f8e",
+              "quote": "The Apple Remote is a remote control device released in or after October 2005 by Apple Inc. for use with a number of its products which use infrared capabilities."
+            }
+          ]
+        },
+        {
+          "id": "u2",
+          "sourceTitle": "Apple Remote",
+          "sentenceIndex": 1,
+          "alternatives": [
+            {
+              "document": "doc-c377dcb7e4e5537c5adb8f9fd981d6911617c2f8a60fc2152578fdbf98696f8e",
+              "quote": " The device was originally designed to interact with the Front Row media program on the iSight iMac G5 and is compatible with some later desktop and portable Macintosh computers."
+            }
+          ]
+        },
+        {
+          "id": "u3",
+          "sourceTitle": "Front Row (software)",
+          "sentenceIndex": 0,
+          "alternatives": [
+            {
+              "document": "doc-31520f8200aaefe5c477775d0f7ae5300bb63142a4cf29aa47b49ce5cd362a14",
+              "quote": "Front Row is a discontinued media center software application for Apple's Macintosh computers and Apple TV for navigating and viewing video, photos, podcasts, and music from a computer, optical disc, or the Internet through a 10-foot user interface (similar to Windows Media Center and Kodi)."
+            }
+          ]
+        },
+        {
+          "id": "u4",
+          "sourceTitle": "Front Row (software)",
+          "sentenceIndex": 1,
+          "alternatives": [
+            {
+              "document": "doc-31520f8200aaefe5c477775d0f7ae5300bb63142a4cf29aa47b49ce5cd362a14",
+              "quote": " The software relies on iTunes and iPhoto and is controlled by an Apple Remote or the keyboard function keys."
+            }
+          ]
+        }
+      ],
+      "observations": [
+        {
+          "variant": "rrf-01",
+          "captureSha256": "18b5d210e006b87552c4ee187ec27ecfe0445164f9cdde5e92125b902bc065e7",
+          "pipelineArtifact": "/home/zyh/projects/yeRAG-agent/target/hotpotqa50-rerank-20261027-002/rrf-01/artifacts/35763b76-0f21-4855-9122-9ff55253dbc5.json",
+          "pipelineArtifactSha256": "fc956a431c67d4c153e03d450de0ce6bda5ceca71beae3b57b9bd24ce91d5671",
+          "answer": "Siri Remote",
+          "actualContexts": [
+            "The Apple Remote is a remote control device released in or after October 2005 by Apple Inc.for use with a number of its products which use infrared capabilities.The device was originally designed to interact with the Front Row media program on the iSight iMac G5 and is compatible with some later desktop and portable Macintosh computers.The first three generations of Apple TV used the Apple Remote as their primary control mechanism.It has now been replaced with the Siri Remote in the fourth generation.",
+            "Siri Remote\n\nThe Siri Remote is a remote control device released in tandem with the 4th Generation Apple TV at an Apple Keynote Address by CEO Tim Cook on October 26, 2015 by Apple Inc. The Remote is designed specifically to work with the always-on Siri capable Apple TV. The device is a successor of the original Apple Remote. It is also compatible with the Apple TV 4K.",
+            "Apple Remote Desktop\n\nApple Remote Desktop (ARD) is a Macintosh application produced by Apple Inc., first released on March 14, 2002, that replaced a similar product called \"Apple Network Assistant\". Aimed at computer administrators responsible for large numbers of computers and teachers who need to assist individuals or perform group demonstrations, Apple Remote Desktop allows users to remotely control or monitor other computers over a network.",
+            "Prior to the Apple Remote, Apple produced several nameless IR remotes for products such as the Macintosh TV, TV tuner expansion boards, and the PowerCD drive.",
+            "Apple Remote"
+          ],
+          "nativeAnswer": {
+            "scorer": "hotpotqa-answer-v1",
+            "prediction": "Siri Remote",
+            "generationComplete": true,
+            "answerSurface": "FULL_GENERATED_ANSWER",
+            "status": "SCORED",
+            "em": 0.0,
+            "f1": 0.0
+          },
+          "stages": {
+            "retrievalPool": {
+              "coveredUnits": [
+                "u1",
+                "u2",
+                "u3",
+                "u4"
+              ],
+              "missingUnits": [],
+              "covered": 4,
+              "required": 4,
+              "state": "FULL",
+              "coverage": 1.0,
+              "hit": 1,
+              "completeHit": 1
+            },
+            "top5": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [
+                "u3",
+                "u4"
+              ],
+              "covered": 2,
+              "required": 4,
+              "state": "PARTIAL",
+              "coverage": 0.5,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "assembled": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [
+                "u3",
+                "u4"
+              ],
+              "covered": 2,
+              "required": 4,
+              "state": "PARTIAL",
+              "coverage": 0.5,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "wire": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [
+                "u3",
+                "u4"
+              ],
+              "covered": 2,
+              "required": 4,
+              "state": "PARTIAL",
+              "coverage": 0.5,
+              "hit": 1,
+              "completeHit": 0
+            }
+          },
+          "evidenceRanks": [
+            {
+              "id": "u1",
+              "rrfPoolRanks": [
+                1
+              ],
+              "finalRanks": [
+                1
+              ],
+              "inTop5": true
+            },
+            {
+              "id": "u2",
+              "rrfPoolRanks": [
+                1
+              ],
+              "finalRanks": [
+                1
+              ],
+              "inTop5": true
+            },
+            {
+              "id": "u3",
+              "rrfPoolRanks": [
+                11
+              ],
+              "finalRanks": [
+                11
+              ],
+              "inTop5": false
+            },
+            {
+              "id": "u4",
+              "rrfPoolRanks": [
+                11
+              ],
+              "finalRanks": [
+                11
+              ],
+              "inTop5": false
+            }
+          ]
+        },
+        {
+          "variant": "rrf-rerank-01",
+          "captureSha256": "8ea3e5430e6b7cbe7ba472869fb9df3a7b234b0a9cf9c01366f7692bd57bdc58",
+          "pipelineArtifact": "/home/zyh/projects/yeRAG-agent/target/hotpotqa50-rerank-20261027-002/rrf-rerank-01/artifacts/ad02f052-5f1c-4523-baa1-a23d43a83a5c.json",
+          "pipelineArtifactSha256": "78b096eea45e0b829f7ad4fd81a66b91194837fdb01f5f3a68f763ac4f7dea50",
+          "answer": "Siri Remote",
+          "actualContexts": [
+            "The Apple Remote is a remote control device released in or after October 2005 by Apple Inc.for use with a number of its products which use infrared capabilities.The device was originally designed to interact with the Front Row media program on the iSight iMac G5 and is compatible with some later desktop and portable Macintosh computers.The first three generations of Apple TV used the Apple Remote as their primary control mechanism.It has now been replaced with the Siri Remote in the fourth generation.",
+            "Siri Remote\n\nThe Siri Remote is a remote control device released in tandem with the 4th Generation Apple TV at an Apple Keynote Address by CEO Tim Cook on October 26, 2015 by Apple Inc. The Remote is designed specifically to work with the always-on Siri capable Apple TV. The device is a successor of the original Apple Remote. It is also compatible with the Apple TV 4K.",
+            "Apple Remote Desktop\n\nApple Remote Desktop (ARD) is a Macintosh application produced by Apple Inc., first released on March 14, 2002, that replaced a similar product called \"Apple Network Assistant\". Aimed at computer administrators responsible for large numbers of computers and teachers who need to assist individuals or perform group demonstrations, Apple Remote Desktop allows users to remotely control or monitor other computers over a network.",
+            "Apple Remote",
+            "Prior to the Apple Remote, Apple produced several nameless IR remotes for products such as the Macintosh TV, TV tuner expansion boards, and the PowerCD drive."
+          ],
+          "nativeAnswer": {
+            "scorer": "hotpotqa-answer-v1",
+            "prediction": "Siri Remote",
+            "generationComplete": true,
+            "answerSurface": "FULL_GENERATED_ANSWER",
+            "status": "SCORED",
+            "em": 0.0,
+            "f1": 0.0
+          },
+          "stages": {
+            "retrievalPool": {
+              "coveredUnits": [
+                "u1",
+                "u2",
+                "u3",
+                "u4"
+              ],
+              "missingUnits": [],
+              "covered": 4,
+              "required": 4,
+              "state": "FULL",
+              "coverage": 1.0,
+              "hit": 1,
+              "completeHit": 1
+            },
+            "top5": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [
+                "u3",
+                "u4"
+              ],
+              "covered": 2,
+              "required": 4,
+              "state": "PARTIAL",
+              "coverage": 0.5,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "assembled": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [
+                "u3",
+                "u4"
+              ],
+              "covered": 2,
+              "required": 4,
+              "state": "PARTIAL",
+              "coverage": 0.5,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "wire": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [
+                "u3",
+                "u4"
+              ],
+              "covered": 2,
+              "required": 4,
+              "state": "PARTIAL",
+              "coverage": 0.5,
+              "hit": 1,
+              "completeHit": 0
+            }
+          },
+          "evidenceRanks": [
+            {
+              "id": "u1",
+              "rrfPoolRanks": [
+                1
+              ],
+              "finalRanks": [
+                1
+              ],
+              "inTop5": true
+            },
+            {
+              "id": "u2",
+              "rrfPoolRanks": [
+                1
+              ],
+              "finalRanks": [
+                1
+              ],
+              "inTop5": true
+            },
+            {
+              "id": "u3",
+              "rrfPoolRanks": [
+                11
+              ],
+              "finalRanks": [
+                7
+              ],
+              "inTop5": false
+            },
+            {
+              "id": "u4",
+              "rrfPoolRanks": [
+                11
+              ],
+              "finalRanks": [
+                7
+              ],
+              "inTop5": false
+            }
+          ]
+        },
+        {
+          "variant": "rrf-rerank-02",
+          "captureSha256": "bc48c5af24985928edc6894064d5679749e40945552dfe84b928d1a99ffa5f68",
+          "pipelineArtifact": "/home/zyh/projects/yeRAG-agent/target/hotpotqa50-rerank-20261027-002/rrf-rerank-02/artifacts/ddc65aa1-bb94-420c-9574-984a3b4ce014.json",
+          "pipelineArtifactSha256": "98e571714ba356e05af75e24f5046831e281cecbfa019d12d94f2bb7f752833c",
+          "answer": "Siri Remote",
+          "actualContexts": [
+            "The Apple Remote is a remote control device released in or after October 2005 by Apple Inc.for use with a number of its products which use infrared capabilities.The device was originally designed to interact with the Front Row media program on the iSight iMac G5 and is compatible with some later desktop and portable Macintosh computers.The first three generations of Apple TV used the Apple Remote as their primary control mechanism.It has now been replaced with the Siri Remote in the fourth generation.",
+            "Siri Remote\n\nThe Siri Remote is a remote control device released in tandem with the 4th Generation Apple TV at an Apple Keynote Address by CEO Tim Cook on October 26, 2015 by Apple Inc. The Remote is designed specifically to work with the always-on Siri capable Apple TV. The device is a successor of the original Apple Remote. It is also compatible with the Apple TV 4K.",
+            "Apple Remote Desktop\n\nApple Remote Desktop (ARD) is a Macintosh application produced by Apple Inc., first released on March 14, 2002, that replaced a similar product called \"Apple Network Assistant\". Aimed at computer administrators responsible for large numbers of computers and teachers who need to assist individuals or perform group demonstrations, Apple Remote Desktop allows users to remotely control or monitor other computers over a network.",
+            "Apple Remote",
+            "Prior to the Apple Remote, Apple produced several nameless IR remotes for products such as the Macintosh TV, TV tuner expansion boards, and the PowerCD drive."
+          ],
+          "nativeAnswer": {
+            "scorer": "hotpotqa-answer-v1",
+            "prediction": "Siri Remote",
+            "generationComplete": true,
+            "answerSurface": "FULL_GENERATED_ANSWER",
+            "status": "SCORED",
+            "em": 0.0,
+            "f1": 0.0
+          },
+          "stages": {
+            "retrievalPool": {
+              "coveredUnits": [
+                "u1",
+                "u2",
+                "u3",
+                "u4"
+              ],
+              "missingUnits": [],
+              "covered": 4,
+              "required": 4,
+              "state": "FULL",
+              "coverage": 1.0,
+              "hit": 1,
+              "completeHit": 1
+            },
+            "top5": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [
+                "u3",
+                "u4"
+              ],
+              "covered": 2,
+              "required": 4,
+              "state": "PARTIAL",
+              "coverage": 0.5,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "assembled": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [
+                "u3",
+                "u4"
+              ],
+              "covered": 2,
+              "required": 4,
+              "state": "PARTIAL",
+              "coverage": 0.5,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "wire": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [
+                "u3",
+                "u4"
+              ],
+              "covered": 2,
+              "required": 4,
+              "state": "PARTIAL",
+              "coverage": 0.5,
+              "hit": 1,
+              "completeHit": 0
+            }
+          },
+          "evidenceRanks": [
+            {
+              "id": "u1",
+              "rrfPoolRanks": [
+                1
+              ],
+              "finalRanks": [
+                1
+              ],
+              "inTop5": true
+            },
+            {
+              "id": "u2",
+              "rrfPoolRanks": [
+                1
+              ],
+              "finalRanks": [
+                1
+              ],
+              "inTop5": true
+            },
+            {
+              "id": "u3",
+              "rrfPoolRanks": [
+                11
+              ],
+              "finalRanks": [
+                7
+              ],
+              "inTop5": false
+            },
+            {
+              "id": "u4",
+              "rrfPoolRanks": [
+                11
+              ],
+              "finalRanks": [
+                7
+              ],
+              "inTop5": false
+            }
+          ]
+        },
+        {
+          "variant": "rrf-02",
+          "captureSha256": "0122b911a74b0f2e1342d0d837b6bda58acbcd2fa4bbec22ec309064be694be6",
+          "pipelineArtifact": "/home/zyh/projects/yeRAG-agent/target/hotpotqa50-rerank-20261027-002/rrf-02/artifacts/f73797cc-e412-4683-af6e-77c647d796ff.json",
+          "pipelineArtifactSha256": "c14d2b4f8748a505c1b1703591f372784c8cf633ddba6f3bb38b8e505a865e2e",
+          "answer": "Siri Remote",
+          "actualContexts": [
+            "The Apple Remote is a remote control device released in or after October 2005 by Apple Inc.for use with a number of its products which use infrared capabilities.The device was originally designed to interact with the Front Row media program on the iSight iMac G5 and is compatible with some later desktop and portable Macintosh computers.The first three generations of Apple TV used the Apple Remote as their primary control mechanism.It has now been replaced with the Siri Remote in the fourth generation.",
+            "Siri Remote\n\nThe Siri Remote is a remote control device released in tandem with the 4th Generation Apple TV at an Apple Keynote Address by CEO Tim Cook on October 26, 2015 by Apple Inc. The Remote is designed specifically to work with the always-on Siri capable Apple TV. The device is a successor of the original Apple Remote. It is also compatible with the Apple TV 4K.",
+            "Apple Remote Desktop\n\nApple Remote Desktop (ARD) is a Macintosh application produced by Apple Inc., first released on March 14, 2002, that replaced a similar product called \"Apple Network Assistant\". Aimed at computer administrators responsible for large numbers of computers and teachers who need to assist individuals or perform group demonstrations, Apple Remote Desktop allows users to remotely control or monitor other computers over a network.",
+            "Prior to the Apple Remote, Apple produced several nameless IR remotes for products such as the Macintosh TV, TV tuner expansion boards, and the PowerCD drive.",
+            "Apple Remote"
+          ],
+          "nativeAnswer": {
+            "scorer": "hotpotqa-answer-v1",
+            "prediction": "Siri Remote",
+            "generationComplete": true,
+            "answerSurface": "FULL_GENERATED_ANSWER",
+            "status": "SCORED",
+            "em": 0.0,
+            "f1": 0.0
+          },
+          "stages": {
+            "retrievalPool": {
+              "coveredUnits": [
+                "u1",
+                "u2",
+                "u3",
+                "u4"
+              ],
+              "missingUnits": [],
+              "covered": 4,
+              "required": 4,
+              "state": "FULL",
+              "coverage": 1.0,
+              "hit": 1,
+              "completeHit": 1
+            },
+            "top5": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [
+                "u3",
+                "u4"
+              ],
+              "covered": 2,
+              "required": 4,
+              "state": "PARTIAL",
+              "coverage": 0.5,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "assembled": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [
+                "u3",
+                "u4"
+              ],
+              "covered": 2,
+              "required": 4,
+              "state": "PARTIAL",
+              "coverage": 0.5,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "wire": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [
+                "u3",
+                "u4"
+              ],
+              "covered": 2,
+              "required": 4,
+              "state": "PARTIAL",
+              "coverage": 0.5,
+              "hit": 1,
+              "completeHit": 0
+            }
+          },
+          "evidenceRanks": [
+            {
+              "id": "u1",
+              "rrfPoolRanks": [
+                1
+              ],
+              "finalRanks": [
+                1
+              ],
+              "inTop5": true
+            },
+            {
+              "id": "u2",
+              "rrfPoolRanks": [
+                1
+              ],
+              "finalRanks": [
+                1
+              ],
+              "inTop5": true
+            },
+            {
+              "id": "u3",
+              "rrfPoolRanks": [
+                11
+              ],
+              "finalRanks": [
+                11
+              ],
+              "inTop5": false
+            },
+            {
+              "id": "u4",
+              "rrfPoolRanks": [
+                11
+              ],
+              "finalRanks": [
+                11
+              ],
+              "inTop5": false
+            }
+          ]
+        }
+      ],
+      "technicalConclusion": "Front Row支持句所在块在RRF池第11、重排第7；已进入50候选重排窗口，但未进入Top5，且组装/入模均缺失该单元。实际上下文保留Siri Remote干扰信息，不能归因于Token预算。",
+      "machineVerdict": null,
+      "itemSha256": "d69a7a64b374d2441ea3c5b0e6c83d2a26a4a15968d07a9ac3626f384e0d9ef0"
+    },
+    {
+      "id": "hotpotqa-5ab2b8fe5542991669774070",
+      "question": "Which American car rental company is also a member of the Association of Car Rental Industry Sytems Standards?",
+      "referenceAnswers": [
+        "Budget Rent a Car"
+      ],
+      "necessaryEvidence": [
+        {
+          "id": "u1",
+          "sourceTitle": "ACRISS Car Classification Code",
+          "sentenceIndex": 0,
+          "alternatives": [
+            {
+              "document": "doc-df12c450fc03e0c4805f48c291a6cef3f82bb22fb316591bfd3597b943c71cf3",
+              "quote": "The ACRISS Car Classification Code developed and maintained by ACRISS (the Association of Car Rental Industry Systems Standards) and is designed to enable customers and travel professionals to make an informed choice when booking car rental in Europe, Middle East and Africa."
+            }
+          ]
+        },
+        {
+          "id": "u2",
+          "sourceTitle": "ACRISS Car Classification Code",
+          "sentenceIndex": 1,
+          "alternatives": [
+            {
+              "document": "doc-df12c450fc03e0c4805f48c291a6cef3f82bb22fb316591bfd3597b943c71cf3",
+              "quote": " ACRISS Members include Avis, Budget, Alamo, National, Enterprise, Europcar, Hertz and Maggiore"
+            }
+          ]
+        },
+        {
+          "id": "u3",
+          "sourceTitle": "Budget Rent a Car",
+          "sentenceIndex": 0,
+          "alternatives": [
+            {
+              "document": "doc-9b1f4020399b6f136f4015a3c0a7cce246b0a608d49865f6f1a2f87b3e546404",
+              "quote": "Budget Rent a Car System, Inc. is an American car rental company that was founded in 1958 in Los Angeles, California by Morris Mirkin."
+            }
+          ]
+        }
+      ],
+      "observations": [
+        {
+          "variant": "rrf-01",
+          "captureSha256": "18b5d210e006b87552c4ee187ec27ecfe0445164f9cdde5e92125b902bc065e7",
+          "pipelineArtifact": "/home/zyh/projects/yeRAG-agent/target/hotpotqa50-rerank-20261027-002/rrf-01/artifacts/bc57cdc7-9e95-4abe-8fc6-bce23fe92f0f.json",
+          "pipelineArtifactSha256": "893a946ea796fb151a3e2c054750e462dea7559ad7ff7915eed93c58453221a1",
+          "answer": "Enterprise",
+          "actualContexts": [
+            "American Car Rental Association\n\nThe American Car Rental Association (ACRA) is a formal trade organization based in Long Lake, New York, composed of rental car companies, that advocates and lobbies on behalf of the car rental industry with elected officials and consumer advocates at the federal, state and local levels of government.",
+            "Enterprise Rent-A-Car\n\nEnterprise Rent-A-Car is an American car rental company headquartered in Clayton, Missouri, United States in Greater St. Louis. In addition to car rental, Enterprise also oversees commercial fleet management, used car sales, and commercial truck rental operations.",
+            "ACRISS Car Classification Code\n\nThe ACRISS Car Classification Code developed and maintained by ACRISS (the Association of Car Rental Industry Systems Standards) and is designed to enable customers and travel professionals to make an informed choice when booking car rental in Europe, Middle East and Africa. ACRISS Members include Avis, Budget, Alamo, National, Enterprise, Europcar, Hertz and Maggiore",
+            "Avis Budget Group\n\nAvis Budget Group, Inc. is the American parent company of Avis Car Rental, Budget Car Rental, Budget Truck Rental, Payless Car Rental, Apex Car Rentals, Maggiore Group and Zipcar. The company's headquarters are located in Parsippany-Troy Hills, New Jersey, United States.",
+            "Enterprise Holdings, Inc.is an American holding company headquartered in Clayton, Missouri.It is the parent company of car rental companies Enterprise Rent-A-Car, National Car Rental, Alamo Rent a Car, and Enterprise CarShare.The holding company was formed in 2009 as a result of Enterprise Rent-A-Car's 2007 acquisition of Vanguard Automotive Group, the parent company of National Car Rental and Alamo Rent a Car.Enterprise ranks as the largest car rental company in the United States."
+          ],
+          "nativeAnswer": {
+            "scorer": "hotpotqa-answer-v1",
+            "prediction": "Enterprise",
+            "generationComplete": true,
+            "answerSurface": "FULL_GENERATED_ANSWER",
+            "status": "SCORED",
+            "em": 0.0,
+            "f1": 0.0
+          },
+          "stages": {
+            "retrievalPool": {
+              "coveredUnits": [
+                "u1",
+                "u2",
+                "u3"
+              ],
+              "missingUnits": [],
+              "covered": 3,
+              "required": 3,
+              "state": "FULL",
+              "coverage": 1.0,
+              "hit": 1,
+              "completeHit": 1
+            },
+            "top5": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [
+                "u3"
+              ],
+              "covered": 2,
+              "required": 3,
+              "state": "PARTIAL",
+              "coverage": 0.6666666666666666,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "assembled": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [
+                "u3"
+              ],
+              "covered": 2,
+              "required": 3,
+              "state": "PARTIAL",
+              "coverage": 0.6666666666666666,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "wire": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [
+                "u3"
+              ],
+              "covered": 2,
+              "required": 3,
+              "state": "PARTIAL",
+              "coverage": 0.6666666666666666,
+              "hit": 1,
+              "completeHit": 0
+            }
+          },
+          "evidenceRanks": [
+            {
+              "id": "u1",
+              "rrfPoolRanks": [
+                3
+              ],
+              "finalRanks": [
+                3
+              ],
+              "inTop5": true
+            },
+            {
+              "id": "u2",
+              "rrfPoolRanks": [
+                3
+              ],
+              "finalRanks": [
+                3
+              ],
+              "inTop5": true
+            },
+            {
+              "id": "u3",
+              "rrfPoolRanks": [
+                6
+              ],
+              "finalRanks": [
+                6
+              ],
+              "inTop5": false
+            }
+          ]
+        },
+        {
+          "variant": "rrf-rerank-01",
+          "captureSha256": "8ea3e5430e6b7cbe7ba472869fb9df3a7b234b0a9cf9c01366f7692bd57bdc58",
+          "pipelineArtifact": "/home/zyh/projects/yeRAG-agent/target/hotpotqa50-rerank-20261027-002/rrf-rerank-01/artifacts/b36a65f2-5d0f-4a0a-a91f-6a70a7062801.json",
+          "pipelineArtifactSha256": "e953c66891aafa597b713185018683161eb26212cc42618f2887918d97db37fd",
+          "answer": "I don't know.",
+          "actualContexts": [
+            "Budget Rent a Car\n\nBudget Rent a Car System, Inc. is an American car rental company that was founded in 1958 in Los Angeles, California by Morris Mirkin. Budget's operations are headquartered in Parsippany-Troy Hills, New Jersey.",
+            "The Hertz Corporation, a subsidiary of Hertz Global Holdings Inc., is an American car rental company based in Estero, Florida that operates 9,700 international corporate and franchisee locations.As the second-largest US car rental company by sales, locations, and fleet size, Hertz operates in 150 countries, including North America, Europe, Latin America, Africa, Asia, Australia, The Caribbean, the Middle East, and New Zealand.",
+            "Enterprise Rent-A-Car\n\nEnterprise Rent-A-Car is an American car rental company headquartered in Clayton, Missouri, United States in Greater St. Louis. In addition to car rental, Enterprise also oversees commercial fleet management, used car sales, and commercial truck rental operations.",
+            "American Car Rental Association\n\nThe American Car Rental Association (ACRA) is a formal trade organization based in Long Lake, New York, composed of rental car companies, that advocates and lobbies on behalf of the car rental industry with elected officials and consumer advocates at the federal, state and local levels of government.",
+            "Enterprise Holdings, Inc.is an American holding company headquartered in Clayton, Missouri.It is the parent company of car rental companies Enterprise Rent-A-Car, National Car Rental, Alamo Rent a Car, and Enterprise CarShare.The holding company was formed in 2009 as a result of Enterprise Rent-A-Car's 2007 acquisition of Vanguard Automotive Group, the parent company of National Car Rental and Alamo Rent a Car.Enterprise ranks as the largest car rental company in the United States."
+          ],
+          "nativeAnswer": {
+            "scorer": "hotpotqa-answer-v1",
+            "prediction": "I don't know.",
+            "generationComplete": true,
+            "answerSurface": "FULL_GENERATED_ANSWER",
+            "status": "SCORED",
+            "em": 0.0,
+            "f1": 0.0
+          },
+          "stages": {
+            "retrievalPool": {
+              "coveredUnits": [
+                "u1",
+                "u2",
+                "u3"
+              ],
+              "missingUnits": [],
+              "covered": 3,
+              "required": 3,
+              "state": "FULL",
+              "coverage": 1.0,
+              "hit": 1,
+              "completeHit": 1
+            },
+            "top5": {
+              "coveredUnits": [
+                "u3"
+              ],
+              "missingUnits": [
+                "u1",
+                "u2"
+              ],
+              "covered": 1,
+              "required": 3,
+              "state": "PARTIAL",
+              "coverage": 0.3333333333333333,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "assembled": {
+              "coveredUnits": [
+                "u3"
+              ],
+              "missingUnits": [
+                "u1",
+                "u2"
+              ],
+              "covered": 1,
+              "required": 3,
+              "state": "PARTIAL",
+              "coverage": 0.3333333333333333,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "wire": {
+              "coveredUnits": [
+                "u3"
+              ],
+              "missingUnits": [
+                "u1",
+                "u2"
+              ],
+              "covered": 1,
+              "required": 3,
+              "state": "PARTIAL",
+              "coverage": 0.3333333333333333,
+              "hit": 1,
+              "completeHit": 0
+            }
+          },
+          "evidenceRanks": [
+            {
+              "id": "u1",
+              "rrfPoolRanks": [
+                3
+              ],
+              "finalRanks": [
+                6
+              ],
+              "inTop5": false
+            },
+            {
+              "id": "u2",
+              "rrfPoolRanks": [
+                3
+              ],
+              "finalRanks": [
+                6
+              ],
+              "inTop5": false
+            },
+            {
+              "id": "u3",
+              "rrfPoolRanks": [
+                6
+              ],
+              "finalRanks": [
+                1
+              ],
+              "inTop5": true
+            }
+          ]
+        },
+        {
+          "variant": "rrf-rerank-02",
+          "captureSha256": "bc48c5af24985928edc6894064d5679749e40945552dfe84b928d1a99ffa5f68",
+          "pipelineArtifact": "/home/zyh/projects/yeRAG-agent/target/hotpotqa50-rerank-20261027-002/rrf-rerank-02/artifacts/b667114b-73cb-4dcb-9bce-9f8d6a7006fc.json",
+          "pipelineArtifactSha256": "63a64d7ba16b9e30dd4e989a9dc2c88fc149546a56676890fc972609ad0141d1",
+          "answer": "I don't know.",
+          "actualContexts": [
+            "Budget Rent a Car\n\nBudget Rent a Car System, Inc. is an American car rental company that was founded in 1958 in Los Angeles, California by Morris Mirkin. Budget's operations are headquartered in Parsippany-Troy Hills, New Jersey.",
+            "The Hertz Corporation, a subsidiary of Hertz Global Holdings Inc., is an American car rental company based in Estero, Florida that operates 9,700 international corporate and franchisee locations.As the second-largest US car rental company by sales, locations, and fleet size, Hertz operates in 150 countries, including North America, Europe, Latin America, Africa, Asia, Australia, The Caribbean, the Middle East, and New Zealand.",
+            "Enterprise Rent-A-Car\n\nEnterprise Rent-A-Car is an American car rental company headquartered in Clayton, Missouri, United States in Greater St. Louis. In addition to car rental, Enterprise also oversees commercial fleet management, used car sales, and commercial truck rental operations.",
+            "American Car Rental Association\n\nThe American Car Rental Association (ACRA) is a formal trade organization based in Long Lake, New York, composed of rental car companies, that advocates and lobbies on behalf of the car rental industry with elected officials and consumer advocates at the federal, state and local levels of government.",
+            "Enterprise Holdings, Inc.is an American holding company headquartered in Clayton, Missouri.It is the parent company of car rental companies Enterprise Rent-A-Car, National Car Rental, Alamo Rent a Car, and Enterprise CarShare.The holding company was formed in 2009 as a result of Enterprise Rent-A-Car's 2007 acquisition of Vanguard Automotive Group, the parent company of National Car Rental and Alamo Rent a Car.Enterprise ranks as the largest car rental company in the United States."
+          ],
+          "nativeAnswer": {
+            "scorer": "hotpotqa-answer-v1",
+            "prediction": "I don't know.",
+            "generationComplete": true,
+            "answerSurface": "FULL_GENERATED_ANSWER",
+            "status": "SCORED",
+            "em": 0.0,
+            "f1": 0.0
+          },
+          "stages": {
+            "retrievalPool": {
+              "coveredUnits": [
+                "u1",
+                "u2",
+                "u3"
+              ],
+              "missingUnits": [],
+              "covered": 3,
+              "required": 3,
+              "state": "FULL",
+              "coverage": 1.0,
+              "hit": 1,
+              "completeHit": 1
+            },
+            "top5": {
+              "coveredUnits": [
+                "u3"
+              ],
+              "missingUnits": [
+                "u1",
+                "u2"
+              ],
+              "covered": 1,
+              "required": 3,
+              "state": "PARTIAL",
+              "coverage": 0.3333333333333333,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "assembled": {
+              "coveredUnits": [
+                "u3"
+              ],
+              "missingUnits": [
+                "u1",
+                "u2"
+              ],
+              "covered": 1,
+              "required": 3,
+              "state": "PARTIAL",
+              "coverage": 0.3333333333333333,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "wire": {
+              "coveredUnits": [
+                "u3"
+              ],
+              "missingUnits": [
+                "u1",
+                "u2"
+              ],
+              "covered": 1,
+              "required": 3,
+              "state": "PARTIAL",
+              "coverage": 0.3333333333333333,
+              "hit": 1,
+              "completeHit": 0
+            }
+          },
+          "evidenceRanks": [
+            {
+              "id": "u1",
+              "rrfPoolRanks": [
+                3
+              ],
+              "finalRanks": [
+                6
+              ],
+              "inTop5": false
+            },
+            {
+              "id": "u2",
+              "rrfPoolRanks": [
+                3
+              ],
+              "finalRanks": [
+                6
+              ],
+              "inTop5": false
+            },
+            {
+              "id": "u3",
+              "rrfPoolRanks": [
+                6
+              ],
+              "finalRanks": [
+                1
+              ],
+              "inTop5": true
+            }
+          ]
+        },
+        {
+          "variant": "rrf-02",
+          "captureSha256": "0122b911a74b0f2e1342d0d837b6bda58acbcd2fa4bbec22ec309064be694be6",
+          "pipelineArtifact": "/home/zyh/projects/yeRAG-agent/target/hotpotqa50-rerank-20261027-002/rrf-02/artifacts/83ca7aea-168a-47c3-b6ad-c7cf9d4554ba.json",
+          "pipelineArtifactSha256": "04803e3470dc975eea7b1d72ba8ae5a5475c78d9877788631acb387660bfe1fd",
+          "answer": "Enterprise",
+          "actualContexts": [
+            "American Car Rental Association\n\nThe American Car Rental Association (ACRA) is a formal trade organization based in Long Lake, New York, composed of rental car companies, that advocates and lobbies on behalf of the car rental industry with elected officials and consumer advocates at the federal, state and local levels of government.",
+            "Enterprise Rent-A-Car\n\nEnterprise Rent-A-Car is an American car rental company headquartered in Clayton, Missouri, United States in Greater St. Louis. In addition to car rental, Enterprise also oversees commercial fleet management, used car sales, and commercial truck rental operations.",
+            "ACRISS Car Classification Code\n\nThe ACRISS Car Classification Code developed and maintained by ACRISS (the Association of Car Rental Industry Systems Standards) and is designed to enable customers and travel professionals to make an informed choice when booking car rental in Europe, Middle East and Africa. ACRISS Members include Avis, Budget, Alamo, National, Enterprise, Europcar, Hertz and Maggiore",
+            "Avis Budget Group\n\nAvis Budget Group, Inc. is the American parent company of Avis Car Rental, Budget Car Rental, Budget Truck Rental, Payless Car Rental, Apex Car Rentals, Maggiore Group and Zipcar. The company's headquarters are located in Parsippany-Troy Hills, New Jersey, United States.",
+            "Enterprise Holdings, Inc.is an American holding company headquartered in Clayton, Missouri.It is the parent company of car rental companies Enterprise Rent-A-Car, National Car Rental, Alamo Rent a Car, and Enterprise CarShare.The holding company was formed in 2009 as a result of Enterprise Rent-A-Car's 2007 acquisition of Vanguard Automotive Group, the parent company of National Car Rental and Alamo Rent a Car.Enterprise ranks as the largest car rental company in the United States."
+          ],
+          "nativeAnswer": {
+            "scorer": "hotpotqa-answer-v1",
+            "prediction": "Enterprise",
+            "generationComplete": true,
+            "answerSurface": "FULL_GENERATED_ANSWER",
+            "status": "SCORED",
+            "em": 0.0,
+            "f1": 0.0
+          },
+          "stages": {
+            "retrievalPool": {
+              "coveredUnits": [
+                "u1",
+                "u2",
+                "u3"
+              ],
+              "missingUnits": [],
+              "covered": 3,
+              "required": 3,
+              "state": "FULL",
+              "coverage": 1.0,
+              "hit": 1,
+              "completeHit": 1
+            },
+            "top5": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [
+                "u3"
+              ],
+              "covered": 2,
+              "required": 3,
+              "state": "PARTIAL",
+              "coverage": 0.6666666666666666,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "assembled": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [
+                "u3"
+              ],
+              "covered": 2,
+              "required": 3,
+              "state": "PARTIAL",
+              "coverage": 0.6666666666666666,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "wire": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [
+                "u3"
+              ],
+              "covered": 2,
+              "required": 3,
+              "state": "PARTIAL",
+              "coverage": 0.6666666666666666,
+              "hit": 1,
+              "completeHit": 0
+            }
+          },
+          "evidenceRanks": [
+            {
+              "id": "u1",
+              "rrfPoolRanks": [
+                3
+              ],
+              "finalRanks": [
+                3
+              ],
+              "inTop5": true
+            },
+            {
+              "id": "u2",
+              "rrfPoolRanks": [
+                3
+              ],
+              "finalRanks": [
+                3
+              ],
+              "inTop5": true
+            },
+            {
+              "id": "u3",
+              "rrfPoolRanks": [
+                6
+              ],
+              "finalRanks": [
+                6
+              ],
+              "inTop5": false
+            }
+          ]
+        }
+      ],
+      "technicalConclusion": "成员关系块从RRF第3移至重排第6，Budget介绍进入Top5；缺少公司与成员资格的完整连接。重排回答拒答，严格EM仍为0，与RRF的EM0相同。",
+      "machineVerdict": null,
+      "itemSha256": "6f3ce3e9585ee45ab476a9472ed1e53df0070169450b97c76f915083ab53cf73"
+    },
+    {
+      "id": "hotpotqa-5a8ec7cc5542995a26add518",
+      "question": "Which was published more frequently, Popular Science or Girlfriends?",
+      "referenceAnswers": [
+        "Girlfriends"
+      ],
+      "necessaryEvidence": [
+        {
+          "id": "u1",
+          "sourceTitle": "Popular Science",
+          "sentenceIndex": 0,
+          "alternatives": [
+            {
+              "document": "doc-9de192d8224bebd3b4581eb7c06cf7c89e696af34eb7035b318725b36a477e47",
+              "quote": "Popular Science (also known as PopSci) is an American bi-monthly magazine carrying popular science content, which refers to articles for the general reader on science and technology subjects."
+            }
+          ]
+        },
+        {
+          "id": "u2",
+          "sourceTitle": "Girlfriends (magazine)",
+          "sentenceIndex": 0,
+          "alternatives": [
+            {
+              "document": "doc-318e1ddfd1fe1c948ccb85853c7b8eaa424c5b0c8ab4399866386eaadf2730b6",
+              "quote": "Girlfriends was a women's magazine that provided critical coverage of culture, entertainment and world events from a lesbian perspective."
+            }
+          ]
+        },
+        {
+          "id": "u3",
+          "sourceTitle": "Girlfriends (magazine)",
+          "sentenceIndex": 3,
+          "alternatives": [
+            {
+              "document": "doc-318e1ddfd1fe1c948ccb85853c7b8eaa424c5b0c8ab4399866386eaadf2730b6",
+              "quote": " Published monthly from San Francisco since 1993, it was distributed nationwide by Disticor."
+            }
+          ]
+        },
+        {
+          "id": "u4",
+          "sourceTitle": "Girlfriends (magazine)",
+          "sentenceIndex": 5,
+          "alternatives": [
+            {
+              "document": "doc-318e1ddfd1fe1c948ccb85853c7b8eaa424c5b0c8ab4399866386eaadf2730b6",
+              "quote": " \"Girlfriends\" magazine ceased publication in 2006."
+            }
+          ]
+        }
+      ],
+      "observations": [
+        {
+          "variant": "rrf-01",
+          "captureSha256": "18b5d210e006b87552c4ee187ec27ecfe0445164f9cdde5e92125b902bc065e7",
+          "pipelineArtifact": "/home/zyh/projects/yeRAG-agent/target/hotpotqa50-rerank-20261027-002/rrf-01/artifacts/dbffd4c6-2cb1-4fe1-90c4-4fbdd89d132e.json",
+          "pipelineArtifactSha256": "29f0d223d92c94ce5398a634cd0a5826aab3b1eb92559c823381b49ef7acc6de",
+          "answer": "Popular Science",
+          "actualContexts": [
+            "Popular science\n\nPopular science (also pop-science or popsci) is interpretation of science intended for a general audience. While science journalism focuses on recent scientific developments, popular science is more broad-ranging. It may be written by professional science journalists or by scientists themselves. It is presented in many forms, including books, film and television documentaries, magazine articles, and web pages.",
+            "Popular Science (also known as PopSci) is an American bi-monthly magazine carrying popular science content, which refers to articles for the general reader on science and technology subjects.\"Popular Science\" has won over 58 awards, including the American Society of Magazine Editors awards for its journalistic excellence in both 2003 (for General Excellence) and 2004 (for Best Magazine Section).",
+            "Popular Science",
+            "Girlfriends (magazine)",
+            "Universum (magazine)\n\nUniversum is an Austrian popular science magazine published in German and based in Vienna, Austria. The magazine is the only Austrian publication in the field of popular science, because Germany-published magazines dominate the field in the country. The magazine is financially supported by the Austrian National Science Foundation."
+          ],
+          "nativeAnswer": {
+            "scorer": "hotpotqa-answer-v1",
+            "prediction": "Popular Science",
+            "generationComplete": true,
+            "answerSurface": "FULL_GENERATED_ANSWER",
+            "status": "SCORED",
+            "em": 0.0,
+            "f1": 0.0
+          },
+          "stages": {
+            "retrievalPool": {
+              "coveredUnits": [
+                "u1",
+                "u2",
+                "u3",
+                "u4"
+              ],
+              "missingUnits": [],
+              "covered": 4,
+              "required": 4,
+              "state": "FULL",
+              "coverage": 1.0,
+              "hit": 1,
+              "completeHit": 1
+            },
+            "top5": {
+              "coveredUnits": [
+                "u1"
+              ],
+              "missingUnits": [
+                "u2",
+                "u3",
+                "u4"
+              ],
+              "covered": 1,
+              "required": 4,
+              "state": "PARTIAL",
+              "coverage": 0.25,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "assembled": {
+              "coveredUnits": [
+                "u1"
+              ],
+              "missingUnits": [
+                "u2",
+                "u3",
+                "u4"
+              ],
+              "covered": 1,
+              "required": 4,
+              "state": "PARTIAL",
+              "coverage": 0.25,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "wire": {
+              "coveredUnits": [
+                "u1"
+              ],
+              "missingUnits": [
+                "u2",
+                "u3",
+                "u4"
+              ],
+              "covered": 1,
+              "required": 4,
+              "state": "PARTIAL",
+              "coverage": 0.25,
+              "hit": 1,
+              "completeHit": 0
+            }
+          },
+          "evidenceRanks": [
+            {
+              "id": "u1",
+              "rrfPoolRanks": [
+                2
+              ],
+              "finalRanks": [
+                2
+              ],
+              "inTop5": true
+            },
+            {
+              "id": "u2",
+              "rrfPoolRanks": [
+                8
+              ],
+              "finalRanks": [
+                8
+              ],
+              "inTop5": false
+            },
+            {
+              "id": "u3",
+              "rrfPoolRanks": [
+                8
+              ],
+              "finalRanks": [
+                8
+              ],
+              "inTop5": false
+            },
+            {
+              "id": "u4",
+              "rrfPoolRanks": [
+                10
+              ],
+              "finalRanks": [
+                10
+              ],
+              "inTop5": false
+            }
+          ]
+        },
+        {
+          "variant": "rrf-rerank-01",
+          "captureSha256": "8ea3e5430e6b7cbe7ba472869fb9df3a7b234b0a9cf9c01366f7692bd57bdc58",
+          "pipelineArtifact": "/home/zyh/projects/yeRAG-agent/target/hotpotqa50-rerank-20261027-002/rrf-rerank-01/artifacts/69a417c9-310b-4d31-910a-cf2ce92d1df5.json",
+          "pipelineArtifactSha256": "1e85fff6725e45bf547bb40f1df5d0c52ba8598bff716ddb70000fe61e3a6255",
+          "answer": "Girlfriends",
+          "actualContexts": [
+            "Girlfriends was a women's magazine that provided critical coverage of culture, entertainment and world events from a lesbian perspective.It was founded by Jacob Anderson-Minshall, Diane Anderson-Minshall and Heather Findlay.It also offered relationship, health and travel advice.Published monthly from San Francisco since 1993, it was distributed nationwide by Disticor.",
+            "Girlfriends (magazine)",
+            "Popular Science (also known as PopSci) is an American bi-monthly magazine carrying popular science content, which refers to articles for the general reader on science and technology subjects.\"Popular Science\" has won over 58 awards, including the American Society of Magazine Editors awards for its journalistic excellence in both 2003 (for General Excellence) and 2004 (for Best Magazine Section).",
+            "Popular science\n\nPopular science (also pop-science or popsci) is interpretation of science intended for a general audience. While science journalism focuses on recent scientific developments, popular science is more broad-ranging. It may be written by professional science journalists or by scientists themselves. It is presented in many forms, including books, film and television documentaries, magazine articles, and web pages.",
+            "Popular Science"
+          ],
+          "nativeAnswer": {
+            "scorer": "hotpotqa-answer-v1",
+            "prediction": "Girlfriends",
+            "generationComplete": true,
+            "answerSurface": "FULL_GENERATED_ANSWER",
+            "status": "SCORED",
+            "em": 1.0,
+            "f1": 1.0
+          },
+          "stages": {
+            "retrievalPool": {
+              "coveredUnits": [
+                "u1",
+                "u2",
+                "u3",
+                "u4"
+              ],
+              "missingUnits": [],
+              "covered": 4,
+              "required": 4,
+              "state": "FULL",
+              "coverage": 1.0,
+              "hit": 1,
+              "completeHit": 1
+            },
+            "top5": {
+              "coveredUnits": [
+                "u1",
+                "u2",
+                "u3"
+              ],
+              "missingUnits": [
+                "u4"
+              ],
+              "covered": 3,
+              "required": 4,
+              "state": "PARTIAL",
+              "coverage": 0.75,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "assembled": {
+              "coveredUnits": [
+                "u1",
+                "u2",
+                "u3"
+              ],
+              "missingUnits": [
+                "u4"
+              ],
+              "covered": 3,
+              "required": 4,
+              "state": "PARTIAL",
+              "coverage": 0.75,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "wire": {
+              "coveredUnits": [
+                "u1",
+                "u2",
+                "u3"
+              ],
+              "missingUnits": [
+                "u4"
+              ],
+              "covered": 3,
+              "required": 4,
+              "state": "PARTIAL",
+              "coverage": 0.75,
+              "hit": 1,
+              "completeHit": 0
+            }
+          },
+          "evidenceRanks": [
+            {
+              "id": "u1",
+              "rrfPoolRanks": [
+                2
+              ],
+              "finalRanks": [
+                3
+              ],
+              "inTop5": true
+            },
+            {
+              "id": "u2",
+              "rrfPoolRanks": [
+                8
+              ],
+              "finalRanks": [
+                1
+              ],
+              "inTop5": true
+            },
+            {
+              "id": "u3",
+              "rrfPoolRanks": [
+                8
+              ],
+              "finalRanks": [
+                1
+              ],
+              "inTop5": true
+            },
+            {
+              "id": "u4",
+              "rrfPoolRanks": [
+                10
+              ],
+              "finalRanks": [
+                6
+              ],
+              "inTop5": false
+            }
+          ]
+        },
+        {
+          "variant": "rrf-rerank-02",
+          "captureSha256": "bc48c5af24985928edc6894064d5679749e40945552dfe84b928d1a99ffa5f68",
+          "pipelineArtifact": "/home/zyh/projects/yeRAG-agent/target/hotpotqa50-rerank-20261027-002/rrf-rerank-02/artifacts/c487a764-e8d4-494e-9cd1-56fbc02869d5.json",
+          "pipelineArtifactSha256": "420d7e2acb22fbe848002e6f3ca8ab52d71e32f2d58b48069a20cfae0e73642a",
+          "answer": "Girlfriends",
+          "actualContexts": [
+            "Girlfriends was a women's magazine that provided critical coverage of culture, entertainment and world events from a lesbian perspective.It was founded by Jacob Anderson-Minshall, Diane Anderson-Minshall and Heather Findlay.It also offered relationship, health and travel advice.Published monthly from San Francisco since 1993, it was distributed nationwide by Disticor.",
+            "Girlfriends (magazine)",
+            "Popular Science (also known as PopSci) is an American bi-monthly magazine carrying popular science content, which refers to articles for the general reader on science and technology subjects.\"Popular Science\" has won over 58 awards, including the American Society of Magazine Editors awards for its journalistic excellence in both 2003 (for General Excellence) and 2004 (for Best Magazine Section).",
+            "Popular science\n\nPopular science (also pop-science or popsci) is interpretation of science intended for a general audience. While science journalism focuses on recent scientific developments, popular science is more broad-ranging. It may be written by professional science journalists or by scientists themselves. It is presented in many forms, including books, film and television documentaries, magazine articles, and web pages.",
+            "Popular Science"
+          ],
+          "nativeAnswer": {
+            "scorer": "hotpotqa-answer-v1",
+            "prediction": "Girlfriends",
+            "generationComplete": true,
+            "answerSurface": "FULL_GENERATED_ANSWER",
+            "status": "SCORED",
+            "em": 1.0,
+            "f1": 1.0
+          },
+          "stages": {
+            "retrievalPool": {
+              "coveredUnits": [
+                "u1",
+                "u2",
+                "u3",
+                "u4"
+              ],
+              "missingUnits": [],
+              "covered": 4,
+              "required": 4,
+              "state": "FULL",
+              "coverage": 1.0,
+              "hit": 1,
+              "completeHit": 1
+            },
+            "top5": {
+              "coveredUnits": [
+                "u1",
+                "u2",
+                "u3"
+              ],
+              "missingUnits": [
+                "u4"
+              ],
+              "covered": 3,
+              "required": 4,
+              "state": "PARTIAL",
+              "coverage": 0.75,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "assembled": {
+              "coveredUnits": [
+                "u1",
+                "u2",
+                "u3"
+              ],
+              "missingUnits": [
+                "u4"
+              ],
+              "covered": 3,
+              "required": 4,
+              "state": "PARTIAL",
+              "coverage": 0.75,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "wire": {
+              "coveredUnits": [
+                "u1",
+                "u2",
+                "u3"
+              ],
+              "missingUnits": [
+                "u4"
+              ],
+              "covered": 3,
+              "required": 4,
+              "state": "PARTIAL",
+              "coverage": 0.75,
+              "hit": 1,
+              "completeHit": 0
+            }
+          },
+          "evidenceRanks": [
+            {
+              "id": "u1",
+              "rrfPoolRanks": [
+                2
+              ],
+              "finalRanks": [
+                3
+              ],
+              "inTop5": true
+            },
+            {
+              "id": "u2",
+              "rrfPoolRanks": [
+                8
+              ],
+              "finalRanks": [
+                1
+              ],
+              "inTop5": true
+            },
+            {
+              "id": "u3",
+              "rrfPoolRanks": [
+                8
+              ],
+              "finalRanks": [
+                1
+              ],
+              "inTop5": true
+            },
+            {
+              "id": "u4",
+              "rrfPoolRanks": [
+                10
+              ],
+              "finalRanks": [
+                6
+              ],
+              "inTop5": false
+            }
+          ]
+        },
+        {
+          "variant": "rrf-02",
+          "captureSha256": "0122b911a74b0f2e1342d0d837b6bda58acbcd2fa4bbec22ec309064be694be6",
+          "pipelineArtifact": "/home/zyh/projects/yeRAG-agent/target/hotpotqa50-rerank-20261027-002/rrf-02/artifacts/16d5bd66-8a31-43fe-87c1-19d1a447fc03.json",
+          "pipelineArtifactSha256": "767d0c81662a58460afffe55d5eb572c56c7613d3e3b4c5a6e13c33af0d535a0",
+          "answer": "Popular Science",
+          "actualContexts": [
+            "Popular science\n\nPopular science (also pop-science or popsci) is interpretation of science intended for a general audience. While science journalism focuses on recent scientific developments, popular science is more broad-ranging. It may be written by professional science journalists or by scientists themselves. It is presented in many forms, including books, film and television documentaries, magazine articles, and web pages.",
+            "Popular Science (also known as PopSci) is an American bi-monthly magazine carrying popular science content, which refers to articles for the general reader on science and technology subjects.\"Popular Science\" has won over 58 awards, including the American Society of Magazine Editors awards for its journalistic excellence in both 2003 (for General Excellence) and 2004 (for Best Magazine Section).",
+            "Popular Science",
+            "Girlfriends (magazine)",
+            "Universum (magazine)\n\nUniversum is an Austrian popular science magazine published in German and based in Vienna, Austria. The magazine is the only Austrian publication in the field of popular science, because Germany-published magazines dominate the field in the country. The magazine is financially supported by the Austrian National Science Foundation."
+          ],
+          "nativeAnswer": {
+            "scorer": "hotpotqa-answer-v1",
+            "prediction": "Popular Science",
+            "generationComplete": true,
+            "answerSurface": "FULL_GENERATED_ANSWER",
+            "status": "SCORED",
+            "em": 0.0,
+            "f1": 0.0
+          },
+          "stages": {
+            "retrievalPool": {
+              "coveredUnits": [
+                "u1",
+                "u2",
+                "u3",
+                "u4"
+              ],
+              "missingUnits": [],
+              "covered": 4,
+              "required": 4,
+              "state": "FULL",
+              "coverage": 1.0,
+              "hit": 1,
+              "completeHit": 1
+            },
+            "top5": {
+              "coveredUnits": [
+                "u1"
+              ],
+              "missingUnits": [
+                "u2",
+                "u3",
+                "u4"
+              ],
+              "covered": 1,
+              "required": 4,
+              "state": "PARTIAL",
+              "coverage": 0.25,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "assembled": {
+              "coveredUnits": [
+                "u1"
+              ],
+              "missingUnits": [
+                "u2",
+                "u3",
+                "u4"
+              ],
+              "covered": 1,
+              "required": 4,
+              "state": "PARTIAL",
+              "coverage": 0.25,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "wire": {
+              "coveredUnits": [
+                "u1"
+              ],
+              "missingUnits": [
+                "u2",
+                "u3",
+                "u4"
+              ],
+              "covered": 1,
+              "required": 4,
+              "state": "PARTIAL",
+              "coverage": 0.25,
+              "hit": 1,
+              "completeHit": 0
+            }
+          },
+          "evidenceRanks": [
+            {
+              "id": "u1",
+              "rrfPoolRanks": [
+                2
+              ],
+              "finalRanks": [
+                2
+              ],
+              "inTop5": true
+            },
+            {
+              "id": "u2",
+              "rrfPoolRanks": [
+                8
+              ],
+              "finalRanks": [
+                8
+              ],
+              "inTop5": false
+            },
+            {
+              "id": "u3",
+              "rrfPoolRanks": [
+                8
+              ],
+              "finalRanks": [
+                8
+              ],
+              "inTop5": false
+            },
+            {
+              "id": "u4",
+              "rrfPoolRanks": [
+                10
+              ],
+              "finalRanks": [
+                10
+              ],
+              "inTop5": false
+            }
+          ]
+        }
+      ],
+      "technicalConclusion": "缺失的Girlfriends停刊句重排第6；实际已入模的双月刊/月刊信息足以比较频率，回答Girlfriends严格EM1。程序仍按原四条标注计PARTIAL，不能删除停刊句抬CompleteHit。",
+      "machineVerdict": null,
+      "itemSha256": "625a1eef14f5c59cda04e00784d2414e2c6aac0902804ba5d1d55349383175b9"
+    },
+    {
+      "id": "hotpotqa-5a7299e75542991f9a20c524",
+      "question": "What movie was released at a later date, My Dog Tulip or Monsters vs. Aliens?",
+      "referenceAnswers": [
+        "Monsters vs. Aliens"
+      ],
+      "necessaryEvidence": [
+        {
+          "id": "u1",
+          "sourceTitle": "My Dog Tulip",
+          "sentenceIndex": 0,
+          "alternatives": [
+            {
+              "document": "doc-863b5271e93e0ef8fbbce0148449a16ac540e17ef928cb97d96fabdf4db96894",
+              "quote": "My Dog Tulip is an American independent animated feature film based on the 1956 memoir of the same name by J. R. Ackerley, BBC editor, novelist and memoirist."
+            }
+          ]
+        },
+        {
+          "id": "u2",
+          "sourceTitle": "Monsters vs. Aliens",
+          "sentenceIndex": 0,
+          "alternatives": [
+            {
+              "document": "doc-8f29ff62e431d249cac48c618075d3333378e524a4066a163cc6d5fe0c86b3be",
+              "quote": "Monsters vs. Aliens is a 2009 American 3D computer-animated science fiction film produced by DreamWorks Animation and distributed by Paramount Pictures."
+            }
+          ]
+        }
+      ],
+      "observations": [
+        {
+          "variant": "rrf-01",
+          "captureSha256": "18b5d210e006b87552c4ee187ec27ecfe0445164f9cdde5e92125b902bc065e7",
+          "pipelineArtifact": "/home/zyh/projects/yeRAG-agent/target/hotpotqa50-rerank-20261027-002/rrf-01/artifacts/8a11420b-8330-4f0b-b139-953c848efd03.json",
+          "pipelineArtifactSha256": "89c83e00fcc66b02348fa03a1bc53410c234e5cae7a224e5c15aa0fabc3eb6df",
+          "answer": "Monsters vs. Aliens",
+          "actualContexts": [
+            "Monsters vs. Aliens: Mutant Pumpkins from Outer Space\n\nMonsters vs. Aliens: Mutant Pumpkins from Outer Space",
+            "Monsters vs. Aliens (video game)\n\nMonsters vs. Aliens is a 2009 video game based on the film with the same name. The game was released on March 24, 2009 on PlayStation 2, Nintendo DS, Xbox 360, PlayStation 3 And Wii.",
+            "Monsters vs. Aliens\n\nMonsters vs. Aliens is a 2009 American 3D computer-animated science fiction film produced by DreamWorks Animation and distributed by Paramount Pictures. It was DreamWorks Animation's first feature film to be directly produced in a stereoscopic 3-D format instead of being converted into 3-D after completion, which added $15 million to the film's budget.",
+            "List of Monsters vs. Aliens characters\n\nThis is a list of characters from the movie Monsters vs. Aliens and other spin-off related.",
+            "Monsters vs. Aliens (franchise)\n\nMonsters vs. Aliens is a media franchise created by DreamWorks Animation. The franchise began with the 2009 film \"Monsters vs. Aliens\" and has since grown to include a short film, two television specials, a television series, and a video game."
+          ],
+          "nativeAnswer": {
+            "scorer": "hotpotqa-answer-v1",
+            "prediction": "Monsters vs. Aliens",
+            "generationComplete": true,
+            "answerSurface": "FULL_GENERATED_ANSWER",
+            "status": "SCORED",
+            "em": 1.0,
+            "f1": 1.0
+          },
+          "stages": {
+            "retrievalPool": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [],
+              "covered": 2,
+              "required": 2,
+              "state": "FULL",
+              "coverage": 1.0,
+              "hit": 1,
+              "completeHit": 1
+            },
+            "top5": {
+              "coveredUnits": [
+                "u2"
+              ],
+              "missingUnits": [
+                "u1"
+              ],
+              "covered": 1,
+              "required": 2,
+              "state": "PARTIAL",
+              "coverage": 0.5,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "assembled": {
+              "coveredUnits": [
+                "u2"
+              ],
+              "missingUnits": [
+                "u1"
+              ],
+              "covered": 1,
+              "required": 2,
+              "state": "PARTIAL",
+              "coverage": 0.5,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "wire": {
+              "coveredUnits": [
+                "u2"
+              ],
+              "missingUnits": [
+                "u1"
+              ],
+              "covered": 1,
+              "required": 2,
+              "state": "PARTIAL",
+              "coverage": 0.5,
+              "hit": 1,
+              "completeHit": 0
+            }
+          },
+          "evidenceRanks": [
+            {
+              "id": "u1",
+              "rrfPoolRanks": [
+                7
+              ],
+              "finalRanks": [
+                7
+              ],
+              "inTop5": false
+            },
+            {
+              "id": "u2",
+              "rrfPoolRanks": [
+                3
+              ],
+              "finalRanks": [
+                3
+              ],
+              "inTop5": true
+            }
+          ]
+        },
+        {
+          "variant": "rrf-rerank-01",
+          "captureSha256": "8ea3e5430e6b7cbe7ba472869fb9df3a7b234b0a9cf9c01366f7692bd57bdc58",
+          "pipelineArtifact": "/home/zyh/projects/yeRAG-agent/target/hotpotqa50-rerank-20261027-002/rrf-rerank-01/artifacts/e22d65d5-6f44-403d-8f7a-617672890d1e.json",
+          "pipelineArtifactSha256": "dfcf6cb563dc590bf06ee3e673b540d91454490b01f2a02b2937925f9915e6c6",
+          "answer": "My Dog Tulip",
+          "actualContexts": [
+            "Monsters vs. Aliens\n\nMonsters vs. Aliens is a 2009 American 3D computer-animated science fiction film produced by DreamWorks Animation and distributed by Paramount Pictures. It was DreamWorks Animation's first feature film to be directly produced in a stereoscopic 3-D format instead of being converted into 3-D after completion, which added $15 million to the film's budget.",
+            "My Dog Tulip\n\nMy Dog Tulip is an American independent animated feature film based on the 1956 memoir of the same name by J. R. Ackerley, BBC editor, novelist and memoirist. The film tells the story of Ackerley's fifteen-year relationship with his Alsatian dog (German Shepherd) \"Queenie\", who had been renamed \"Tulip\" for the book. The film – geared toward an adult audience – was adapted, directed and animated by Paul Fierlinger with backgrounds and characters painted by his wife, Sandra Fierlinger.",
+            "Monsters vs. Aliens (TV series)\n\nMonsters vs. Aliens is an American computer-animated television series based on the 2009 film of the same name. After being first announced in 2009, the series premiered on Nickelodeon on March 23, 2013, after the Nickelodeon Kids' Choice Awards, then began airing in its regular timeslot on April 6, 2013. A total of 26 episodes consisting of 52 segments were released, with the last episode airing on February 8, 2014.",
+            "Monsters vs. Aliens (franchise)\n\nMonsters vs. Aliens is a media franchise created by DreamWorks Animation. The franchise began with the 2009 film \"Monsters vs. Aliens\" and has since grown to include a short film, two television specials, a television series, and a video game.",
+            "Monsters vs. Aliens (video game)\n\nMonsters vs. Aliens is a 2009 video game based on the film with the same name. The game was released on March 24, 2009 on PlayStation 2, Nintendo DS, Xbox 360, PlayStation 3 And Wii."
+          ],
+          "nativeAnswer": {
+            "scorer": "hotpotqa-answer-v1",
+            "prediction": "My Dog Tulip",
+            "generationComplete": true,
+            "answerSurface": "FULL_GENERATED_ANSWER",
+            "status": "SCORED",
+            "em": 0.0,
+            "f1": 0.0
+          },
+          "stages": {
+            "retrievalPool": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [],
+              "covered": 2,
+              "required": 2,
+              "state": "FULL",
+              "coverage": 1.0,
+              "hit": 1,
+              "completeHit": 1
+            },
+            "top5": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [],
+              "covered": 2,
+              "required": 2,
+              "state": "FULL",
+              "coverage": 1.0,
+              "hit": 1,
+              "completeHit": 1
+            },
+            "assembled": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [],
+              "covered": 2,
+              "required": 2,
+              "state": "FULL",
+              "coverage": 1.0,
+              "hit": 1,
+              "completeHit": 1
+            },
+            "wire": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [],
+              "covered": 2,
+              "required": 2,
+              "state": "FULL",
+              "coverage": 1.0,
+              "hit": 1,
+              "completeHit": 1
+            }
+          },
+          "evidenceRanks": [
+            {
+              "id": "u1",
+              "rrfPoolRanks": [
+                7
+              ],
+              "finalRanks": [
+                2
+              ],
+              "inTop5": true
+            },
+            {
+              "id": "u2",
+              "rrfPoolRanks": [
+                3
+              ],
+              "finalRanks": [
+                1
+              ],
+              "inTop5": true
+            }
+          ]
+        },
+        {
+          "variant": "rrf-rerank-02",
+          "captureSha256": "bc48c5af24985928edc6894064d5679749e40945552dfe84b928d1a99ffa5f68",
+          "pipelineArtifact": "/home/zyh/projects/yeRAG-agent/target/hotpotqa50-rerank-20261027-002/rrf-rerank-02/artifacts/e12ccfc6-6e39-4e1e-833e-822e0e13a0ce.json",
+          "pipelineArtifactSha256": "eea2f19710d98da974dc39b38218437bc450a6039e2b848be67af36d488cc1b3",
+          "answer": "My Dog Tulip",
+          "actualContexts": [
+            "Monsters vs. Aliens\n\nMonsters vs. Aliens is a 2009 American 3D computer-animated science fiction film produced by DreamWorks Animation and distributed by Paramount Pictures. It was DreamWorks Animation's first feature film to be directly produced in a stereoscopic 3-D format instead of being converted into 3-D after completion, which added $15 million to the film's budget.",
+            "My Dog Tulip\n\nMy Dog Tulip is an American independent animated feature film based on the 1956 memoir of the same name by J. R. Ackerley, BBC editor, novelist and memoirist. The film tells the story of Ackerley's fifteen-year relationship with his Alsatian dog (German Shepherd) \"Queenie\", who had been renamed \"Tulip\" for the book. The film – geared toward an adult audience – was adapted, directed and animated by Paul Fierlinger with backgrounds and characters painted by his wife, Sandra Fierlinger.",
+            "Monsters vs. Aliens (TV series)\n\nMonsters vs. Aliens is an American computer-animated television series based on the 2009 film of the same name. After being first announced in 2009, the series premiered on Nickelodeon on March 23, 2013, after the Nickelodeon Kids' Choice Awards, then began airing in its regular timeslot on April 6, 2013. A total of 26 episodes consisting of 52 segments were released, with the last episode airing on February 8, 2014.",
+            "Monsters vs. Aliens (franchise)\n\nMonsters vs. Aliens is a media franchise created by DreamWorks Animation. The franchise began with the 2009 film \"Monsters vs. Aliens\" and has since grown to include a short film, two television specials, a television series, and a video game.",
+            "Monsters vs. Aliens (video game)\n\nMonsters vs. Aliens is a 2009 video game based on the film with the same name. The game was released on March 24, 2009 on PlayStation 2, Nintendo DS, Xbox 360, PlayStation 3 And Wii."
+          ],
+          "nativeAnswer": {
+            "scorer": "hotpotqa-answer-v1",
+            "prediction": "My Dog Tulip",
+            "generationComplete": true,
+            "answerSurface": "FULL_GENERATED_ANSWER",
+            "status": "SCORED",
+            "em": 0.0,
+            "f1": 0.0
+          },
+          "stages": {
+            "retrievalPool": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [],
+              "covered": 2,
+              "required": 2,
+              "state": "FULL",
+              "coverage": 1.0,
+              "hit": 1,
+              "completeHit": 1
+            },
+            "top5": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [],
+              "covered": 2,
+              "required": 2,
+              "state": "FULL",
+              "coverage": 1.0,
+              "hit": 1,
+              "completeHit": 1
+            },
+            "assembled": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [],
+              "covered": 2,
+              "required": 2,
+              "state": "FULL",
+              "coverage": 1.0,
+              "hit": 1,
+              "completeHit": 1
+            },
+            "wire": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [],
+              "covered": 2,
+              "required": 2,
+              "state": "FULL",
+              "coverage": 1.0,
+              "hit": 1,
+              "completeHit": 1
+            }
+          },
+          "evidenceRanks": [
+            {
+              "id": "u1",
+              "rrfPoolRanks": [
+                7
+              ],
+              "finalRanks": [
+                2
+              ],
+              "inTop5": true
+            },
+            {
+              "id": "u2",
+              "rrfPoolRanks": [
+                3
+              ],
+              "finalRanks": [
+                1
+              ],
+              "inTop5": true
+            }
+          ]
+        },
+        {
+          "variant": "rrf-02",
+          "captureSha256": "0122b911a74b0f2e1342d0d837b6bda58acbcd2fa4bbec22ec309064be694be6",
+          "pipelineArtifact": "/home/zyh/projects/yeRAG-agent/target/hotpotqa50-rerank-20261027-002/rrf-02/artifacts/dcf7551e-1f3c-4b62-98ea-35dfba2e41bd.json",
+          "pipelineArtifactSha256": "27236475bf5e2861e330acef2865ca05320612c1b5277b2f24ef7627c27a3cbe",
+          "answer": "Monsters vs. Aliens",
+          "actualContexts": [
+            "Monsters vs. Aliens: Mutant Pumpkins from Outer Space\n\nMonsters vs. Aliens: Mutant Pumpkins from Outer Space",
+            "Monsters vs. Aliens (video game)\n\nMonsters vs. Aliens is a 2009 video game based on the film with the same name. The game was released on March 24, 2009 on PlayStation 2, Nintendo DS, Xbox 360, PlayStation 3 And Wii.",
+            "Monsters vs. Aliens\n\nMonsters vs. Aliens is a 2009 American 3D computer-animated science fiction film produced by DreamWorks Animation and distributed by Paramount Pictures. It was DreamWorks Animation's first feature film to be directly produced in a stereoscopic 3-D format instead of being converted into 3-D after completion, which added $15 million to the film's budget.",
+            "List of Monsters vs. Aliens characters\n\nThis is a list of characters from the movie Monsters vs. Aliens and other spin-off related.",
+            "Monsters vs. Aliens (franchise)\n\nMonsters vs. Aliens is a media franchise created by DreamWorks Animation. The franchise began with the 2009 film \"Monsters vs. Aliens\" and has since grown to include a short film, two television specials, a television series, and a video game."
+          ],
+          "nativeAnswer": {
+            "scorer": "hotpotqa-answer-v1",
+            "prediction": "Monsters vs. Aliens",
+            "generationComplete": true,
+            "answerSurface": "FULL_GENERATED_ANSWER",
+            "status": "SCORED",
+            "em": 1.0,
+            "f1": 1.0
+          },
+          "stages": {
+            "retrievalPool": {
+              "coveredUnits": [
+                "u1",
+                "u2"
+              ],
+              "missingUnits": [],
+              "covered": 2,
+              "required": 2,
+              "state": "FULL",
+              "coverage": 1.0,
+              "hit": 1,
+              "completeHit": 1
+            },
+            "top5": {
+              "coveredUnits": [
+                "u2"
+              ],
+              "missingUnits": [
+                "u1"
+              ],
+              "covered": 1,
+              "required": 2,
+              "state": "PARTIAL",
+              "coverage": 0.5,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "assembled": {
+              "coveredUnits": [
+                "u2"
+              ],
+              "missingUnits": [
+                "u1"
+              ],
+              "covered": 1,
+              "required": 2,
+              "state": "PARTIAL",
+              "coverage": 0.5,
+              "hit": 1,
+              "completeHit": 0
+            },
+            "wire": {
+              "coveredUnits": [
+                "u2"
+              ],
+              "missingUnits": [
+                "u1"
+              ],
+              "covered": 1,
+              "required": 2,
+              "state": "PARTIAL",
+              "coverage": 0.5,
+              "hit": 1,
+              "completeHit": 0
+            }
+          },
+          "evidenceRanks": [
+            {
+              "id": "u1",
+              "rrfPoolRanks": [
+                7
+              ],
+              "finalRanks": [
+                7
+              ],
+              "inTop5": false
+            },
+            {
+              "id": "u2",
+              "rrfPoolRanks": [
+                3
+              ],
+              "finalRanks": [
+                3
+              ],
+              "inTop5": true
+            }
+          ]
+        }
+      ],
+      "technicalConclusion": "重排后两条标注支持句均FULL，但My Dog Tulip标注句和实际上下文没有其上映日期；仅有Monsters vs. Aliens为2009的信息，无法从该证据独立判定上映先后。RRF答金标、重排答另一片名，严格EM从1到0。",
+      "machineVerdict": null,
+      "itemSha256": "cd40b7df666752d339c5283be065c0a3cab315f9e98f5c0cc0f466d6db8fc21c"
+    }
+  ]
+}
