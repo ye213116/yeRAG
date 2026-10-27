@@ -67,13 +67,28 @@ public final class EvidencePositions {
     private static ObjectNode assess(ObjectMapper json,JsonNode units,java.util.function.Predicate<JsonNode> found) {
         ObjectNode result=json.createObjectNode(); ArrayNode present=result.putArray("coveredUnits"),missing=result.putArray("missingUnits");
         for(JsonNode unit:units) {
-            boolean hit=false; for(JsonNode anchor:unit.path("anchors")) if(found.test(anchor)) { hit=true; break; }
+            boolean hit=false;
+            if(unit.has("anchorGroups")) {
+                for(JsonNode group:unit.path("anchorGroups")) if(covers(group.path("anchors"),group.path("start").asInt(-1),group.path("end").asInt(-1),found)) { hit=true;break; }
+            } else for(JsonNode anchor:unit.path("anchors")) if(found.test(anchor)) { hit=true; break; }
             (hit?present:missing).add(unit.path("id").asText());
         }
         int count=present.size(),total=units.size();
         result.put("covered",count).put("required",total);
         if(total==0) result.put("state","NOT_APPLICABLE");
-        else result.put("state",count==0?"NONE":count==total?"FULL":"PARTIAL").put("coverage",(double)count/total).put("hit",count>0?1:0);
+        else result.put("state",count==0?"NONE":count==total?"FULL":"PARTIAL").put("coverage",(double)count/total).put("hit",count>0?1:0).put("completeHit",count==total?1:0);
         return result;
+    }
+    static boolean covers(JsonNode anchors,int start,int end,java.util.function.Predicate<JsonNode> found) {
+        if(start<0 || end<=start) throw new IllegalStateException("Invalid source span bounds");
+        List<Range> ranges=new ArrayList<>();
+        for(JsonNode anchor:anchors) {
+            int left=anchor.path("coverageStart").asInt(-1),right=anchor.path("coverageEnd").asInt(-1);
+            if(left<start || right>end || left>=right) throw new IllegalStateException("Fragment outside source span");
+            if(found.test(anchor)) ranges.add(new Range(left,right));
+        }
+        ranges.sort(Comparator.comparingInt(Range::start)); int cursor=start;
+        for(Range range:ranges) if(range.start()<=cursor) cursor=Math.max(cursor,range.end());
+        return cursor>=end;
     }
 }

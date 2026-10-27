@@ -543,3 +543,30 @@ hr{
         height: 100vh;
     }
 }
+/* yeRAG brand palette: emerald -> cyan, replaces the old violet accents */
+.tw-from-\[\#646cff\] {
+    --tw-gradient-from: #10b981 var(--tw-gradient-from-position);
+    --tw-gradient-to: rgba(16, 185, 129, 0) var(--tw-gradient-to-position);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.tw-to-\[\#c258f5\] {
+    --tw-gradient-to: #22d3ee var(--tw-gradient-to-position);
+}
+
+.tw-text-\[\#646cff\] {
+    color: #10b981;
+}
+
+.\!tw-bg-\[\#6366f1\] {
+    background-color: #10b981 !important;
+}
+
+.purple-bg-grad {
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.55) 8%, rgba(45, 190, 170, 0.6) 35%, rgba(34, 211, 238, 0.55) 80%);
+}
+
+.animated-border::after {
+    background-color: #10b981;
+    box-shadow: inset 0px 0px 20px 5px #10b981;
+}

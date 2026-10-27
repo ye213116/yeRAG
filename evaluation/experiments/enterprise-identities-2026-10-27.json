@@ -1,0 +1,17 @@
+{
+  "evaluator": {
+    "id": 2,
+    "role": "USER",
+    "orgTags": [
+      "PRIVATE_closeout_evaluator_20261027"
+    ]
+  },
+  "uploader": {
+    "id": 3,
+    "role": "USER",
+    "orgTags": [
+      "EVAL_RESTRICTED",
+      "PRIVATE_closeout_uploader_20261027"
+    ]
+  }
+}

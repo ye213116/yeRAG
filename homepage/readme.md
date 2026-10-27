@@ -1,8 +1,8 @@
-# 派聪明 (PaiSmart) - 首页
+# yeRAG - 首页
 
 ## 项目简介
 
-派聪明是一款基于 Java 技术栈的 RAG（检索增强生成）知识库项目。HomePage为该项目提供了一个现代化的首页展示，采用响应式设计，支持深色/浅色主题切换，为用户提供优秀的浏览体验。
+yeRAG 是一款基于 Java 技术栈的 RAG（检索增强生成）知识库项目。HomePage为该项目提供了一个现代化的首页展示，采用响应式设计，支持深色/浅色主题切换，为用户提供优秀的浏览体验。
 
 ## 功能特性
 
@@ -16,7 +16,7 @@
 
 ### 🚀 核心功能
 
-- **项目展示**：展示派聪明 RAG 知识库的核心功能
+- **项目展示**：展示 yeRAG RAG 知识库的核心功能
 - **技术栈展示**：展示项目使用的技术栈（MySQL、Redis、MinIO、Kafka、Elasticsearch）
 - **AI 模型支持**：展示支持的多种 AI 模型（DeepSeek、通义千问、OpenAI、Claude 等）
 - **功能流程**：详细展示 RAG 知识库的完整工作流程
@@ -76,8 +76,8 @@ homepage/
 1. **克隆项目**
 
    ```bash
-   git clone https://github.com/itwanger/PaiSmart.git
-   cd PaiSmart/homepage
+   git clone https://github.com/ye213116/yeRAG
+   cd yeRAG-agent/homepage
    ```
 
 2. **安装依赖**
@@ -145,7 +145,7 @@ particlesJS('particles-js', {
 
 ## 联系方式
 
-- **项目主页**：<https://github.com/itwanger/PaiSmart>
+- **项目主页**：<https://github.com/ye213116/yeRAG>
 - **作者**：沉默王二
 - **微信**：qing_gee
 - **知识星球**：<https://javabetter.cn/zhishixingqiu/>

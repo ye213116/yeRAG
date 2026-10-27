@@ -61,6 +61,41 @@ class HybridSearchPermissionTest {
         documents=List.of(doc("private","2","other",false));
         assertThrows(SecurityException.class,() -> service.searchWithPermissionDetailed("body","name:123",5,60).block());
     }
+    @Test void bm25BaselineDoesNotCallEmbeddingAndStillPreFiltersAclAndCorpus() {
+        String md5="0123456789abcdef0123456789abcdef"; EsDocument own=doc("own","1","other",false); own.setFileMd5(md5); documents=List.of(own);
+        var result=service.searchWithPermissionDetailed("body","id:1",150,60,List.of(md5),com.yizhaoqi.smartpai.rag.model.RagTypes.RecallStrategy.BM25).block();
+        assertEquals(Status.SUCCEEDED,result.status()); assertEquals(1,requests.size()); assertTrue(requests.get(0).knn().isEmpty());
+        assertTrue(requests.get(0).query().toString().contains(md5));
+        assertTrue(requests.get(0).query().toString().contains("department")); verify(embedding,never()).embed(anyList());
+    }
+    @Test void vectorBaselineNeverSilentlyFallsBackToBm25() {
+        vectorFails=true;
+        var result=service.searchWithPermissionDetailed("body","id:1",150,60,List.of(),com.yizhaoqi.smartpai.rag.model.RagTypes.RecallStrategy.VECTOR).block();
+        assertEquals(Status.FAILED,result.status()); assertEquals(1,requests.size()); assertFalse(requests.get(0).knn().isEmpty());
+        requests.clear(); when(embedding.embed(anyList())).thenThrow(new RuntimeException("synthetic embedding outage"));
+        assertEquals(Status.FAILED,service.searchWithPermissionDetailed("body","id:1",150,60,List.of(),com.yizhaoqi.smartpai.rag.model.RagTypes.RecallStrategy.VECTOR).block().status());
+        assertTrue(requests.isEmpty());
+    }
+    @Test void singleRouteBaselineCannotWidenAcl() {
+        documents=List.of(doc("private","2","other",false));
+        for(var strategy:List.of(com.yizhaoqi.smartpai.rag.model.RagTypes.RecallStrategy.BM25,com.yizhaoqi.smartpai.rag.model.RagTypes.RecallStrategy.VECTOR))
+            assertThrows(SecurityException.class,() -> service.searchWithPermissionDetailed("body","id:1",150,60,List.of(),strategy).block());
+    }
+    @Test void evaluationScopeIntersectsSameAclBeforeBothRoutesAndRejectsOutOfScopeHits() {
+        String md5="0123456789abcdef0123456789abcdef";
+        EsDocument own=doc("own","1","other",false); own.setFileMd5(md5); documents=List.of(own);
+        assertEquals(Status.SUCCEEDED,service.searchWithPermissionDetailed("body","id:1",5,60,List.of(md5)).block().status());
+        var text=requests.stream().filter(r -> r.knn().isEmpty()).findFirst().orElseThrow();
+        var vector=requests.stream().filter(r -> !r.knn().isEmpty()).findFirst().orElseThrow();
+        var filter=text.query().bool().filter().get(0);
+        assertEquals(filter.toString(),vector.knn().get(0).filter().get(0).toString());
+        assertEquals(HybridRecallClient.aclQuery("1",List.of("department")).toString(),filter.bool().filter().get(0).toString());
+        assertTrue(filter.bool().filter().get(1).toString().contains(md5));
+        own.setFileMd5("ffffffffffffffffffffffffffffffff");
+        assertThrows(SecurityException.class,() -> service.searchWithPermissionDetailed("body","id:1",5,60,List.of(md5)).block());
+        own.setFileMd5(md5); own.setUserId("2");
+        assertThrows(SecurityException.class,() -> service.searchWithPermissionDetailed("body","id:1",5,60,List.of(md5)).block());
+    }
     @Test void singleRouteFailureDegradesAndAllFailuresAreNotEmptySuccess() {
         vectorFails=true;
         assertEquals(Status.DEGRADED,service.searchWithPermissionDetailed("body","id:1",5,60).block().status());

@@ -10,6 +10,13 @@ Usage:
   scripts/rag-eval.sh report DATASET PREFLIGHT_JSON CAPTURE_JSON NEW_OUTPUT [REVIEWS_JSONL]
   scripts/rag-eval.sh upload DATASET BASE_URL
   scripts/rag-eval.sh convert LEGACY_JSON_OR_JSONL OUTPUT_JSONL
+  scripts/rag-eval.sh import hotpotqa|ultrarag INPUT NEW_DATASET --source-url URL --revision REV [options]
+  scripts/rag-eval.sh study prepare|tune|validate [arguments...]
+  scripts/rag-eval.sh replay RUN GRID_JSON NEW_OUTPUT
+  scripts/rag-eval.sh review RUN... --output NEW_OUTPUT
+  scripts/rag-eval.sh matrix DATASET NEW_OUTPUT [--repeats N] [--support] [--policy FILE] [--resume] [--spring-arg=ARG]
+  scripts/rag-eval.sh rerank DATASET NEW_OUTPUT [--repeats N] [--support] [--policy FILE] [--resume] [--spring-arg=ARG]
+  scripts/rag-eval.sh compare BASELINE_RUN CANDIDATE_RUN NEW_OUTPUT [--policy FILE] [--allow-code-change]
 Live check/run require AI_RAG_EVAL_IDENTITY and deployment configuration.
 ACL preflight also needs AI_RAG_EVAL_SETUP_IDENTITY (authorized restricted-document uploader).
 Upload reads YERAG_EVAL_TOKEN and YERAG_EVAL_SETUP_TOKEN from environment; never pass tokens in arguments.
@@ -22,8 +29,13 @@ shift
 case "$rag_action" in
   upload) [[ $# -eq 2 ]] || usage; exec python3 scripts/rag-eval-upload.py "$@" ;;
   convert) [[ $# -eq 2 ]] || usage; exec python3 scripts/rag-eval-convert.py "$@" ;;
+  import) exec python3 scripts/rag-eval-import.py "$@" ;;
+  study) exec python3 scripts/rag-eval-study.py "$@" ;;
+  review) exec python3 scripts/rag-eval-review.py "$@" ;;
+  matrix|rerank|compare) exec python3 scripts/rag-eval-experiment.py "$rag_action" "$@" ;;
   validate) [[ $# -eq 1 ]] || usage ;;
   report) [[ $# -ge 4 && $# -le 5 ]] || usage ;;
+  replay) [[ $# -eq 3 ]] || usage ;;
   check|run) [[ $# -ge 2 ]] || usage ;;
   *) usage ;;
 esac
@@ -46,6 +58,8 @@ if [[ "$rag_action" == validate ]]; then
   exec java -cp "$rag_classpath" com.yizhaoqi.smartpai.rag.eval.EvaluationDatasetCheck "$@"
 elif [[ "$rag_action" == report ]]; then
   exec java -cp "$rag_classpath" com.yizhaoqi.smartpai.rag.eval.EvaluationRunner "$@"
+elif [[ "$rag_action" == replay ]]; then
+  exec java -cp "$rag_classpath" com.yizhaoqi.smartpai.rag.eval.EvaluationRankReplay "$@"
 fi
 rag_dataset="$1"
 rag_output="$2"

@@ -112,16 +112,52 @@ public class HybridSearchService {
     /** Pipeline recall boundary. Reranking belongs to RerankStage; all failures remain typed. */
     public reactor.core.publisher.Mono<com.yizhaoqi.smartpai.rag.model.RagTypes.RetrievalResult> searchWithPermissionDetailed(
             String query,String identity,int candidateK,double rankConstant) {
+        return searchWithPermissionDetailed(query,identity,candidateK,rankConstant,List.of());
+    }
+
+    /** Optional trusted corpus restriction is intersected with ACL before either recall route. */
+    public reactor.core.publisher.Mono<com.yizhaoqi.smartpai.rag.model.RagTypes.RetrievalResult> searchWithPermissionDetailed(
+            String query,String identity,int candidateK,double rankConstant,List<String> corpusMd5s) {
+        return searchWithPermissionDetailed(query,identity,candidateK,rankConstant,corpusMd5s,
+            com.yizhaoqi.smartpai.rag.model.RagTypes.RecallStrategy.HYBRID);
+    }
+    public reactor.core.publisher.Mono<com.yizhaoqi.smartpai.rag.model.RagTypes.RetrievalResult> searchWithPermissionDetailed(
+            String query,String identity,int candidateK,double rankConstant,List<String> corpusMd5s,
+            com.yizhaoqi.smartpai.rag.model.RagTypes.RecallStrategy strategy) {
+        java.util.Objects.requireNonNull(strategy);
+        List<String> scope=List.copyOf(corpusMd5s);
+        if(scope.size()>1000 || scope.stream().anyMatch(v -> !v.matches("[a-f0-9]{32}")))
+            throw new IllegalArgumentException("Invalid corpus scope");
         return reactor.core.publisher.Mono.defer(() -> {
             User user=resolveUser(identity);
             List<String> tags=orgTagCacheService.getUserEffectiveOrgTags(user.getUsername());
             if(tags==null) return reactor.core.publisher.Mono.error(new SecurityException("Permission scope unavailable"));
             tags=List.copyOf(tags);
-            String owner=user.getId().toString(); Query acl=HybridRecallClient.aclQuery(owner,tags);
+            String owner=user.getId().toString(); Query authorization=HybridRecallClient.aclQuery(owner,tags);
+            Query acl=scope.isEmpty()?authorization:Query.of(q -> q.bool(b -> b.filter(authorization).filter(f -> f.terms(t ->
+                t.field("fileMd5").terms(v -> v.value(scope.stream().map(co.elastic.clients.elasticsearch._types.FieldValue::of).toList()))))));
             final List<String> effectiveTags=tags;
-            java.util.function.Predicate<SearchResult> allowed=hit -> owner.equals(hit.getUserId())
-                || Boolean.TRUE.equals(hit.getIsPublic()) || effectiveTags.contains(hit.getOrgTag());
+            java.util.function.Predicate<SearchResult> allowed=hit -> (scope.isEmpty() || scope.contains(hit.getFileMd5()))
+                && (owner.equals(hit.getUserId()) || Boolean.TRUE.equals(hit.getIsPublic()) || effectiveTags.contains(hit.getOrgTag()));
             int window=Math.min(10000,Math.max(1,candidateK));
+            if(strategy!=com.yizhaoqi.smartpai.rag.model.RagTypes.RecallStrategy.HYBRID) {
+                var values=strategy==com.yizhaoqi.smartpai.rag.model.RagTypes.RecallStrategy.BM25
+                    ?reactor.core.publisher.Mono.just(List.<Float>of())
+                    :reactor.core.publisher.Mono.fromCallable(() -> {
+                        List<Float> vector=embedToVectorList(query);
+                        if(vector==null || vector.isEmpty()) throw new IllegalStateException("EMBEDDING_UNAVAILABLE");
+                        return vector;
+                    }).subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic()).timeout(retrieval.getRouteTimeout());
+                String route=strategy==com.yizhaoqi.smartpai.rag.model.RagTypes.RecallStrategy.BM25?"bm25":"vector";
+                return values.flatMap(vector -> recallClient.recallDetailed(route,query,vector,acl,window,retrieval.getRouteTimeout(),allowed))
+                    .onErrorResume(error -> error instanceof SecurityException?reactor.core.publisher.Mono.error(error):
+                        reactor.core.publisher.Mono.just(new com.yizhaoqi.smartpai.rag.model.RagTypes.RouteResult(route,
+                            com.yizhaoqi.smartpai.rag.model.RagTypes.Status.FAILED,List.of(),0,"EMBEDDING_OR_ROUTE_UNAVAILABLE")))
+                    .map(result -> new com.yizhaoqi.smartpai.rag.model.RagTypes.RetrievalResult(
+                        result.status()==com.yizhaoqi.smartpai.rag.model.RagTypes.Status.FAILED?result.status():
+                        result.candidates().isEmpty()?com.yizhaoqi.smartpai.rag.model.RagTypes.Status.NO_EVIDENCE:com.yizhaoqi.smartpai.rag.model.RagTypes.Status.SUCCEEDED,
+                        List.of(result),result.candidates())).map(this::attachDetailedNames);
+            }
             if(retrieval.getMode()==RetrievalProperties.Mode.LEGACY) {
                 return reactor.core.publisher.Mono.fromCallable(() -> {
                     var values=embedToVectorList(query); return values==null?List.<Float>of():values;

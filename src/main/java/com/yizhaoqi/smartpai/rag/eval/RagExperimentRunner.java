@@ -30,6 +30,13 @@ public class RagExperimentRunner implements ApplicationRunner {
     private final RagProperties rag;
     private final Path datasetPath,output;
     private final String identity,setupIdentity,action;
+    @Value("${ai.rag.eval.baseline:false}") private boolean baseline;
+    @Value("${ai.rag.eval.recall-strategy:HYBRID}") private String recallStrategy="HYBRID";
+    @Value("${ai.retrieval.mode:rrf}") private String retrievalMode="rrf";
+    @Value("${ai.rag.eval.support-enabled:false}") private boolean supportEnabled;
+    @Value("${ai.rag.eval.require-rerank:false}") private boolean requireRerank;
+    @org.springframework.beans.factory.annotation.Autowired private com.yizhaoqi.smartpai.client.RerankClient rerankClient;
+    @org.springframework.beans.factory.annotation.Autowired(required=false) private EvaluationSupportJudge supportJudge;
     public RagExperimentRunner(RagPipeline pipeline,QuestionTelemetry telemetry,EvidenceStore store,HybridSearchService search,
             EvaluationJudge judge,ObjectMapper json,AiProperties ai,RagProperties rag,
             @Value("${ai.rag.eval.dataset}") String dataset,@Value("${ai.rag.eval.output}") String output,
@@ -42,6 +49,12 @@ public class RagExperimentRunner implements ApplicationRunner {
     @Override public void run(ApplicationArguments args) throws Exception {
         if(!Set.of("check","run").contains(action) || !identity.matches("(?:id|name):.+")) throw new IllegalArgumentException("Action check/run and trusted id:/name: identity required");
         var dataset=EvaluationCases.load(datasetPath,json);
+        boolean publicDataset=dataset.manifest().path("schemaVersion").asInt()==3;
+        var strategy=RecallStrategy.valueOf(recallStrategy);
+        if(!baseline && strategy!=RecallStrategy.HYBRID) throw new IllegalArgumentException("Single-route strategies require explicit baseline mode");
+        if(baseline && !retrievalMode.equalsIgnoreCase("rrf")) throw new IllegalArgumentException("Baselines require retrieval mode rrf; legacy is rollback only");
+        if(requireRerank && (baseline || !rag.isRerankEnabled() || !rerankClient.available() || !retrievalMode.equalsIgnoreCase("rrf")))
+            throw new IllegalArgumentException("Requested rerank experiment requires an enabled, configured RRF rerank service");
         if(!dataset.manifest().path("corpusVersion").asText().equals(rag.getCorpusVersion())) throw new IllegalArgumentException("Configure ai.rag.corpus-version to the dataset corpusVersion");
         if(action.equals("run") && !Double.valueOf(0).equals(ai.getGeneration().getTemperature())) throw new IllegalArgumentException("Configure ai.generation.temperature=0 for evaluation");
         if(Files.exists(output) && hasFiles(output)) throw new IllegalArgumentException("Output directory must be new/empty; old runs are immutable");
@@ -52,8 +65,9 @@ public class RagExperimentRunner implements ApplicationRunner {
             md5s.add(document.path("fileMd5").asText());
             if("restricted".equals(document.path("visibility").asText())) restricted.add(document.path("fileMd5").asText());
         }
-        var scan=search.scanCorpusWithPermission(identity,md5s);
-        List<Candidate> audit=restricted.isEmpty() || setupIdentity.isBlank()?List.of():search.scanCorpusWithPermission(setupIdentity,restricted).chunks();
+        md5s=md5s.stream().distinct().sorted().toList();
+        var scan=EvaluationCorpus.scan(search,identity,md5s);
+        List<Candidate> audit=restricted.isEmpty() || setupIdentity.isBlank()?List.of():EvaluationCorpus.scan(search,setupIdentity,restricted).chunks();
         ObjectNode preflight=new EvaluationPreflight(json).build(dataset,identity,scan.permissionFingerprint(),scan.chunks(),audit);
         json.writerWithDefaultPrettyPrinter().writeValue(output.resolve("preflight.json").toFile(),preflight);
         archiveDataset(dataset);
@@ -63,6 +77,7 @@ public class RagExperimentRunner implements ApplicationRunner {
             .put("preflightSha256",preflight.path("sha256").asText()).put("corpusFingerprint",preflight.path("corpusFingerprint").asText())
             .put("corpusVersion",rag.getCorpusVersion()).put("codeVersion",rag.getCodeVersion()).put("createdAt",java.time.Instant.now().toString());
         capture.set("generationParameters",json.valueToTree(ai.getGeneration()));
+        capture.putObject("experiment").put("baseline",baseline).put("recallStrategy",strategy.name()).put("supportEnabled",supportEnabled);
         ArrayNode attempts=capture.putArray("cases");
         Map<String,JsonNode> checks=new HashMap<>(); for(JsonNode check:preflight.path("cases")) checks.put(check.path("id").asText(),check);
         for(ObjectNode sample:dataset.cases()) {
@@ -70,28 +85,52 @@ public class RagExperimentRunner implements ApplicationRunner {
             if(!"READY".equals(checks.get(caseId).path("status").asText())) { attempt.put("executionError","DATASET_INVALID"); checkpoint(capture); continue; }
             AtomicReference<String> rootId=new AtomicReference<>(); AtomicReference<Result> result=new AtomicReference<>();
             try {
-                verifyCorpus(scan,search.scanCorpusWithPermission(identity,md5s));
+                if(!publicDataset) verifyCorpus(scan,EvaluationCorpus.scan(search,identity,md5s));
                 Request request=pipeline.request(identity,sample.path("question").asText(),List.of(),Mode.FIXED_QA,5,0);
+                request=request.forEvaluation(md5s,publicDataset && "short".equals(dataset.manifest().path("benchmark").path("answerStyle").asText()));
+                if(baseline) request=request.forBaseline(strategy);
                 if(request.topK()!=5) throw new IllegalStateException("Configured retrieval limit is below five");
+                final Request execution=request;
                 telemetry.observe(identity,request.question(),"eval",caseId,
-                    () -> pipeline.run(request,new RagObserver(){}).doOnNext(result::set)
+                    () -> pipeline.run(execution,new RagObserver(){}).doOnNext(result::set)
                         .map(r -> new AgentRunResult(r.answer(),r.context().references())),rootId::set).block();
             } catch(Exception failure) { attempt.put("executionError",failure.getClass().getSimpleName()); }
             try {
                 if(rootId.get()!=null) exportQuestion(rootId.get(),artifacts,attempt);
             } catch(Exception exportFailure) { attempt.put("exportError",exportFailure.getClass().getSimpleName()); }
-            try { verifyCorpus(scan,search.scanCorpusWithPermission(identity,md5s)); attempt.put("corpusVerified",true); }
-            catch(Exception changed) { attempt.put("corpusError","CORPUS_OR_PERMISSION_UNAVAILABLE_OR_CHANGED"); }
+            if(!publicDataset) {
+                try { verifyCorpus(scan,EvaluationCorpus.scan(search,identity,md5s)); attempt.put("corpusVerified",true); }
+                catch(Exception changed) { attempt.put("corpusError","CORPUS_OR_PERMISSION_UNAVAILABLE_OR_CHANGED"); }
+            }
             if(result.get()!=null && attempt.hasNonNull("pipelineRunId")) {
                 try {
-                    var preview=new EvaluationRunner(artifacts).evaluate(sample,checks.get(caseId),preflight,attempt,new EvaluationReviews(null,json));
+                    // Public metrics remain ineligible in partial captures until the final snapshot verifies.
+                    var preview=new EvaluationRunner(artifacts).evaluate(sample,checks.get(caseId),preflight,
+                        publicDataset?attempt.deepCopy().put("corpusVerified",true):attempt,new EvaluationReviews(null,json));
                     if(preview.path("deterministic").path("generationComplete").asBoolean()) {
                         JsonNode assessment=judge.assess(identity,dataset.hash(),sample,result.get().runId(),result.get().context().content(),result.get().answer()).block();
                         export(assessment,artifacts); attempt.put("judgeRunId",assessment.path("runId").asText());
                         for(JsonNode event:assessment.path("events")) if("child".equals(event.path("name").asText())) export(store.read(event.path("data").path("runId").asText(),identity),artifacts);
                     }
                 } catch(Exception failed) { attempt.put("judgeError",failed.getClass().getSimpleName()); }
+                if(supportEnabled) try {
+                    var preview=new EvaluationRunner(artifacts).evaluate(sample,checks.get(caseId),preflight,
+                        publicDataset?attempt.deepCopy().put("corpusVerified",true):attempt,new EvaluationReviews(null,json));
+                    if(preview.path("deterministic").path("generationComplete").asBoolean()) {
+                        JsonNode assessment=supportJudge.assess(identity,dataset.hash(),sample,result.get().runId(),result.get().context().content(),result.get().answer()).block();
+                        export(assessment,artifacts); attempt.put("supportRunId",assessment.path("runId").asText());
+                        for(JsonNode event:assessment.path("events")) if("child".equals(event.path("name").asText())) export(store.read(event.path("data").path("runId").asText(),identity),artifacts);
+                    }
+                } catch(Exception failed) { attempt.put("supportError",failed.getClass().getSimpleName()); }
             }
+            checkpoint(capture);
+        }
+        if(publicDataset) {
+            boolean unchanged=false;
+            try { verifyCorpus(scan,EvaluationCorpus.scan(search,identity,md5s)); unchanged=true; }
+            catch(Exception changed) { capture.put("corpusError","CORPUS_OR_PERMISSION_UNAVAILABLE_OR_CHANGED"); }
+            for(JsonNode attempt:attempts) ((ObjectNode)attempt).put("corpusVerified",unchanged);
+            capture.put("snapshotVerified",unchanged);
             checkpoint(capture);
         }
         EvaluationPreflight.seal(capture);
@@ -132,6 +171,12 @@ public class RagExperimentRunner implements ApplicationRunner {
         for(JsonNode document:dataset.manifest().path("documents")) {
             Path relative=Path.of(document.path("path").asText()),destination=archive.resolve(relative); Files.createDirectories(destination.getParent());
             Files.copy(dataset.directory().resolve(relative),destination);
+        }
+        if(dataset.manifest().path("schemaVersion").asInt()==3) {
+            Path relative=Path.of(dataset.manifest().path("source").path("path").asText());
+            Path destination=archive.resolve(relative); Files.createDirectories(destination.getParent());
+            Files.copy(dataset.directory().resolve(relative),destination);
+            if(Files.isRegularFile(dataset.directory().resolve("SOURCE.md"))) Files.copy(dataset.directory().resolve("SOURCE.md"),archive.resolve("SOURCE.md"));
         }
     }
 }

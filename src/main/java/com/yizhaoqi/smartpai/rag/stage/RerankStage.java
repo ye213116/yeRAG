@@ -31,6 +31,7 @@ public class RerankStage implements RagStage {
                 c.runtime().remaining();
                 if(error instanceof ExistingReranker.NotConfigured) return Mono.just(publish(c,input,null,Status.SKIPPED,"NOT_CONFIGURED"));
                 if (error instanceof SecurityException) return Mono.error(error);
+                c.evidence().event("rerankFailure",Map.of("errorCode",error.getClass().getSimpleName()));
                 return Mono.just(publish(c,input,null,Status.DEGRADED,"RERANK_FAILED"));
             });
     }
@@ -44,7 +45,10 @@ public class RerankStage implements RagStage {
         for (int i=0;i<input.size();i++) {
             Candidate v=input.get(i); int rank=-1;
             for (int j=0;j<kept.size();j++) if (kept.get(j).id().equals(v.id())) rank=j+1;
-            decisions.add(new Decision(v.id(),rank>0,rank>0?reason:scores!=null && !scores.containsKey(v.id())?"OUTSIDE_RERANK_WINDOW":"BELOW_THRESHOLD",i+1,rank,scores==null?v.score():scores.get(v.id())));
+            // A candidate outside topN has no rerank score. Keep the boxed null:
+            // mixing primitive v.score() with Double in a ternary would unbox it.
+            Double score=scores==null?Double.valueOf(v.score()):scores.get(v.id());
+            decisions.add(new Decision(v.id(),rank>0,rank>0?reason:scores!=null && !scores.containsKey(v.id())?"OUTSIDE_RERANK_WINDOW":"BELOW_THRESHOLD",i+1,rank,score));
         }
         Selection selection=new Selection(kept,decisions); c.state().rerank(selection);
         return new StageOutcome(status,reason,Map.of("candidates",selection.candidates(),"decisions",selection.decisions(),

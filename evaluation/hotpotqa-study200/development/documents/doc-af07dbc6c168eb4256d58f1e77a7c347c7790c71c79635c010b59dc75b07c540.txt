@@ -1,0 +1,3 @@
+Cantor space
+
+In mathematics, a Cantor space, named for Georg Cantor, is a topological abstraction of the classical Cantor set: a topological space is a Cantor space if it is homeomorphic to the Cantor set. In set theory, the topological space 2 is called "the" Cantor space. Note that, commonly, 2 is referred to simply as the Cantor set, while the term Cantor space is reserved for the more general construction of "D" for a finite set "D" and a set "S" which might be finite, countable or possibly uncountable.

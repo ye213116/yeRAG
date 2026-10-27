@@ -38,8 +38,8 @@ public class EsConfig {
     @Value("${elasticsearch.password:changeme}")
     private String password;
 
-    @Bean
-    public ElasticsearchClient elasticsearchClient() {
+    @Bean(destroyMethod = "close")
+    public ElasticsearchTransport elasticsearchTransport() {
         // 创建低级客户端
         RestClientBuilder builder = RestClient.builder(new HttpHost(host, port, scheme));
 
@@ -67,10 +67,13 @@ public class EsConfig {
         RestClient restClient = builder.build();
 
         // 创建传输层
-        ElasticsearchTransport transport = new RestClientTransport(
+        return new RestClientTransport(
                 restClient, new JacksonJsonpMapper()
         );
+    }
 
+    @Bean
+    public ElasticsearchClient elasticsearchClient(ElasticsearchTransport transport) {
         // 返回高级客户端
         return new ElasticsearchClient(transport);
     }

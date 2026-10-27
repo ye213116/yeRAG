@@ -13,9 +13,10 @@ public final class EvaluationCases {
     public static Dataset load(Path directory,ObjectMapper json) throws Exception {
         Path root=directory.toAbsolutePath().normalize();
         ObjectNode manifest=(ObjectNode)json.readTree(root.resolve("dataset.json").toFile());
-        if(manifest.path("schemaVersion").asInt()!=2) throw new IllegalArgumentException("Dataset schemaVersion must be 2; convert legacy input first");
+        int schema=manifest.path("schemaVersion").asInt();
+        if(schema!=2 && schema!=3) throw new IllegalArgumentException("Dataset schemaVersion must be 2 or 3");
         requireText(manifest,"datasetVersion"); requireText(manifest,"corpusVersion");
-        List<ObjectNode> cases=read(root.resolve("cases.jsonl"),json);
+        List<ObjectNode> cases=read(root.resolve("cases.jsonl"),json,schema==3);
         if(manifest.has("expectedCount") && manifest.path("expectedCount").asInt()!=cases.size()) throw new IllegalArgumentException("Dataset count differs from manifest");
         Set<String> documents=new HashSet<>();
         for(JsonNode document:manifest.path("documents")) {
@@ -34,16 +35,20 @@ public final class EvaluationCases {
                 if(!documents.contains(requireText(alternative,"document"))) throw new IllegalArgumentException("Unknown evidence document");
             for(JsonNode id:sample.path("forbiddenDocuments")) if(!documents.contains(id.asText())) throw new IllegalArgumentException("Unknown forbidden document");
         }
+        if(schema==3) PublicDatasetSource.verify(root,manifest,cases,json);
         String hash=EvidenceRecorder.hash(manifest.toString()+"\n"+String.join("\n",cases.stream().map(JsonNode::toString).toList()));
         return new Dataset(root,manifest,List.copyOf(cases),hash);
     }
     public static List<ObjectNode> read(Path path,ObjectMapper json) throws Exception {
+        return read(path,json,false);
+    }
+    private static List<ObjectNode> read(Path path,ObjectMapper json,boolean publicDataset) throws Exception {
         List<ObjectNode> result=new ArrayList<>(); Set<String> ids=new HashSet<>();
         try(var lines=Files.lines(path)) {
             for(String line:lines.toList()) {
                 if(line.isBlank() || line.stripLeading().startsWith("#")) continue;
                 if(!(json.readTree(line) instanceof ObjectNode sample)) throw new IllegalArgumentException("Case must be an object");
-                validate(sample);
+                validate(sample,publicDataset);
                 if(!ids.add(sample.get("id").asText())) throw new IllegalArgumentException("Duplicate case ID");
                 result.add(sample);
             }
@@ -52,12 +57,17 @@ public final class EvaluationCases {
         return List.copyOf(result);
     }
     public static void validate(JsonNode sample) {
+        validate(sample,false);
+    }
+    private static void validate(JsonNode sample,boolean publicDataset) {
         requireText(sample,"id"); requireText(sample,"question"); requireText(sample,"referenceAnswer");
         String type=requireText(sample,"type");
         if(!Set.of("answerable","unanswerable","acl").contains(type)) throw new IllegalArgumentException("Unknown case type");
-        stringArray(sample,"keyPoints",true);
+        stringArray(sample,"keyPoints",!publicDataset);
+        if(publicDataset) stringArray(sample,"referenceAnswers",true);
         if(!sample.path("evidenceUnits").isArray()) throw new IllegalArgumentException("evidenceUnits array required");
-        if(type.equals("answerable")==sample.path("evidenceUnits").isEmpty()) throw new IllegalArgumentException("Only answerable cases require nonempty evidence units");
+        if(!publicDataset && type.equals("answerable")==sample.path("evidenceUnits").isEmpty()) throw new IllegalArgumentException("Only answerable cases require nonempty evidence units");
+        if(!type.equals("answerable") && !sample.path("evidenceUnits").isEmpty()) throw new IllegalArgumentException("Negative cases cannot carry positive evidence");
         Set<String> unitIds=new HashSet<>();
         for(JsonNode unit:sample.path("evidenceUnits")) {
             if(!unitIds.add(requireText(unit,"id"))) throw new IllegalArgumentException("Duplicate evidence unit");

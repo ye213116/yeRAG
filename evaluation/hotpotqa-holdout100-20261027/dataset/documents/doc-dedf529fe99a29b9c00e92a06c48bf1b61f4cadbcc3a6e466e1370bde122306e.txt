@@ -1,0 +1,3 @@
+Kolmogorov's three-series theorem
+
+In probability theory, Kolmogorov's Three-Series Theorem, named after Andrey Kolmogorov, gives a criterion for the almost sure convergence of an infinite series of random variables in terms of the convergence of three different series involving properties of their probability distributions. Kolmogorov's three-series theorem, combined with Kronecker's lemma, can be used to give a relatively easy proof of the Strong Law of Large Numbers.

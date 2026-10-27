@@ -1,0 +1,43 @@
+{
+  "reviewType": "MACHINE_TECHNICAL_FINDING",
+  "humanLabelReviewer": "zyh",
+  "originalLabelsChanged": false,
+  "cases": [
+    {
+      "caseId": "conflict-02",
+      "pipelineRunId": "b0eb69f3-d98a-4258-ad95-e3884ff4289a",
+      "technicalReviewState": "COMPLETED",
+      "humanAnswerApproval": false,
+      "judgeAssessment": {
+        "verdict": "partial",
+        "missingKeyPoints": [
+          "没有提供客服手册与本附件之间的优先级规则"
+        ],
+        "unsupportedClaims": [],
+        "contradictedClaims": [],
+        "reviewRequired": false,
+        "reason": "答案正确指出两份文件不一致，并准确给出合同附件500元[1]与客服手册300元[2]两个额度，符合前两个关键点。但未提及基准资料没有提供客服手册与合同附件之间的优先级规则这一关键点，也未说明不能擅自消除冲突或断定优先级，因此内容不完整，判定为partial。"
+      },
+      "observation": "Necessary evidence is FULL in Top5 and wire. Judge requires all approved keyPoints, including details beyond the direct yes/no comparison wording. Do not infer hallucination or change approved labels/scores automatically.",
+      "action": "Keep partial score and original answer. If the operator later changes completeness expectations, issue a new label version and review history; do not rerun to select a higher score."
+    },
+    {
+      "caseId": "cross-doc-03",
+      "pipelineRunId": "b909e5aa-7d36-4ff5-a514-b8568121650e",
+      "technicalReviewState": "COMPLETED",
+      "humanAnswerApproval": false,
+      "judgeAssessment": {
+        "verdict": "partial",
+        "missingKeyPoints": [
+          "灾难恢复目标RTO为4小时，RPO为30分钟"
+        ],
+        "unsupportedClaims": [],
+        "contradictedClaims": [],
+        "reviewRequired": false,
+        "reason": "答案正确回答了专业版支持SAML单点登录，并正确说明专业版与基础版适用相同的灾难恢复目标，均有上下文支持。但遗漏了关键点中具体的灾难恢复目标数值（RTO为4小时、RPO为30分钟），因此属于内容正确但有遗漏的部分正确。"
+      },
+      "observation": "Necessary evidence is FULL in Top5 and wire. Judge requires all approved keyPoints, including details beyond the direct yes/no comparison wording. Do not infer hallucination or change approved labels/scores automatically.",
+      "action": "Keep partial score and original answer. If the operator later changes completeness expectations, issue a new label version and review history; do not rerun to select a higher score."
+    }
+  ]
+}

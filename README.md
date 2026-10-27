@@ -45,9 +45,7 @@ yeRAG 是一个面向企业知识库的 Agentic RAG 应用。它把文档处理�
 
 知识库工具和固定 RAG 共用 Query、Retrieve、Rerank、Merge、Assemble 阶段；固定 RAG 继续执行 Generate。问答、工具和模型调用通过运行 ID 关联，保存候选变化、裁剪范围与实际模型请求；completion 附带可查询本人证据的 `runId`。
 
-配置、证据接口和 MySQL 迁移见 [Pipeline 使用文档](docs/rag-pipeline.md)。[单链路评测说明](evaluation/README.md) 提供版本化的 50 题合成资料、Hit@5 / Coverage@5、独立 Judge 与阶段证据诊断；程序事实、模型判断和人工复核分开保存。每题只执行一次现有 Pipeline，相邻块扩展留待第二阶段。
-
-评测设计与实际验收范围见 [第一阶段设计](docs/superpowers/specs/2026-10-21-yerag-eval-v1-design.md)。合成标注仍需人工确认，真实服务结果与模拟测试分别报告。
+配置、证据接口和 MySQL 迁移见 [Pipeline 使用文档](docs/rag-pipeline.md)。评测机制、数据集、真实结果、运行方法与后续工作统一维护在 [yeRAG 评测主文档](evaluation/README.md)。该文档明确区分完整 RRF + rerank 主链路、召回消融、独立留出、企业人审和真实权限验收；旧评测说明与实验纪要保留为历史快照。
 
 ## Agent 与 Tool Calling
 

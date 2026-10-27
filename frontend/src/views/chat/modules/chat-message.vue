@@ -134,7 +134,7 @@ async function handleSourceFileClick(fileInfo: { fileName: string; referenceNumb
         <SystemLogo class="text-6 text-white" />
       </NAvatar>
       <div class="flex-col gap-1">
-        <NText class="text-4 font-bold">派聪明</NText>
+        <NText class="text-4 font-bold">yeRAG</NText>
         <NText class="text-3 color-gray-500">{{ formatDate(msg.timestamp) }}</NText>
       </div>
     </div>
@@ -145,11 +145,13 @@ async function handleSourceFileClick(fileInfo: { fileName: string; referenceNumb
     <NText v-else-if="msg.status === 'error'" class="ml-12 mt-2 italic">
       {{ msg.content || '服务器繁忙，请稍后再试' }}
     </NText>
-    <div v-else-if="msg.role === 'assistant'" class="mt-2 pl-12" @click="handleContentClick">
+    <div v-else-if="msg.role === 'assistant'" class="assistant-content mt-2 pl-12" @click="handleContentClick">
       <VueMarkdownIt :content="content" />
     </div>
-    <NText v-else-if="msg.role === 'user'" class="ml-12 mt-2 text-4">{{ content }}</NText>
-    <NDivider class="ml-12 w-[calc(100%-3rem)] mb-0! mt-2!" />
+    <div v-else-if="msg.role === 'user'" class="ml-12 mt-2">
+      <div class="user-bubble text-4">{{ content }}</div>
+    </div>
+    <NDivider class="ml-12 w-[calc(100%-3rem)] mb-0! mt-2! opacity-40" />
     <div class="ml-12 flex gap-4">
       <NButton quaternary @click="handleCopy(msg.content)">
         <template #icon>
@@ -161,19 +163,35 @@ async function handleSourceFileClick(fileInfo: { fileName: string; referenceNumb
 </template>
 
 <style scoped lang="scss">
+.user-bubble {
+  width: fit-content;
+  max-width: 82%;
+  padding: 8px 14px;
+  border-radius: 16px;
+  border-top-left-radius: 4px;
+  background-color: rgb(var(--primary-color) / 0.1);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.assistant-content {
+  line-height: 1.75;
+}
+
 :deep(.source-file-link) {
-  color: #1890ff;
+  color: rgb(var(--primary-color));
   cursor: pointer;
   text-decoration: underline;
   transition: color 0.2s;
 
   &:hover {
-    color: #40a9ff;
+    color: rgb(var(--primary-color) / 0.75);
     text-decoration: none;
   }
 
   &:active {
-    color: #096dd9;
+    color: rgb(var(--primary-color) / 0.9);
   }
 }
 </style>

@@ -11,3 +11,30 @@ body,
 html {
   overflow-x: hidden;
 }
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background-color: rgb(var(--primary-color) / 0.24);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 8px;
+  background-color: rgb(145 158 171 / 0.35);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(145 158 171 / 0.6);
+}

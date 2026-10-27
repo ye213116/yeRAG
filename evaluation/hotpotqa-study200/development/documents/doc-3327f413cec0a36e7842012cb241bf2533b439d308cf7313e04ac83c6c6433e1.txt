@@ -1,0 +1,3 @@
+Tav (number)
+
+In his work on set theory, Georg Cantor denoted the collection of all cardinal numbers by the last letter of the Hebrew alphabet, ת (transliterated as Taf, Tav, or Taw.) As Cantor realized, this collection could not itself have a cardinality, as this would lead to a paradox of the Burali-Forti type. Cantor instead said that it was an "inconsistent" collection which was absolutely infinite.

@@ -132,11 +132,11 @@ const handShortcut = (e: KeyboardEvent) => {
 </script>
 
 <template>
-  <div class="relative w-full b-1 b-#1c1c1c20 bg-#fff p-4 card-wrapper dark:bg-#1c1c1c">
+  <div class="input-card relative w-full b-1 b-#1c1c1c20 bg-#fff p-4 card-wrapper dark:bg-#1c1c1c">
     <textarea
       ref="inputRef"
       v-model.trim="input.message"
-      placeholder="给 派聪明 发送消息"
+      placeholder="给 yeRAG 发送消息"
       class="min-h-10 w-full cursor-text resize-none b-none bg-transparent color-#333 caret-[rgb(var(--primary-color))] outline-none dark:color-#f1f1f1"
       @keydown="handShortcut"
     />
@@ -169,4 +169,17 @@ const handShortcut = (e: KeyboardEvent) => {
   </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+.input-card {
+  border-radius: 18px;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 0.05);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.input-card:focus-within {
+  border-color: rgb(var(--primary-color) / 0.55);
+  box-shadow: 0 6px 24px rgb(var(--primary-color) / 0.12);
+}
+</style>

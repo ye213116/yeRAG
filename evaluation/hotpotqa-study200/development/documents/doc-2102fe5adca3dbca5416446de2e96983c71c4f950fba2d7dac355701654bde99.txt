@@ -1,0 +1,3 @@
+Limitation of size
+
+In the philosophy of mathematics, specifically the philosophical foundations of set theory, limitation of size is a concept developed by Philip Jourdain and/or Georg Cantor to avoid Cantor's paradox. It identifies certain "inconsistent multiplicities", in Cantor's terminology, that cannot be sets because they are "too large". In modern terminology these are called proper classes.

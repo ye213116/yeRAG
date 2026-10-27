@@ -11,6 +11,7 @@ public final class EvaluationArtifacts {
     private final Path root;
     private final ObjectMapper json;
     public EvaluationArtifacts(Path root,ObjectMapper json) { this.root=root; this.json=json; }
+    public Path directory() { return root; }
     public JsonNode read(String id) throws Exception {
         UUID.fromString(id);
         JsonNode run=json.readTree(root.resolve(id+".json").toFile());
@@ -42,7 +43,7 @@ public final class EvaluationArtifacts {
                     || !EvidenceRecorder.hash(c.path("text").asText()).equals(c.path("sourceHash").asText())) throw new IllegalStateException("Top5 snapshot mismatch");
             for(String field:List.of("owner","fileMd5","esIndex","esHitId","scoreKind")) EvaluationCases.requireText(c,field);
             if(!c.path("id").asText().equals(c.path("esIndex").asText()+":"+c.path("esHitId").asText())
-                    || !Set.of("RRF","RERANK","ES").contains(c.path("scoreKind").asText())
+                    || !Set.of("RRF","RERANK","ES","BM25","VECTOR").contains(c.path("scoreKind").asText())
                     || !c.path("score").isNumber() || !Double.isFinite(c.path("score").asDouble()))
                 throw new IllegalStateException("Invalid Top5 source identity/score");
             if(!c.path("chunkId").isIntegralNumber() || c.path("chunkId").asInt()!=original.path("chunkIndex").asInt(-1)) throw new IllegalStateException("Top5 chunk ID mismatch");

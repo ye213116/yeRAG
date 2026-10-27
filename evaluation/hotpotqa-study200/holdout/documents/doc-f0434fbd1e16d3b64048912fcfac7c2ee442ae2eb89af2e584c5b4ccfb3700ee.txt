@@ -1,0 +1,3 @@
+Schizopolis
+
+Schizopolis (also known as Steven Soderbergh's Schizopolis) is a 1996 experimental comedy film with a non-linear narrative directed by Steven Soderbergh.

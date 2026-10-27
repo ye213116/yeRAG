@@ -1,0 +1,11 @@
+{
+  "reason": "POST_RUN_JSON_CONTAINER_COMPATIBILITY",
+  "createdAt": "2026-10-27T07:30:50.230176+00:00",
+  "protocolSha256": "3ee097993ddd58e99a398a21217088187823bf5ad2075f93b3349e6cb9fa94ee",
+  "originalScriptSha256": "7f3905aa9e30d5cacf2543372cfdba40ecfde3d6a58ccb3e252b886699c25fc0",
+  "correctedValidatorSha256": "4354784ae62f0cb0ad8e0893b9ddcf851f87fdd28942394d486e82957cdef99d",
+  "noExperimentalConfigurationOrLabelChanges": true,
+  "modelReruns": 0,
+  "regressionBefore": "target/eval-closeout-judge-json-before.log",
+  "regressionAfter": "target/eval-closeout-python-tests.log"
+}

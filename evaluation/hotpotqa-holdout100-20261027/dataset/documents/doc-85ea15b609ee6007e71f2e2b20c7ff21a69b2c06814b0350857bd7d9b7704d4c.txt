@@ -1,0 +1,3 @@
+St Vincents Hall
+
+St Vincents Hall, Grantham, is a Gothic Revival mansion built in 1868 for the industrialist Richard Hornsby who founded Richard Hornsby & Sons, engine and machinery manufacturer.

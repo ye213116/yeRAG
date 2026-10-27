@@ -1,0 +1,588 @@
+{
+  "status": "VERIFIED",
+  "date": "2026-10-27",
+  "branch": "agent",
+  "baseHead": "fd8d6a3134f48f7a34422a5b3dc4e1547ae74334",
+  "worktreeState": "UNCOMMITTED",
+  "studyDirectory": "evaluation/hotpotqa-study200",
+  "studySha256": "753c8300cea17a24a26cbcb5dea8cbe9dccbd6d4e6dc51e9b0629177db98b0cd",
+  "codeVersion": "fd8d6a3134f48f7a34422a5b3dc4e1547ae74334+37a354c6f44c4bd7dce98864d9b0f902e531680c45473928fcc8de1515b5928b",
+  "selection": {
+    "version": "yerag-locked-evidence-selection-v1",
+    "createdAt": "2026-10-27T03:24:50.250374+00:00",
+    "studySha256": "753c8300cea17a24a26cbcb5dea8cbe9dccbd6d4e6dc51e9b0629177db98b0cd",
+    "developmentRun": "/home/zyh/projects/yeRAG-agent/target/hotpotqa-study200-experiment-20261027-001/development",
+    "developmentCaptureSha256": "0cabe5dce8f6aed7dfe9c62f781dd10ce642b0f0262d71aa3437ddccf9adfac4",
+    "codeVersion": "fd8d6a3134f48f7a34422a5b3dc4e1547ae74334+37a354c6f44c4bd7dce98864d9b0f902e531680c45473928fcc8de1515b5928b",
+    "gridSha256": "69a1996be82951672cf873b24199e4d6383f9f5c5152d19c023f45d47095fbfc",
+    "replaySha256": "d3842ed7423a8e8206b221930b251aa04cb7596dd7ac5966e217c88cdf5e49b3",
+    "selectionRule": "lexicographic CompleteHit@5, Coverage@5, Hit@5; ties prefer baseline, then closest log-weight to baseline, then name",
+    "baseline": {
+      "name": "bm25-1.0",
+      "constant": 60,
+      "bm25Weight": 1.0,
+      "vectorWeight": 1.0
+    },
+    "selected": {
+      "configuration": {
+        "name": "bm25-0.5",
+        "constant": 60,
+        "bm25Weight": 0.5,
+        "vectorWeight": 1.0
+      },
+      "count": 100,
+      "hitAt5": 0.97,
+      "coverageAt5": 0.8348809523809523,
+      "completeHitAt5": 0.68,
+      "top5MatchingCapture": 22
+    },
+    "notice": "Selected on development evidence only. Candidate generation quality is unmeasured until the locked holdout run."
+  },
+  "gridResults": [
+    {
+      "configuration": {
+        "name": "bm25-0.25",
+        "constant": 60,
+        "bm25Weight": 0.25,
+        "vectorWeight": 1.0
+      },
+      "count": 100,
+      "hitAt5": 0.99,
+      "coverageAt5": 0.8432142857142856,
+      "completeHitAt5": 0.67,
+      "top5MatchingCapture": 4
+    },
+    {
+      "configuration": {
+        "name": "bm25-0.5",
+        "constant": 60,
+        "bm25Weight": 0.5,
+        "vectorWeight": 1.0
+      },
+      "count": 100,
+      "hitAt5": 0.97,
+      "coverageAt5": 0.8348809523809523,
+      "completeHitAt5": 0.68,
+      "top5MatchingCapture": 22
+    },
+    {
+      "configuration": {
+        "name": "bm25-1.0",
+        "constant": 60,
+        "bm25Weight": 1.0,
+        "vectorWeight": 1.0
+      },
+      "count": 100,
+      "hitAt5": 0.96,
+      "coverageAt5": 0.7948809523809524,
+      "completeHitAt5": 0.62,
+      "top5MatchingCapture": 100
+    },
+    {
+      "configuration": {
+        "name": "bm25-2.0",
+        "constant": 60,
+        "bm25Weight": 2.0,
+        "vectorWeight": 1.0
+      },
+      "count": 100,
+      "hitAt5": 0.92,
+      "coverageAt5": 0.7548809523809524,
+      "completeHitAt5": 0.57,
+      "top5MatchingCapture": 8
+    }
+  ],
+  "runs": [
+    {
+      "role": "development",
+      "directory": "target/hotpotqa-study200-experiment-20261027-001/development",
+      "captureSha256": "0cabe5dce8f6aed7dfe9c62f781dd10ce642b0f0262d71aa3437ddccf9adfac4",
+      "datasetHash": "7e0f0763e75bccc08b893c45b6ad5d81448cdf635a5acae70f09510dae7a0173",
+      "corpusFingerprint": "745d010de60a5a2730f6c903d0b1f37a773462ba328c48db2cbf2cbe10aa443d",
+      "publicBenchmark": {
+        "configuration": {
+          "dataset": "hotpotqa",
+          "language": "en",
+          "split": "validation",
+          "setting": "shared-candidate-subset",
+          "answerStyle": "short",
+          "scorer": "hotpotqa-answer-v1"
+        },
+        "labelSource": "PUBLIC_SOURCE_MAPPED_NOT_HUMAN_REVIEWED",
+        "count": 100,
+        "completed": 100,
+        "answerMetricCount": 100,
+        "incomplete": 0,
+        "em": 0.53,
+        "f1": 0.6602989755342696,
+        "observedSupportingEvidence": {
+          "count": 100,
+          "hitAt5": 0.96,
+          "coverageAt5": 0.7948809523809524,
+          "completeHitAt5": 0.62
+        },
+        "judgeFailures": 0,
+        "judgeUnavailable": 0
+      },
+      "measurements": {
+        "percentileMethod": "NEAREST_RANK",
+        "pipelineLatencyMs": {
+          "count": 100,
+          "unavailable": 0,
+          "mean": 1015.91,
+          "p50": 985.0,
+          "p95": 1414.0
+        },
+        "firstAnswerLatencyMs": {
+          "count": 100,
+          "unavailable": 0,
+          "mean": 910.24,
+          "p50": 896.0,
+          "p95": 1233.0
+        },
+        "contextEstimatedTokens": {
+          "count": 100,
+          "unavailable": 0,
+          "mean": 1902.44,
+          "p50": 1932.0,
+          "p95": 2542.0
+        },
+        "tokenScope": "GENERATION_AND_EVALUATION_JUDGES_ONLY; embedding/rerank billing excluded; no monetary cost inferred",
+        "generationUsage": {
+          "reportedCalls": 100,
+          "missingOrNotCalled": 0,
+          "promptTokens": 67253,
+          "completionTokens": 435,
+          "totalTokens": 67688
+        },
+        "judgeUsage": {
+          "reportedCalls": 100,
+          "missingOrNotCalled": 0,
+          "promptTokens": 86645,
+          "completionTokens": 9718,
+          "totalTokens": 96363
+        },
+        "supportUsage": {
+          "reportedCalls": 0,
+          "missingOrNotCalled": 100
+        }
+      },
+      "nativeScoreOfficialAgreementCount": 100,
+      "offlineReplayByteIdentical": true,
+      "multiChildEvidenceUnits": 2
+    },
+    {
+      "role": "holdout/baseline",
+      "directory": "target/hotpotqa-study200-experiment-20261027-001/holdout/baseline",
+      "captureSha256": "a494ab2d481203e48abfc1d2ae3df2166d59e61d16063a772b487d836d48510a",
+      "datasetHash": "fe74fb554ef973d3b7af6d7f7c932231d8ef2fc0c188f1251e696e26e1ce9075",
+      "corpusFingerprint": "6f6a7981bf56e00bae7827c35ba7c6b9714fb797214ed6e7f9929dcc7a29c729",
+      "publicBenchmark": {
+        "configuration": {
+          "dataset": "hotpotqa",
+          "language": "en",
+          "split": "validation",
+          "setting": "shared-candidate-subset",
+          "answerStyle": "short",
+          "scorer": "hotpotqa-answer-v1"
+        },
+        "labelSource": "PUBLIC_SOURCE_MAPPED_NOT_HUMAN_REVIEWED",
+        "count": 100,
+        "completed": 100,
+        "answerMetricCount": 100,
+        "incomplete": 0,
+        "em": 0.64,
+        "f1": 0.765607396988976,
+        "observedSupportingEvidence": {
+          "count": 100,
+          "hitAt5": 0.97,
+          "coverageAt5": 0.8891666666666667,
+          "completeHitAt5": 0.8
+        },
+        "judgeFailures": 0,
+        "judgeUnavailable": 0
+      },
+      "measurements": {
+        "percentileMethod": "NEAREST_RANK",
+        "pipelineLatencyMs": {
+          "count": 100,
+          "unavailable": 0,
+          "mean": 1026.89,
+          "p50": 985.0,
+          "p95": 1650.0
+        },
+        "firstAnswerLatencyMs": {
+          "count": 100,
+          "unavailable": 0,
+          "mean": 917.23,
+          "p50": 882.0,
+          "p95": 1496.0
+        },
+        "contextEstimatedTokens": {
+          "count": 100,
+          "unavailable": 0,
+          "mean": 1944.84,
+          "p50": 1978.0,
+          "p95": 2468.0
+        },
+        "tokenScope": "GENERATION_AND_EVALUATION_JUDGES_ONLY; embedding/rerank billing excluded; no monetary cost inferred",
+        "generationUsage": {
+          "reportedCalls": 100,
+          "missingOrNotCalled": 0,
+          "promptTokens": 68636,
+          "completionTokens": 369,
+          "totalTokens": 69005
+        },
+        "judgeUsage": {
+          "reportedCalls": 100,
+          "missingOrNotCalled": 0,
+          "promptTokens": 88068,
+          "completionTokens": 9372,
+          "totalTokens": 97440
+        },
+        "supportUsage": {
+          "reportedCalls": 0,
+          "missingOrNotCalled": 100
+        }
+      },
+      "nativeScoreOfficialAgreementCount": 100,
+      "offlineReplayByteIdentical": true,
+      "multiChildEvidenceUnits": 1
+    },
+    {
+      "role": "holdout/candidate",
+      "directory": "target/hotpotqa-study200-experiment-20261027-001/holdout/candidate",
+      "captureSha256": "b42f339b075b572d6993b46870e6832268f6e2f1cf2586f28e663031f1a941fe",
+      "datasetHash": "fe74fb554ef973d3b7af6d7f7c932231d8ef2fc0c188f1251e696e26e1ce9075",
+      "corpusFingerprint": "6f6a7981bf56e00bae7827c35ba7c6b9714fb797214ed6e7f9929dcc7a29c729",
+      "publicBenchmark": {
+        "configuration": {
+          "dataset": "hotpotqa",
+          "language": "en",
+          "split": "validation",
+          "setting": "shared-candidate-subset",
+          "answerStyle": "short",
+          "scorer": "hotpotqa-answer-v1"
+        },
+        "labelSource": "PUBLIC_SOURCE_MAPPED_NOT_HUMAN_REVIEWED",
+        "count": 100,
+        "completed": 100,
+        "answerMetricCount": 100,
+        "incomplete": 0,
+        "em": 0.62,
+        "f1": 0.7429407303223092,
+        "observedSupportingEvidence": {
+          "count": 100,
+          "hitAt5": 0.97,
+          "coverageAt5": 0.8908333333333333,
+          "completeHitAt5": 0.8
+        },
+        "judgeFailures": 0,
+        "judgeUnavailable": 0
+      },
+      "measurements": {
+        "percentileMethod": "NEAREST_RANK",
+        "pipelineLatencyMs": {
+          "count": 100,
+          "unavailable": 0,
+          "mean": 994.2,
+          "p50": 947.0,
+          "p95": 1370.0
+        },
+        "firstAnswerLatencyMs": {
+          "count": 100,
+          "unavailable": 0,
+          "mean": 895.2,
+          "p50": 853.0,
+          "p95": 1279.0
+        },
+        "contextEstimatedTokens": {
+          "count": 100,
+          "unavailable": 0,
+          "mean": 1923.63,
+          "p50": 1951.0,
+          "p95": 2394.0
+        },
+        "tokenScope": "GENERATION_AND_EVALUATION_JUDGES_ONLY; embedding/rerank billing excluded; no monetary cost inferred",
+        "generationUsage": {
+          "reportedCalls": 100,
+          "missingOrNotCalled": 0,
+          "promptTokens": 68090,
+          "completionTokens": 374,
+          "totalTokens": 68464
+        },
+        "judgeUsage": {
+          "reportedCalls": 100,
+          "missingOrNotCalled": 0,
+          "promptTokens": 87489,
+          "completionTokens": 9329,
+          "totalTokens": 96818
+        },
+        "supportUsage": {
+          "reportedCalls": 0,
+          "missingOrNotCalled": 100
+        }
+      },
+      "nativeScoreOfficialAgreementCount": 100,
+      "offlineReplayByteIdentical": true,
+      "multiChildEvidenceUnits": 1
+    }
+  ],
+  "comparison": {
+    "baseline": "/home/zyh/projects/yeRAG-agent/target/hotpotqa-study200-experiment-20261027-001/holdout/baseline",
+    "candidate": "/home/zyh/projects/yeRAG-agent/target/hotpotqa-study200-experiment-20261027-001/holdout/candidate",
+    "allowCodeChange": false,
+    "datasetHash": "fe74fb554ef973d3b7af6d7f7c932231d8ef2fc0c188f1251e696e26e1ce9075",
+    "comparability": "MATCHED",
+    "allowedConfigChanges": [
+      "options.rrfK",
+      "retrieval.bm25Weight",
+      "retrieval.knnWeight"
+    ],
+    "configurationChanges": [
+      {
+        "field": "retrieval.bm25Weight",
+        "baseline": 1.0,
+        "candidate": 0.5
+      }
+    ],
+    "notice": "Paired exploratory comparison on this frozen sample; a single run does not establish stable model gains or production acceptance.",
+    "metrics": {
+      "hitAt5": {
+        "pairedCount": 100,
+        "totalCases": 100,
+        "unpaired": 0,
+        "wins": 0,
+        "losses": 0,
+        "ties": 100,
+        "changes": [],
+        "baseline": 0.97,
+        "candidate": 0.97,
+        "delta": 0.0
+      },
+      "coverageAt5": {
+        "pairedCount": 100,
+        "totalCases": 100,
+        "unpaired": 0,
+        "wins": 1,
+        "losses": 1,
+        "ties": 98,
+        "changes": [
+          {
+            "caseId": "hotpotqa-5a831fcc55429940e5e1a96a",
+            "baseline": 0.5,
+            "candidate": 1.0,
+            "delta": 0.5
+          },
+          {
+            "caseId": "hotpotqa-5ab7c6995542993667794005",
+            "baseline": 1.0,
+            "candidate": 0.6666666666666666,
+            "delta": -0.33333333333333337
+          }
+        ],
+        "baseline": 0.8891666666666665,
+        "candidate": 0.8908333333333333,
+        "delta": 0.0016666666666667052
+      },
+      "completeHitAt5": {
+        "pairedCount": 100,
+        "totalCases": 100,
+        "unpaired": 0,
+        "wins": 1,
+        "losses": 1,
+        "ties": 98,
+        "changes": [
+          {
+            "caseId": "hotpotqa-5a831fcc55429940e5e1a96a",
+            "baseline": 0.0,
+            "candidate": 1.0,
+            "delta": 1.0
+          },
+          {
+            "caseId": "hotpotqa-5ab7c6995542993667794005",
+            "baseline": 1.0,
+            "candidate": 0.0,
+            "delta": -1.0
+          }
+        ],
+        "baseline": 0.8,
+        "candidate": 0.8,
+        "delta": 0.0
+      },
+      "em": {
+        "pairedCount": 100,
+        "totalCases": 100,
+        "unpaired": 0,
+        "wins": 0,
+        "losses": 2,
+        "ties": 98,
+        "changes": [
+          {
+            "caseId": "hotpotqa-5a7f35015542992e7d278c8a",
+            "baseline": 1.0,
+            "candidate": 0.0,
+            "delta": -1.0
+          },
+          {
+            "caseId": "hotpotqa-5a8cee9b554299441c6b9f87",
+            "baseline": 1.0,
+            "candidate": 0.0,
+            "delta": -1.0
+          }
+        ],
+        "baseline": 0.64,
+        "candidate": 0.62,
+        "delta": -0.020000000000000018
+      },
+      "f1": {
+        "pairedCount": 100,
+        "totalCases": 100,
+        "unpaired": 0,
+        "wins": 0,
+        "losses": 3,
+        "ties": 97,
+        "changes": [
+          {
+            "caseId": "hotpotqa-5a7261635542997f8278398a",
+            "baseline": 0.6666666666666666,
+            "candidate": 0.4,
+            "delta": -0.2666666666666666
+          },
+          {
+            "caseId": "hotpotqa-5a7f35015542992e7d278c8a",
+            "baseline": 1.0,
+            "candidate": 0.0,
+            "delta": -1.0
+          },
+          {
+            "caseId": "hotpotqa-5a8cee9b554299441c6b9f87",
+            "baseline": 1.0,
+            "candidate": 0.0,
+            "delta": -1.0
+          }
+        ],
+        "baseline": 0.7656073969889757,
+        "candidate": 0.7429407303223091,
+        "delta": -0.022666666666666613
+      },
+      "judgeClaimSupportRate": {
+        "pairedCount": 0,
+        "totalCases": 100,
+        "unpaired": 100,
+        "wins": 0,
+        "losses": 0,
+        "ties": 0,
+        "changes": []
+      }
+    },
+    "measurements": {
+      "pipelineLatencyMs": {
+        "baseline": {
+          "count": 100,
+          "unavailable": 0,
+          "mean": 1026.89,
+          "p50": 985.0,
+          "p95": 1650.0
+        },
+        "candidate": {
+          "count": 100,
+          "unavailable": 0,
+          "mean": 994.2,
+          "p50": 947.0,
+          "p95": 1370.0
+        }
+      },
+      "generationUsage": {
+        "baseline": {
+          "reportedCalls": 100,
+          "missingOrNotCalled": 0,
+          "promptTokens": 68636,
+          "completionTokens": 369,
+          "totalTokens": 69005
+        },
+        "candidate": {
+          "reportedCalls": 100,
+          "missingOrNotCalled": 0,
+          "promptTokens": 68090,
+          "completionTokens": 374,
+          "totalTokens": 68464
+        }
+      }
+    },
+    "gates": [
+      {
+        "metric": "completeHitAt5",
+        "maxDrop": 0,
+        "status": "PASS"
+      },
+      {
+        "metric": "em",
+        "maxDrop": 0,
+        "status": "FAIL"
+      }
+    ],
+    "incompleteAnswers": {
+      "baseline": 0,
+      "candidate": 0
+    },
+    "gateStatus": "FAIL"
+  },
+  "officialScorerSha256": "d35fc91a6db21d791dbdda11daf3856e9359f5701d54e3eefba20d88fecc02c0",
+  "backendTests": {
+    "tests": 255,
+    "passed": 245,
+    "skipped": 10,
+    "failures": 0,
+    "errors": 0
+  },
+  "pythonTests": {
+    "tests": 24,
+    "passed": 24
+  },
+  "rawSourceLabels": "PUBLIC_SOURCE_MAPPED_NOT_HUMAN_REVIEWED",
+  "reviewPacks": [
+    "target/hotpotqa50-review-pack-20261027-002",
+    "target/phase1-label-review-pack-20261027-001"
+  ],
+  "offlineReplayDirectory": "target/hotpotqa-study200-experiment-20261027-001-offline-replay",
+  "scriptSha256": {
+    "scripts/rag-eval-study.py": "32313caa757ef2011a13dbac5c2ac634e8e31e7956dacd6beb99d9fc8d992bcb",
+    "scripts/rag-eval-review.py": "5c1de9f476d00018e8614cba93c44d7bce85a06c86111cae51404b3ba9c9a7de",
+    "scripts/rag-eval-experiment.py": "ef48570e7d2f94e254e9657ca85053e22cc1aeeabbd63efdeb85534496697606",
+    "scripts/rag-eval-import.py": "5ec1ac2ede6baea52bb686de26c0ba7657b865e3d092619fbde837fcfc3da0e5",
+    "scripts/rag-eval.sh": "8a738eb5e4ecc17f59857f7e953a617d079d5dc5573376699c009f78dc1e8f21"
+  },
+  "limitations": [
+    "One paired holdout experiment, not statistical significance or production acceptance",
+    "English HotpotQA shared-candidate subsets only",
+    "Question IDs/normalized questions disjoint; not an entity- or document-disjoint split",
+    "Human review remains pending",
+    "No RAGAS or monetary cost measurement"
+  ],
+  "dataSplitChecks": {
+    "oldSourceIdOverlap": 0,
+    "developmentHoldoutSourceIdOverlap": 0,
+    "normalizedQuestionOverlap": 0,
+    "crossSplitDocumentOverlap": 5
+  },
+  "verificationCommands": [
+    "mvn -q test",
+    "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/tests -v",
+    "PYTHONDONTWRITEBYTECODE=1 python3 target/verify-study200-20261027.py",
+    "git diff --check"
+  ],
+  "logs": [
+    "target/eval-study-all-tests.log",
+    "target/eval-study-python-tests.log",
+    "target/hotpotqa-study200-experiment-20261027-001/holdout-resume.log"
+  ],
+  "rawSelection": {
+    "path": "target/hotpotqa-study200-experiment-20261027-001/selection/selection.json",
+    "sha256": "cb0f1eb51c1375d1665e3bf418cf625bf884deee5f8a54a9687a0dd9883455d4"
+  },
+  "rawComparison": {
+    "path": "target/hotpotqa-study200-experiment-20261027-001/holdout/comparison/comparison.json",
+    "sha256": "7077b074495ce082a21b9e151f0dae3c36ed365401b25b87a7b6554975f5ab92"
+  }
+}

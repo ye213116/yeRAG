@@ -1,0 +1,3 @@
+Borel–Kolmogorov paradox
+
+In probability theory, the Borel–Kolmogorov paradox (sometimes known as Borel's paradox) is a paradox relating to conditional probability with respect to an event of probability zero (also known as a null set). It is named after Émile Borel and Andrey Kolmogorov.

@@ -1,0 +1,3 @@
+Cantor–Bernstein theorem
+
+In set theory and order theory, the Cantor–Bernstein theorem states that the cardinality of the second type class, the class of countable order types, equals the cardinality of the continuum. It was used by Felix Hausdorff and named by him after Georg Cantor and Felix Bernstein. Cantor constructed a family of countable order types with the cardinality of the continuum, and in his 1901 inaugural dissertation Bernstein proved that such a family can have no higher cardinality.

@@ -24,7 +24,7 @@ public final class EvaluationApplication {
             "spring.jpa.hibernate.ddl-auto","none","spring.sql.init.mode","never")));
         context.addBeanFactoryPostProcessor(factory -> {
             if(factory instanceof BeanDefinitionRegistry registry) {
-                for(String name:List.of("esIndexInitializer","adminUserInitializer","orgTagInitializer","memoryController","legacyMemoryMigration",
+                for(String name:List.of("esIndexInitializer","adminUserInitializer","orgTagInitializer","memoryController","legacyMemoryMigration","fileProcessingConsumer",
                         TaskManagementConfigUtils.SCHEDULED_ANNOTATION_PROCESSOR_BEAN_NAME))
                     if(registry.containsBeanDefinition(name)) registry.removeBeanDefinition(name);
             }

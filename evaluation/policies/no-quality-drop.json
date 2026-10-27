@@ -1,0 +1,7 @@
+{
+  "notice": "Local development comparison policy: no decrease in complete evidence hit or exact answer match. No production acceptance claim; latency/token thresholds are intentionally unset until calibrated.",
+  "maxDrops": {
+    "completeHitAt5": 0,
+    "em": 0
+  }
+}

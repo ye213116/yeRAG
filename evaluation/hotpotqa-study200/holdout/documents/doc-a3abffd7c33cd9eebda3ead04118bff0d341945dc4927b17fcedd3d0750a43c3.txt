@@ -1,0 +1,3 @@
+Time–frequency analysis for music signals
+
+Time–frequency analysis for music signals is one of the applications of time–frequency analysis. Musical sound can be more complicated than human vocal sound, occupying a wider band of frequency. Music signals are time-varying signals; while the classic Fourier transform is not sufficient to analyze them, time–frequency analysis is an efficient tool for such use. Time–frequency analysis is extended from the classic Fourier approach. Short-time Fourier transform (STFT), Gabor transform (GT) and Wigner distribution function (WDF) are famous time–frequency methods, useful for analyzing music signals such as notes played on a piano, a flute or a guitar.

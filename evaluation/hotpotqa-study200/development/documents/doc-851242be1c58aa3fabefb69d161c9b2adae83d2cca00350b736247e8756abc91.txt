@@ -1,0 +1,3 @@
+Georg Cantor
+
+Georg Ferdinand Ludwig Philipp Cantor ( ; ] ; March 3 [O.S. February 19] 1845  – January 6, 1918) was a German mathematician. He invented set theory, which has become a fundamental theory in mathematics. Cantor established the importance of one-to-one correspondence between the members of two sets, defined infinite and well-ordered sets, and proved that the real numbers are more numerous than the natural numbers. In fact, Cantor's method of proof of this theorem implies the existence of an "infinity of infinities". He defined the cardinal and ordinal numbers and their arithmetic. Cantor's work is of great philosophical interest, a fact of which he was well aware.

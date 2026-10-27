@@ -20,7 +20,7 @@ public class GenerateStage implements RagStage {
                 return Mono.just(new StageOutcome(Status.NO_EVIDENCE,"FIXED_ABSTENTION",Map.of("answer",answer)));
             }
             List<AgentMessage> messages=new ArrayList<>();
-            messages.add(AgentMessage.system(AssembleStage.RULES));
+            messages.add(AgentMessage.system(systemRules(c.request().conciseAnswer())));
             messages.addAll(c.request().history());
             messages.add(AgentMessage.user("参考资料：\n"+c.state().context().content()+"\n问题："+c.request().question()));
             StringBuilder answer=new StringBuilder();
@@ -31,5 +31,8 @@ public class GenerateStage implements RagStage {
                 return new StageOutcome(Status.SUCCEEDED,"GENERATED",Map.of("answer",answer.toString()));
             }));
         });
+    }
+    public static String systemRules(boolean concise) {
+        return AssembleStage.RULES+(concise?"\nFor this benchmark, output only the short answer in the question's language. Do not add explanation, citations, or formatting. For yes/no questions output only yes or no. If evidence is insufficient, abstain.":"");
     }
 }

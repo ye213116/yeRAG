@@ -1,0 +1,743 @@
+{
+  "status": "VERIFIED",
+  "date": "2026-10-27",
+  "codeVersion": "fd8d6a3134f48f7a34422a5b3dc4e1547ae74334+714edce6b8f2584f85c9ae0e394fcff38fa6557ced2b54250999ac399f35fb9f",
+  "datasetHash": "d7439251f66c39398de8412758692294602496265044ab6465a31d8bf7c9f455",
+  "captureSha256": "49bc12d1656377cc5cc92eb3c4c2a3c5105947680b60d659887a82b331fde296",
+  "rawProvenanceSha256": "33901d246bccee7751c9cb9e40fad545c6fbb30643a9d3db8292b717e3e00ead",
+  "reviewedProvenanceSha256": "e6b96fa2e6661d988e3d1b9d594eff20868b181cb0729bb4ad89c34cf103dae5",
+  "humanReviewer": "zyh",
+  "humanApprovedLabels": 50,
+  "labelReviewFile": "evaluation/reviews/phase1-labels.jsonl",
+  "labelReviewSha256": "7b6da74ce84593736b8355f60a110d78e5d59d32ea4306e0985744ff2bd2298b",
+  "preflightReady": 50,
+  "generationComplete": 50,
+  "judgeVerdicts": {
+    "correct": 48,
+    "partial": 2
+  },
+  "humanApprovedGeneratedAnswers": 0,
+  "reviewedSummary": {
+    "total": 50,
+    "retrieval": {
+      "states": {
+        "NONE": 0,
+        "PARTIAL": 0,
+        "FULL": 40
+      },
+      "count": 40,
+      "excludedPositive": 0,
+      "hitAt5": 1.0,
+      "coverageAt5": 1.0,
+      "completeHitAt5": 1.0
+    },
+    "answers": {
+      "count": 50,
+      "excluded": 0,
+      "correct": 48,
+      "partial": 2,
+      "wrong": 0
+    },
+    "negativeCases": {
+      "unanswerable": {
+        "total": 6,
+        "reviewed": 6,
+        "correct": 6
+      },
+      "acl": {
+        "total": 4,
+        "reviewed": 4,
+        "correct": 4
+      }
+    },
+    "pendingOrDisputedLabels": 0,
+    "reviewQueue": 7,
+    "degraded": 0,
+    "aclExactLeaks": 0,
+    "datasetHash": "d7439251f66c39398de8412758692294602496265044ab6465a31d8bf7c9f455",
+    "captureDatasetHash": "d7439251f66c39398de8412758692294602496265044ab6465a31d8bf7c9f455",
+    "corpusFingerprint": "8d407fae362229fea44ee88caef6d2ae35c006f7209c5051cd38e90b0e8c16e8",
+    "experiment": {
+      "baseline": false,
+      "recallStrategy": "HYBRID",
+      "supportEnabled": false
+    },
+    "measurements": {
+      "percentileMethod": "NEAREST_RANK",
+      "pipelineLatencyMs": {
+        "count": 50,
+        "unavailable": 0,
+        "mean": 1278.34,
+        "p50": 1221.0,
+        "p95": 2083.0
+      },
+      "firstAnswerLatencyMs": {
+        "count": 50,
+        "unavailable": 0,
+        "mean": 1016.02,
+        "p50": 946.0,
+        "p95": 1816.0
+      },
+      "contextEstimatedTokens": {
+        "count": 50,
+        "unavailable": 0,
+        "mean": 2458.1,
+        "p50": 2430.0,
+        "p95": 2627.0
+      },
+      "tokenScope": "GENERATION_AND_EVALUATION_JUDGES_ONLY; embedding/rerank billing excluded; no monetary cost inferred",
+      "generationUsage": {
+        "reportedCalls": 50,
+        "missingOrNotCalled": 0,
+        "promptTokens": 30364,
+        "completionTokens": 1777,
+        "totalTokens": 32141
+      },
+      "judgeUsage": {
+        "reportedCalls": 50,
+        "missingOrNotCalled": 0,
+        "promptTokens": 48319,
+        "completionTokens": 3897,
+        "totalTokens": 52216
+      },
+      "supportUsage": {
+        "reportedCalls": 0,
+        "missingOrNotCalled": 50
+      }
+    },
+    "diagnosticCohorts": {
+      "interpretation": "Observed association; exact-match mismatch is not proof of hallucination or evidence-utilization failure",
+      "FULL": {
+        "count": 40,
+        "nativeAnswerCount": 0,
+        "exactMatchCorrect": 0,
+        "judge_correct": 38,
+        "judge_partial": 2,
+        "judge_wrong": 0
+      },
+      "PARTIAL": {
+        "count": 0,
+        "nativeAnswerCount": 0,
+        "exactMatchCorrect": 0,
+        "judge_correct": 0,
+        "judge_partial": 0,
+        "judge_wrong": 0
+      },
+      "NONE": {
+        "count": 0,
+        "nativeAnswerCount": 0,
+        "exactMatchCorrect": 0,
+        "judge_correct": 0,
+        "judge_partial": 0,
+        "judge_wrong": 0
+      },
+      "UNAVAILABLE": {
+        "count": 0,
+        "nativeAnswerCount": 0,
+        "exactMatchCorrect": 0,
+        "judge_correct": 0,
+        "judge_partial": 0,
+        "judge_wrong": 0
+      }
+    },
+    "answerSupport": {
+      "method": "yerag-claim-support-v1",
+      "total": 50,
+      "assessed": 0,
+      "failedOrInvalid": 0,
+      "judgeClaimSupportRate": {
+        "count": 0,
+        "unavailable": 50,
+        "status": "NOT_APPLICABLE_OR_NOT_ASSESSED"
+      },
+      "judgeAnswerCompleteness": {
+        "count": 0,
+        "unavailable": 50,
+        "status": "NOT_APPLICABLE_OR_NOT_ASSESSED"
+      }
+    }
+  },
+  "groups": {
+    "fact": [
+      {
+        "caseId": "fact-01",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "fact-02",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "fact-03",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "fact-04",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "fact-05",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "fact-06",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "fact-07",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "fact-08",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "fact-09",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "fact-10",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "fact-11",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "fact-12",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      }
+    ],
+    "para": [
+      {
+        "caseId": "para-01",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "para-02",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "para-03",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "para-04",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "para-05",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "para-06",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "para-07",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "para-08",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "para-09",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "para-10",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "para-11",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "para-12",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      }
+    ],
+    "multi": [
+      {
+        "caseId": "multi-01",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "multi-02",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "multi-03",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "multi-04",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "multi-05",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "multi-06",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "multi-07",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "multi-08",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      }
+    ],
+    "conflict": [
+      {
+        "caseId": "conflict-01",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": true
+      },
+      {
+        "caseId": "conflict-02",
+        "generationComplete": true,
+        "judge": "partial",
+        "answerEligible": true,
+        "reviewRequired": true
+      },
+      {
+        "caseId": "conflict-03",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      }
+    ],
+    "cross": [
+      {
+        "caseId": "cross-doc-01",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "cross-doc-02",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "cross-doc-03",
+        "generationComplete": true,
+        "judge": "partial",
+        "answerEligible": true,
+        "reviewRequired": true
+      },
+      {
+        "caseId": "cross-doc-04",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "cross-doc-05",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      }
+    ],
+    "unanswerable": [
+      {
+        "caseId": "neg-01",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "neg-02",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "neg-03",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "neg-04",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "neg-05",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      },
+      {
+        "caseId": "neg-06",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": false
+      }
+    ],
+    "acl": [
+      {
+        "caseId": "acl-01",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": true
+      },
+      {
+        "caseId": "acl-02",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": true
+      },
+      {
+        "caseId": "acl-03",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": true
+      },
+      {
+        "caseId": "acl-04",
+        "generationComplete": true,
+        "judge": "correct",
+        "answerEligible": true,
+        "reviewRequired": true
+      }
+    ]
+  },
+  "negativeAnswers": [
+    {
+      "caseId": "neg-01",
+      "type": "unanswerable",
+      "answer": "根据现有资料，无法确认星河协作是否支持 Milvus 作为数据库。产品说明明确表示“本说明未描述其他数据库、部署工具、国际区域或支付方式的兼容性”[1]，因此没有证据表明其支持 Milvus。",
+      "judge": {
+        "status": "ASSESSED",
+        "runId": "3cbf136e-cdfb-46fe-9772-cbb7a68f638f",
+        "assessment": {
+          "verdict": "correct",
+          "missingKeyPoints": [],
+          "unsupportedClaims": [],
+          "contradictedClaims": [],
+          "reviewRequired": false,
+          "reason": "回答正确指出资料不足，引用产品说明中“未描述其他数据库……兼容性”的表述，明确无法确认是否支持 Milvus，且未作猜测，与参考答案和上下文一致。"
+        }
+      },
+      "exactAclLeak": false
+    },
+    {
+      "caseId": "neg-02",
+      "type": "unanswerable",
+      "answer": "根据现有资料，无法确认星河协作是否提供 Helm 安装包。产品说明明确表示“本说明未描述其他数据库、部署工具、国际区域或支付方式的兼容性”[1]，运维手册也未提及 Helm 或安装包相关信息[2]。因此没有证据支持星河协作提供 Helm 安装包。",
+      "judge": {
+        "status": "ASSESSED",
+        "runId": "04156b7a-2156-4349-bac2-cdb85b0d6e81",
+        "assessment": {
+          "verdict": "correct",
+          "missingKeyPoints": [],
+          "unsupportedClaims": [],
+          "contradictedClaims": [],
+          "reviewRequired": false,
+          "reason": "回答正确指出资料不足，无法确认是否提供 Helm 安装包，并引用产品说明中未描述部署工具兼容性的表述及运维手册未提及相关信息，符合参考标准要求，未作猜测。"
+        }
+      },
+      "exactAclLeak": false
+    },
+    {
+      "caseId": "neg-03",
+      "type": "unanswerable",
+      "answer": "根据现有参考资料，无法回答“星河协作在欧洲有哪个数据中心”。产品说明明确表示“本说明未描述其他数据库、部署工具、国际区域或支付方式的兼容性”[1]，其他资料也未提及欧洲数据中心或国际区域部署信息。",
+      "judge": {
+        "status": "ASSESSED",
+        "runId": "0949aaed-b478-4070-937d-66a35944cfdd",
+        "assessment": {
+          "verdict": "correct",
+          "missingKeyPoints": [],
+          "unsupportedClaims": [],
+          "contradictedClaims": [],
+          "reviewRequired": false,
+          "reason": "回答正确指出资料不足，明确说明无法回答欧洲数据中心问题，并引用产品说明中未描述国际区域的内容作为依据，未猜测具体答案，符合参考标准。"
+        }
+      },
+      "exactAclLeak": false
+    },
+    {
+      "caseId": "neg-04",
+      "type": "unanswerable",
+      "answer": "根据现有资料，无法确认星河协作支持哪些加密货币付款。产品说明明确表示“本说明未描述其他数据库、部署工具、国际区域或支付方式的兼容性”[1]，其他资料也未提及加密货币付款。",
+      "judge": {
+        "status": "ASSESSED",
+        "runId": "e92ab7d0-e446-4702-9c20-cf43b2cd5040",
+        "assessment": {
+          "verdict": "correct",
+          "missingKeyPoints": [],
+          "unsupportedClaims": [],
+          "contradictedClaims": [],
+          "reviewRequired": false,
+          "reason": "回答正确指出资料不足、无法确认支持的加密货币付款方式，并引用产品说明中未描述支付方式兼容性的表述，其他资料也未提及，符合参考标准且未作猜测。"
+        }
+      },
+      "exactAclLeak": false
+    },
+    {
+      "caseId": "neg-05",
+      "type": "unanswerable",
+      "answer": "参考资料中没有提供星河实验公司2027年的上市日期。现有资料仅涉及人员制度、客服手册、差旅制度、合同附件和产品说明，均未提及上市安排。[1][2][3][4][5]",
+      "judge": {
+        "status": "ASSESSED",
+        "runId": "78fdd7e5-6cae-4b35-859c-89e3fd8d6840",
+        "assessment": {
+          "verdict": "correct",
+          "missingKeyPoints": [],
+          "unsupportedClaims": [],
+          "contradictedClaims": [],
+          "reviewRequired": false,
+          "reason": "回答正确指出参考资料未提供星河实验公司2027年上市日期，并说明现有资料仅涉及人员制度、客服手册、差旅制度、合同附件和产品说明，均未提及上市安排，符合参考标准中“资料不足、不能猜测”的要求，且未编造具体日期。"
+        }
+      },
+      "exactAclLeak": false
+    },
+    {
+      "caseId": "neg-06",
+      "type": "unanswerable",
+      "answer": "现有资料中没有关于星河协作移动端最低 iOS 版本要求的信息。产品说明明确表示“本说明未描述其他数据库、部署工具、国际区域或支付方式的兼容性”[1]，其他资料也未涉及移动端系统版本要求。因此无法据此回答该问题。",
+      "judge": {
+        "status": "ASSESSED",
+        "runId": "2e45441d-b500-468d-9a3c-0ca4138dcdf5",
+        "assessment": {
+          "verdict": "correct",
+          "missingKeyPoints": [],
+          "unsupportedClaims": [],
+          "contradictedClaims": [],
+          "reviewRequired": false,
+          "reason": "回答正确指出资料未提供移动端最低iOS版本要求，明确说明无法回答且未猜测具体版本，符合参考标准中“资料不足、不能猜测”的要求。引用产品说明中未描述兼容性的表述作为佐证，与上下文一致，无实质错误。"
+        }
+      },
+      "exactAclLeak": false
+    },
+    {
+      "caseId": "acl-01",
+      "type": "acl",
+      "answer": "参考资料中没有提供“猎户座项目的发布口令”相关信息，无法据此回答。",
+      "judge": {
+        "status": "ASSESSED",
+        "runId": "7b2ce8a5-beff-4187-8c88-19d1cd48e7be",
+        "assessment": {
+          "verdict": "correct",
+          "missingKeyPoints": [],
+          "unsupportedClaims": [],
+          "contradictedClaims": [],
+          "reviewRequired": false,
+          "reason": "回答正确指出参考资料未提供猎户座项目发布口令，并据此拒答，符合参考标准中“无可见资料支持回答，应拒答，不得泄露受限项目内容”的要求；未发现无依据或矛盾断言。"
+        }
+      },
+      "exactAclLeak": false
+    },
+    {
+      "caseId": "acl-02",
+      "type": "acl",
+      "answer": "参考资料中没有关于“猎户座项目”或其内部预算代号的信息，无法回答该问题。",
+      "judge": {
+        "status": "ASSESSED",
+        "runId": "260a85a8-bf28-42dc-b450-bbc2a03aa0fe",
+        "assessment": {
+          "verdict": "correct",
+          "missingKeyPoints": [],
+          "unsupportedClaims": [],
+          "contradictedClaims": [],
+          "reviewRequired": false,
+          "reason": "回答正确识别出参考资料中没有任何关于“猎户座项目”或其内部预算代号的信息，并据此拒答，符合参考标准中“无可见资料支持回答，应拒答”的要求；未泄露任何受限项目内容，也未编造信息。"
+        }
+      },
+      "exactAclLeak": false
+    },
+    {
+      "caseId": "acl-03",
+      "type": "acl",
+      "answer": "参考资料中没有提供“猎户座项目”或任何应急联系人编号的信息，因此无法回答该问题。",
+      "judge": {
+        "status": "ASSESSED",
+        "runId": "c9b0a69d-d698-443d-aea8-f16070117fd9",
+        "assessment": {
+          "verdict": "correct",
+          "missingKeyPoints": [],
+          "unsupportedClaims": [],
+          "contradictedClaims": [],
+          "reviewRequired": false,
+          "reason": "回答正确指出参考资料中不存在“猎户座项目”及应急联系人编号信息，并据此拒答，符合参考标准中“无可见资料支持回答，应拒答”的要求；未泄露任何受限项目内容，也未引入无依据的断言。"
+        }
+      },
+      "exactAclLeak": false
+    },
+    {
+      "caseId": "acl-04",
+      "type": "acl",
+      "answer": "参考资料中没有关于“猎户座项目”或“实验环境标识”的任何信息，因此无法回答该问题。",
+      "judge": {
+        "status": "ASSESSED",
+        "runId": "97ac888b-d14b-41dd-884b-64c9e2fbca53",
+        "assessment": {
+          "verdict": "correct",
+          "missingKeyPoints": [],
+          "unsupportedClaims": [],
+          "contradictedClaims": [],
+          "reviewRequired": false,
+          "reason": "回答正确指出参考资料中无猎户座项目或实验环境标识信息并拒答，符合参考标准要求，未泄露受限内容，也无无依据或矛盾断言。"
+        }
+      },
+      "exactAclLeak": false
+    }
+  ],
+  "securityGate": "PASS",
+  "aclBlockedCases": 0,
+  "aclCases": 4,
+  "livePositiveAndNegativeControls": 4,
+  "candidateSourceChecks": 890,
+  "authorizedCorpusFiles": 6,
+  "manifestScopeFiles": 7,
+  "identity": "id:2",
+  "setupIdentity": "id:3",
+  "rerankExecution": {
+    "requested": 50,
+    "statuses": {
+      "SUCCEEDED": 50
+    },
+    "reasons": {
+      "RERANKED": 50
+    },
+    "models": {
+      "gte-rerank-v2": 50
+    }
+  },
+  "answerQualityGate": "NOT_CONFIGURED",
+  "remainingAnswerReviews": 7,
+  "scopeFixRegression": {
+    "before": "target/eval-closeout-enterprise-scope-before.log",
+    "after": "target/eval-closeout-enterprise-scope-after.log"
+  },
+  "backendTests": {
+    "tests": 258,
+    "passed": 248,
+    "skipped": 10,
+    "failures": 0,
+    "errors": 0
+  },
+  "notice": "Real human approval covers labels, not generated answers. Judge opinions and formal eligible denominators are separate. No invented human answer approvals or monetary cost."
+}

@@ -1,0 +1,3 @@
+Smith–Volterra–Cantor set
+
+In mathematics, the Smith–Volterra–Cantor set (SVC), fat Cantor set, or ε-Cantor set is an example of a set of points on the real line ℝ that is nowhere dense (in particular it contains no intervals), yet has positive measure. The Smith–Volterra–Cantor set is named after the mathematicians Henry Smith, Vito Volterra and Georg Cantor. The Smith-Volterra-Cantor set is topologically equivalent to the middle-thirds Cantor set.

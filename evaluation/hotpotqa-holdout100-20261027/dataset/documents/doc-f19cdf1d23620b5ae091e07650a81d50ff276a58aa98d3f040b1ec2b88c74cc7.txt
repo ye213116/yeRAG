@@ -1,0 +1,3 @@
+Chapman–Kolmogorov equation
+
+In mathematics, specifically in the theory of Markovian stochastic processes in probability theory, the Chapman–Kolmogorov equation is an identity relating the joint probability distributions of different sets of coordinates on a stochastic process. The equation was derived independently by both the British mathematician Sydney Chapman and the Russian mathematician Andrey Kolmogorov.

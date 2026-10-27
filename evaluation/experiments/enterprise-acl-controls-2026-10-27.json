@@ -1,0 +1,646 @@
+{
+  "status": "PASS",
+  "endpoint": "authenticated searchWithPermission hybrid compatibility endpoint",
+  "privateSource": [
+    "50436a376a407b2fefe7cc371be603e9"
+  ],
+  "checks": [
+    {
+      "caseId": "acl-01",
+      "query": "猎户座项目的发布口令是什么？",
+      "identities": {
+        "evaluator": {
+          "id": 2,
+          "role": "USER",
+          "orgTags": [
+            "PRIVATE_closeout_evaluator_20261027"
+          ],
+          "resultCount": 5,
+          "restrictedHits": 0,
+          "results": [
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "25b6be231f8f79be90cd6b3aee925bee",
+              "chunkId": 1,
+              "textContent": "Snegithiye",
+              "score": 0.04167202606812871,
+              "fileName": "doc-e97184f4ac4b4adbf569307d2ea0613306f62f34ef5458465124b17e19124d10.txt",
+              "userId": "1",
+              "orgTag": "default",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "7fc3d1311d3e29e6f42e3e8a248ebf66",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：星河协作产品说明 v1，仅用于测试】\n星河协作基础版每个租户最多支持20名成员。\n星河协作专业版每个租户最多支持200名成员。\n专业版支持SAML单点登录，基础版不支持SAML单点登录。\n专业版审计日志保留180天，基础版审计日志保留30天。\n单个上传文件最大为50MB。\n产品支持导出CSV和JSON，不包含Excel原生格式导出。\n公开API的限流阈值为每个租户每分钟600次请求。\n限流后返回HTTP 429，客户端应至少等待10秒再重试。\n本说明未描述其他数据库、部署工具、国际区域或支付方式的兼容性。",
+              "score": 0.032266458495966696,
+              "fileName": "产品说明.txt",
+              "userId": "2",
+              "orgTag": "PRIVATE_closeout_evaluator_20261027",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "00d1e93ef619c7ad4dc9d16e9ea0265a",
+              "chunkId": 1,
+              "textContent": "Despoina",
+              "score": 0.03217427991018577,
+              "fileName": "doc-51a27c66ca47262954f51647903e17c8b11f3b17b6ebe6b10265033acd2fc31d.txt",
+              "userId": "1",
+              "orgTag": "default",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "17d60ca58e0f18a02be62a59968f9196",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：星河协作合同附件 v1，仅用于测试】\n本附件标注生效日期为2026-10-01。\n合同附件规定客户应提前15天申请退订。\n合同附件规定误扣费的自动退款额度上限为500元。\n合同附件规定注销后的数据删除时限为72小时。\n基准资料没有提供客服手册与本附件之间的优先级规则。",
+              "score": 0.031009615384615385,
+              "fileName": "合同附件.txt",
+              "userId": "2",
+              "orgTag": "PRIVATE_closeout_evaluator_20261027",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "e2dbc3437eec9cac64608558ee6f74d7",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：星河协作客服手册 v1，仅用于测试】\n本手册标注生效日期为2026-10-01。\n客服手册规定客户应提前7天申请退订。\n客服手册规定误扣费的自动退款额度上限为300元。\n客服手册规定注销后的数据删除时限为24小时。",
+              "score": 0.031009615384615385,
+              "fileName": "客服手册.txt",
+              "userId": "2",
+              "orgTag": "PRIVATE_closeout_evaluator_20261027",
+              "isPublic": true
+            }
+          ]
+        },
+        "uploader": {
+          "id": 3,
+          "role": "USER",
+          "orgTags": [
+            "EVAL_RESTRICTED",
+            "PRIVATE_closeout_uploader_20261027"
+          ],
+          "resultCount": 5,
+          "restrictedHits": 1,
+          "results": [
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "25b6be231f8f79be90cd6b3aee925bee",
+              "chunkId": 1,
+              "textContent": "Snegithiye",
+              "score": 0.0411010325393887,
+              "fileName": "doc-e97184f4ac4b4adbf569307d2ea0613306f62f34ef5458465124b17e19124d10.txt",
+              "userId": "1",
+              "orgTag": "default",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "50436a376a407b2fefe7cc371be603e9",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：受限项目，不是真实秘密，仅用于权限测试】\n猎户座项目的发布口令为ORION-SYNTH-4827。\n猎户座项目的内部预算代号为BUDGET-SYNTH-913。\n猎户座项目的应急联系人编号为CONTACT-SYNTH-662。\n猎户座项目的实验环境标识为ENV-SYNTH-735。",
+              "score": 0.03278688524590164,
+              "fileName": "受限项目资料.txt",
+              "userId": "3",
+              "orgTag": "EVAL_RESTRICTED",
+              "isPublic": false
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "00d1e93ef619c7ad4dc9d16e9ea0265a",
+              "chunkId": 1,
+              "textContent": "Despoina",
+              "score": 0.032002655196226956,
+              "fileName": "doc-51a27c66ca47262954f51647903e17c8b11f3b17b6ebe6b10265033acd2fc31d.txt",
+              "userId": "1",
+              "orgTag": "default",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "7fc3d1311d3e29e6f42e3e8a248ebf66",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：星河协作产品说明 v1，仅用于测试】\n星河协作基础版每个租户最多支持20名成员。\n星河协作专业版每个租户最多支持200名成员。\n专业版支持SAML单点登录，基础版不支持SAML单点登录。\n专业版审计日志保留180天，基础版审计日志保留30天。\n单个上传文件最大为50MB。\n产品支持导出CSV和JSON，不包含Excel原生格式导出。\n公开API的限流阈值为每个租户每分钟600次请求。\n限流后返回HTTP 429，客户端应至少等待10秒再重试。\n本说明未描述其他数据库、部署工具、国际区域或支付方式的兼容性。",
+              "score": 0.031754032258064516,
+              "fileName": "产品说明.txt",
+              "userId": "2",
+              "orgTag": "PRIVATE_closeout_evaluator_20261027",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "17d60ca58e0f18a02be62a59968f9196",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：星河协作合同附件 v1，仅用于测试】\n本附件标注生效日期为2026-10-01。\n合同附件规定客户应提前15天申请退订。\n合同附件规定误扣费的自动退款额度上限为500元。\n合同附件规定注销后的数据删除时限为72小时。\n基准资料没有提供客服手册与本附件之间的优先级规则。",
+              "score": 0.030536130536130537,
+              "fileName": "合同附件.txt",
+              "userId": "2",
+              "orgTag": "PRIVATE_closeout_evaluator_20261027",
+              "isPublic": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "caseId": "acl-02",
+      "query": "猎户座项目的内部预算代号是什么？",
+      "identities": {
+        "evaluator": {
+          "id": 2,
+          "role": "USER",
+          "orgTags": [
+            "PRIVATE_closeout_evaluator_20261027"
+          ],
+          "resultCount": 5,
+          "restrictedHits": 0,
+          "results": [
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "25b6be231f8f79be90cd6b3aee925bee",
+              "chunkId": 1,
+              "textContent": "Snegithiye",
+              "score": 0.03371070253092725,
+              "fileName": "doc-e97184f4ac4b4adbf569307d2ea0613306f62f34ef5458465124b17e19124d10.txt",
+              "userId": "1",
+              "orgTag": "default",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "7fc3d1311d3e29e6f42e3e8a248ebf66",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：星河协作产品说明 v1，仅用于测试】\n星河协作基础版每个租户最多支持20名成员。\n星河协作专业版每个租户最多支持200名成员。\n专业版支持SAML单点登录，基础版不支持SAML单点登录。\n专业版审计日志保留180天，基础版审计日志保留30天。\n单个上传文件最大为50MB。\n产品支持导出CSV和JSON，不包含Excel原生格式导出。\n公开API的限流阈值为每个租户每分钟600次请求。\n限流后返回HTTP 429，客户端应至少等待10秒再重试。\n本说明未描述其他数据库、部署工具、国际区域或支付方式的兼容性。",
+              "score": 0.03036576949620428,
+              "fileName": "产品说明.txt",
+              "userId": "2",
+              "orgTag": "PRIVATE_closeout_evaluator_20261027",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "17d60ca58e0f18a02be62a59968f9196",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：星河协作合同附件 v1，仅用于测试】\n本附件标注生效日期为2026-10-01。\n合同附件规定客户应提前15天申请退订。\n合同附件规定误扣费的自动退款额度上限为500元。\n合同附件规定注销后的数据删除时限为72小时。\n基准资料没有提供客服手册与本附件之间的优先级规则。",
+              "score": 0.029138513513513514,
+              "fileName": "合同附件.txt",
+              "userId": "2",
+              "orgTag": "PRIVATE_closeout_evaluator_20261027",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "e2dbc3437eec9cac64608558ee6f74d7",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：星河协作客服手册 v1，仅用于测试】\n本手册标注生效日期为2026-10-01。\n客服手册规定客户应提前7天申请退订。\n客服手册规定误扣费的自动退款额度上限为300元。\n客服手册规定注销后的数据删除时限为24小时。",
+              "score": 0.027579737335834898,
+              "fileName": "客服手册.txt",
+              "userId": "2",
+              "orgTag": "PRIVATE_closeout_evaluator_20261027",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "16a187e76f6531b06cb44e1c10b3d20b",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：星河协作运维手册 v1，仅用于测试】\n每日02:00执行全量备份，每隔6小时执行一次增量备份。\n全量备份保留30天，增量备份保留7天。\n灾难恢复目标RTO为4小时，RPO为30分钟。\nP1故障的首次响应目标为15分钟。\nP2故障的首次响应目标为2小时。\n维护窗口为每周日01:00至03:00。\n专业版和基础版适用相同的灾难恢复目标。",
+              "score": 0.02453239360260233,
+              "fileName": "运维手册.txt",
+              "userId": "2",
+              "orgTag": "PRIVATE_closeout_evaluator_20261027",
+              "isPublic": true
+            }
+          ]
+        },
+        "uploader": {
+          "id": 3,
+          "role": "USER",
+          "orgTags": [
+            "EVAL_RESTRICTED",
+            "PRIVATE_closeout_uploader_20261027"
+          ],
+          "resultCount": 5,
+          "restrictedHits": 1,
+          "results": [
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "25b6be231f8f79be90cd6b3aee925bee",
+              "chunkId": 1,
+              "textContent": "Snegithiye",
+              "score": 0.03333607715630188,
+              "fileName": "doc-e97184f4ac4b4adbf569307d2ea0613306f62f34ef5458465124b17e19124d10.txt",
+              "userId": "1",
+              "orgTag": "default",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "50436a376a407b2fefe7cc371be603e9",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：受限项目，不是真实秘密，仅用于权限测试】\n猎户座项目的发布口令为ORION-SYNTH-4827。\n猎户座项目的内部预算代号为BUDGET-SYNTH-913。\n猎户座项目的应急联系人编号为CONTACT-SYNTH-662。\n猎户座项目的实验环境标识为ENV-SYNTH-735。",
+              "score": 0.03278688524590164,
+              "fileName": "受限项目资料.txt",
+              "userId": "3",
+              "orgTag": "EVAL_RESTRICTED",
+              "isPublic": false
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "7fc3d1311d3e29e6f42e3e8a248ebf66",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：星河协作产品说明 v1，仅用于测试】\n星河协作基础版每个租户最多支持20名成员。\n星河协作专业版每个租户最多支持200名成员。\n专业版支持SAML单点登录，基础版不支持SAML单点登录。\n专业版审计日志保留180天，基础版审计日志保留30天。\n单个上传文件最大为50MB。\n产品支持导出CSV和JSON，不包含Excel原生格式导出。\n公开API的限流阈值为每个租户每分钟600次请求。\n限流后返回HTTP 429，客户端应至少等待10秒再重试。\n本说明未描述其他数据库、部署工具、国际区域或支付方式的兼容性。",
+              "score": 0.029910714285714284,
+              "fileName": "产品说明.txt",
+              "userId": "2",
+              "orgTag": "PRIVATE_closeout_evaluator_20261027",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "17d60ca58e0f18a02be62a59968f9196",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：星河协作合同附件 v1，仅用于测试】\n本附件标注生效日期为2026-10-01。\n合同附件规定客户应提前15天申请退订。\n合同附件规定误扣费的自动退款额度上限为500元。\n合同附件规定注销后的数据删除时限为72小时。\n基准资料没有提供客服手册与本附件之间的优先级规则。",
+              "score": 0.02871794871794872,
+              "fileName": "合同附件.txt",
+              "userId": "2",
+              "orgTag": "PRIVATE_closeout_evaluator_20261027",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "e2dbc3437eec9cac64608558ee6f74d7",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：星河协作客服手册 v1，仅用于测试】\n本手册标注生效日期为2026-10-01。\n客服手册规定客户应提前7天申请退订。\n客服手册规定误扣费的自动退款额度上限为300元。\n客服手册规定注销后的数据删除时限为24小时。",
+              "score": 0.02719970792259949,
+              "fileName": "客服手册.txt",
+              "userId": "2",
+              "orgTag": "PRIVATE_closeout_evaluator_20261027",
+              "isPublic": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "caseId": "acl-03",
+      "query": "猎户座项目的应急联系人编号是什么？",
+      "identities": {
+        "evaluator": {
+          "id": 2,
+          "role": "USER",
+          "orgTags": [
+            "PRIVATE_closeout_evaluator_20261027"
+          ],
+          "resultCount": 5,
+          "restrictedHits": 0,
+          "results": [
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "7fc3d1311d3e29e6f42e3e8a248ebf66",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：星河协作产品说明 v1，仅用于测试】\n星河协作基础版每个租户最多支持20名成员。\n星河协作专业版每个租户最多支持200名成员。\n专业版支持SAML单点登录，基础版不支持SAML单点登录。\n专业版审计日志保留180天，基础版审计日志保留30天。\n单个上传文件最大为50MB。\n产品支持导出CSV和JSON，不包含Excel原生格式导出。\n公开API的限流阈值为每个租户每分钟600次请求。\n限流后返回HTTP 429，客户端应至少等待10秒再重试。\n本说明未描述其他数据库、部署工具、国际区域或支付方式的兼容性。",
+              "score": 0.032018442622950824,
+              "fileName": "产品说明.txt",
+              "userId": "2",
+              "orgTag": "PRIVATE_closeout_evaluator_20261027",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "e2dbc3437eec9cac64608558ee6f74d7",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：星河协作客服手册 v1，仅用于测试】\n本手册标注生效日期为2026-10-01。\n客服手册规定客户应提前7天申请退订。\n客服手册规定误扣费的自动退款额度上限为300元。\n客服手册规定注销后的数据删除时限为24小时。",
+              "score": 0.03200204813108039,
+              "fileName": "客服手册.txt",
+              "userId": "2",
+              "orgTag": "PRIVATE_closeout_evaluator_20261027",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "17d60ca58e0f18a02be62a59968f9196",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：星河协作合同附件 v1，仅用于测试】\n本附件标注生效日期为2026-10-01。\n合同附件规定客户应提前15天申请退订。\n合同附件规定误扣费的自动退款额度上限为500元。\n合同附件规定注销后的数据删除时限为72小时。\n基准资料没有提供客服手册与本附件之间的优先级规则。",
+              "score": 0.03200204813108039,
+              "fileName": "合同附件.txt",
+              "userId": "2",
+              "orgTag": "PRIVATE_closeout_evaluator_20261027",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "16a187e76f6531b06cb44e1c10b3d20b",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：星河协作运维手册 v1，仅用于测试】\n每日02:00执行全量备份，每隔6小时执行一次增量备份。\n全量备份保留30天，增量备份保留7天。\n灾难恢复目标RTO为4小时，RPO为30分钟。\nP1故障的首次响应目标为15分钟。\nP2故障的首次响应目标为2小时。\n维护窗口为每周日01:00至03:00。\n专业版和基础版适用相同的灾难恢复目标。",
+              "score": 0.029906956136464335,
+              "fileName": "运维手册.txt",
+              "userId": "2",
+              "orgTag": "PRIVATE_closeout_evaluator_20261027",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "d7038ec1cec49323f68657f15107068a",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：星河实验公司人员制度 v1，仅用于测试】\n本资料描述虚构公司，不代表真实企业规定。\n新员工试用期为90天。\n正式员工每年享有15天年假。\n弹性到岗时间为每天09:00至10:00。\n新员工须在入职7天内完成信息安全培训。\n远程办公每周最多2天，须提前1个工作日申请。\n试用期员工不适用远程办公政策。\n设备领用需要直属主管审批，设备归还应在离职当天完成。",
+              "score": 0.023554876496052965,
+              "fileName": "人员制度.txt",
+              "userId": "2",
+              "orgTag": "PRIVATE_closeout_evaluator_20261027",
+              "isPublic": true
+            }
+          ]
+        },
+        "uploader": {
+          "id": 3,
+          "role": "USER",
+          "orgTags": [
+            "EVAL_RESTRICTED",
+            "PRIVATE_closeout_uploader_20261027"
+          ],
+          "resultCount": 5,
+          "restrictedHits": 1,
+          "results": [
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "50436a376a407b2fefe7cc371be603e9",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：受限项目，不是真实秘密，仅用于权限测试】\n猎户座项目的发布口令为ORION-SYNTH-4827。\n猎户座项目的内部预算代号为BUDGET-SYNTH-913。\n猎户座项目的应急联系人编号为CONTACT-SYNTH-662。\n猎户座项目的实验环境标识为ENV-SYNTH-735。",
+              "score": 0.03278688524590164,
+              "fileName": "受限项目资料.txt",
+              "userId": "3",
+              "orgTag": "EVAL_RESTRICTED",
+              "isPublic": false
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "7fc3d1311d3e29e6f42e3e8a248ebf66",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：星河协作产品说明 v1，仅用于测试】\n星河协作基础版每个租户最多支持20名成员。\n星河协作专业版每个租户最多支持200名成员。\n专业版支持SAML单点登录，基础版不支持SAML单点登录。\n专业版审计日志保留180天，基础版审计日志保留30天。\n单个上传文件最大为50MB。\n产品支持导出CSV和JSON，不包含Excel原生格式导出。\n公开API的限流阈值为每个租户每分钟600次请求。\n限流后返回HTTP 429，客户端应至少等待10秒再重试。\n本说明未描述其他数据库、部署工具、国际区域或支付方式的兼容性。",
+              "score": 0.0315136476426799,
+              "fileName": "产品说明.txt",
+              "userId": "2",
+              "orgTag": "PRIVATE_closeout_evaluator_20261027",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "e2dbc3437eec9cac64608558ee6f74d7",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：星河协作客服手册 v1，仅用于测试】\n本手册标注生效日期为2026-10-01。\n客服手册规定客户应提前7天申请退订。\n客服手册规定误扣费的自动退款额度上限为300元。\n客服手册规定注销后的数据删除时限为24小时。",
+              "score": 0.03149801587301587,
+              "fileName": "客服手册.txt",
+              "userId": "2",
+              "orgTag": "PRIVATE_closeout_evaluator_20261027",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "17d60ca58e0f18a02be62a59968f9196",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：星河协作合同附件 v1，仅用于测试】\n本附件标注生效日期为2026-10-01。\n合同附件规定客户应提前15天申请退订。\n合同附件规定误扣费的自动退款额度上限为500元。\n合同附件规定注销后的数据删除时限为72小时。\n基准资料没有提供客服手册与本附件之间的优先级规则。",
+              "score": 0.03149801587301587,
+              "fileName": "合同附件.txt",
+              "userId": "2",
+              "orgTag": "PRIVATE_closeout_evaluator_20261027",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "16a187e76f6531b06cb44e1c10b3d20b",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：星河协作运维手册 v1，仅用于测试】\n每日02:00执行全量备份，每隔6小时执行一次增量备份。\n全量备份保留30天，增量备份保留7天。\n灾难恢复目标RTO为4小时，RPO为30分钟。\nP1故障的首次响应目标为15分钟。\nP2故障的首次响应目标为2小时。\n维护窗口为每周日01:00至03:00。\n专业版和基础版适用相同的灾难恢复目标。",
+              "score": 0.02946236559139785,
+              "fileName": "运维手册.txt",
+              "userId": "2",
+              "orgTag": "PRIVATE_closeout_evaluator_20261027",
+              "isPublic": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "caseId": "acl-04",
+      "query": "猎户座项目的实验环境标识是什么？",
+      "identities": {
+        "evaluator": {
+          "id": 2,
+          "role": "USER",
+          "orgTags": [
+            "PRIVATE_closeout_evaluator_20261027"
+          ],
+          "resultCount": 5,
+          "restrictedHits": 0,
+          "results": [
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "25b6be231f8f79be90cd6b3aee925bee",
+              "chunkId": 1,
+              "textContent": "Snegithiye",
+              "score": 0.036148076627065755,
+              "fileName": "doc-e97184f4ac4b4adbf569307d2ea0613306f62f34ef5458465124b17e19124d10.txt",
+              "userId": "1",
+              "orgTag": "default",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "a00644d0861aa438668d022473b5910e",
+              "chunkId": 1,
+              "textContent": "List of Lab Rats characters",
+              "score": 0.03371070253092725,
+              "fileName": "doc-bdfaa1680629246f93c1cc036ac8c3845439932378fea70a45e34ffa128d26ee.txt",
+              "userId": "1",
+              "orgTag": "default",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "7fc3d1311d3e29e6f42e3e8a248ebf66",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：星河协作产品说明 v1，仅用于测试】\n星河协作基础版每个租户最多支持20名成员。\n星河协作专业版每个租户最多支持200名成员。\n专业版支持SAML单点登录，基础版不支持SAML单点登录。\n专业版审计日志保留180天，基础版审计日志保留30天。\n单个上传文件最大为50MB。\n产品支持导出CSV和JSON，不包含Excel原生格式导出。\n公开API的限流阈值为每个租户每分钟600次请求。\n限流后返回HTTP 429，客户端应至少等待10秒再重试。\n本说明未描述其他数据库、部署工具、国际区域或支付方式的兼容性。",
+              "score": 0.03177805800756621,
+              "fileName": "产品说明.txt",
+              "userId": "2",
+              "orgTag": "PRIVATE_closeout_evaluator_20261027",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "16a187e76f6531b06cb44e1c10b3d20b",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：星河协作运维手册 v1，仅用于测试】\n每日02:00执行全量备份，每隔6小时执行一次增量备份。\n全量备份保留30天，增量备份保留7天。\n灾难恢复目标RTO为4小时，RPO为30分钟。\nP1故障的首次响应目标为15分钟。\nP2故障的首次响应目标为2小时。\n维护窗口为每周日01:00至03:00。\n专业版和基础版适用相同的灾难恢复目标。",
+              "score": 0.030679156908665108,
+              "fileName": "运维手册.txt",
+              "userId": "2",
+              "orgTag": "PRIVATE_closeout_evaluator_20261027",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "17d60ca58e0f18a02be62a59968f9196",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：星河协作合同附件 v1，仅用于测试】\n本附件标注生效日期为2026-10-01。\n合同附件规定客户应提前15天申请退订。\n合同附件规定误扣费的自动退款额度上限为500元。\n合同附件规定注销后的数据删除时限为72小时。\n基准资料没有提供客服手册与本附件之间的优先级规则。",
+              "score": 0.03055037313432836,
+              "fileName": "合同附件.txt",
+              "userId": "2",
+              "orgTag": "PRIVATE_closeout_evaluator_20261027",
+              "isPublic": true
+            }
+          ]
+        },
+        "uploader": {
+          "id": 3,
+          "role": "USER",
+          "orgTags": [
+            "EVAL_RESTRICTED",
+            "PRIVATE_closeout_uploader_20261027"
+          ],
+          "resultCount": 5,
+          "restrictedHits": 1,
+          "results": [
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "25b6be231f8f79be90cd6b3aee925bee",
+              "chunkId": 1,
+              "textContent": "Snegithiye",
+              "score": 0.03571766055819918,
+              "fileName": "doc-e97184f4ac4b4adbf569307d2ea0613306f62f34ef5458465124b17e19124d10.txt",
+              "userId": "1",
+              "orgTag": "default",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "a00644d0861aa438668d022473b5910e",
+              "chunkId": 1,
+              "textContent": "List of Lab Rats characters",
+              "score": 0.03333607715630188,
+              "fileName": "doc-bdfaa1680629246f93c1cc036ac8c3845439932378fea70a45e34ffa128d26ee.txt",
+              "userId": "1",
+              "orgTag": "default",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "50436a376a407b2fefe7cc371be603e9",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：受限项目，不是真实秘密，仅用于权限测试】\n猎户座项目的发布口令为ORION-SYNTH-4827。\n猎户座项目的内部预算代号为BUDGET-SYNTH-913。\n猎户座项目的应急联系人编号为CONTACT-SYNTH-662。\n猎户座项目的实验环境标识为ENV-SYNTH-735。",
+              "score": 0.03278688524590164,
+              "fileName": "受限项目资料.txt",
+              "userId": "3",
+              "orgTag": "EVAL_RESTRICTED",
+              "isPublic": false
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "7fc3d1311d3e29e6f42e3e8a248ebf66",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：星河协作产品说明 v1，仅用于测试】\n星河协作基础版每个租户最多支持20名成员。\n星河协作专业版每个租户最多支持200名成员。\n专业版支持SAML单点登录，基础版不支持SAML单点登录。\n专业版审计日志保留180天，基础版审计日志保留30天。\n单个上传文件最大为50MB。\n产品支持导出CSV和JSON，不包含Excel原生格式导出。\n公开API的限流阈值为每个租户每分钟600次请求。\n限流后返回HTTP 429，客户端应至少等待10秒再重试。\n本说明未描述其他数据库、部署工具、国际区域或支付方式的兼容性。",
+              "score": 0.03128054740957967,
+              "fileName": "产品说明.txt",
+              "userId": "2",
+              "orgTag": "PRIVATE_closeout_evaluator_20261027",
+              "isPublic": true
+            },
+            {
+              "candidateId": null,
+              "esIndex": null,
+              "esHitId": null,
+              "fileMd5": "16a187e76f6531b06cb44e1c10b3d20b",
+              "chunkId": 1,
+              "textContent": "【合成基准资料：星河协作运维手册 v1，仅用于测试】\n每日02:00执行全量备份，每隔6小时执行一次增量备份。\n全量备份保留30天，增量备份保留7天。\n灾难恢复目标RTO为4小时，RPO为30分钟。\nP1故障的首次响应目标为15分钟。\nP2故障的首次响应目标为2小时。\n维护窗口为每周日01:00至03:00。\n专业版和基础版适用相同的灾难恢复目标。",
+              "score": 0.03021353930031804,
+              "fileName": "运维手册.txt",
+              "userId": "2",
+              "orgTag": "PRIVATE_closeout_evaluator_20261027",
+              "isPublic": true
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "notice": "Live authorization control; main Pipeline rerank quality is evaluated separately. No authentication headers or tokens archived."
+}

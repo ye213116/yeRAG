@@ -1,0 +1,3 @@
+Knaster–Kuratowski fan
+
+In topology, a branch of mathematics, the Knaster–Kuratowski fan (named after Polish mathematicians Bronisław Knaster and Kazimierz Kuratowski) is a specific connected topological space with the property that the removal of a single point makes it totally disconnected. It is also known as Cantor's leaky tent or Cantor's teepee (after Georg Cantor), depending on the presence or absence of the apex.

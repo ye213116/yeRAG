@@ -14,6 +14,20 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class EvaluationRunnerTest {
     @TempDir Path root;
+    @Test void completeHitIsIndependentOfAnyHitAndNegativesHaveNoCompleteHit() throws Exception {
+        var partial=new PhaseOneFixture(root,2);
+        JsonNode top=partial.evaluate(partial.approve()).path("deterministic").path("top5");
+        assertEquals(1,top.path("hit").asInt()); assertEquals(0,top.path("completeHit").asInt());
+        assertEquals(1,EvidencePositions.candidates(partial.json,partial.check.path("units"),partial.json.valueToTree(partial.originals)).path("completeHit").asInt());
+        assertFalse(EvidencePositions.candidates(partial.json,partial.json.createArrayNode(),partial.json.createArrayNode()).has("completeHit"));
+    }
+    @Test void topKAssemblyDecisionIsNotMislabelledAsTokenBudgetLoss() throws Exception {
+        var f=new PhaseOneFixture(root,2); ObjectNode assembled=(ObjectNode)EvaluationArtifacts.stage(f.pipeline,"ASSEMBLE").deepCopy();
+        assembled.putArray("decisions").addObject().put("id",f.originals.get(2).id()).put("reason","TOP_K");
+        f.stage(f.pipeline,"ASSEMBLE",assembled); f.stage(f.pipeline,"MERGE",f.json.createObjectNode().set("passages",f.passages(f.originals))); f.save();
+        String findings=f.evaluate(f.approve()).path("deterministic").path("findings").toString();
+        assertTrue(findings.contains("CONTEXT_TOP_K_WINDOW_LOSS")); assertFalse(findings.contains("CONTEXT_BUDGET_LOSS"));
+    }
     @ParameterizedTest @CsvSource({"0,0,NONE","1,1,PARTIAL","2,1,PARTIAL","3,1,FULL"})
     void necessaryUnitsDistinguishZeroPartialAndFull(int covered,int hit,String state) throws Exception {
         var f=new PhaseOneFixture(root,covered); JsonNode row=f.evaluate(f.approve());

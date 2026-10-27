@@ -1,0 +1,3 @@
+Derived algebraic geometry
+
+Derived algebraic geometry (also called spectral algebraic geometry) is a branch of mathematics that generalizes algebraic geometry to a situation where commutative rings, which provide a local chart, are replaced by ring spectra in algebraic topology, whose higher homotopy accounts for the non-discreteness (e.g., Tor) of the structure sheaf. Grothendieck's scheme theory allows the structure sheaf to carry nilpotent elements. Derived algebraic geometry can be thought of as an extension of this, and provides natural settings for intersection theory (or motivic homotopy theory) of singular algebraic varieties and cotangent complexes in deformation theory (cf. F. Francis).

@@ -37,7 +37,11 @@ public class RagPipeline {
             var evidence=recorder.start(request.userId(),parent==null?null:parent.parentRunId(),"pipeline",request);
             var runtime=parent==null?new RunContext(request.userId(),evidence.id(),evidence.id(),System.nanoTime()+ai.getAgent().getTotalTimeout().toNanos()):parent.child(evidence.id());
             evidence.event("retrievalConfig",Map.of("mode",retrieval.getMode(),"bm25Weight",retrieval.getBm25Weight(),"knnWeight",retrieval.getKnnWeight(),
-                "routeTimeoutMs",retrieval.getRouteTimeout().toMillis(),"candidateIdentity","INDEX_AND_ES_HIT_ID"));
+                "routeTimeoutMs",retrieval.getRouteTimeout().toMillis(),"candidateIdentity","INDEX_AND_ES_HIT_ID","recallStrategy",request.recallStrategy()));
+            var rerank=retrieval.getRerank();
+            evidence.event("rerankConfig",Map.of("enabled",rerank.isEnabled(),"model",rerank.getModel(),
+                "topN",rerank.getTopN(),"maxDocChars",rerank.getMaxDocChars(),"timeoutMs",rerank.getTimeout().toMillis(),
+                "serviceFingerprint",EvidenceRecorder.hash(rerank.getUrl()==null?"":rerank.getUrl())));
             if (view.hasKey("rag.toolCallId")) evidence.event("toolCallId",view.get("rag.toolCallId"));
             var context=new RagContext(request,new RagState(),runtime,evidence,observer);
             var degraded=new java.util.concurrent.atomic.AtomicBoolean();
@@ -54,7 +58,8 @@ public class RagPipeline {
                             if (outcome.status()==Status.DEGRADED) degraded.set(true);
                             evidence.event(stage.key().name(),Map.of("elapsedMs",(System.nanoTime()-started)/1_000_000,"outcome",outcome));
                             if(stage.key()==StageKey.RERANK) {
-                                String scoreKind=outcome.status()==Status.SUCCEEDED?"RERANK":retrieval.getMode()==com.yizhaoqi.smartpai.config.RetrievalProperties.Mode.LEGACY?"ES":"RRF";
+                                String scoreKind=outcome.status()==Status.SUCCEEDED?"RERANK":request.recallStrategy()!=RecallStrategy.HYBRID?request.recallStrategy().name():
+                                    retrieval.getMode()==com.yizhaoqi.smartpai.config.RetrievalProperties.Mode.LEGACY?"ES":"RRF";
                                 var top=context.state().rerank().candidates().stream().limit(request.topK()).toList();
                                 List<RankedChunk> snapshot=new ArrayList<>();
                                 for(int i=0;i<top.size();i++) snapshot.add(RankedChunk.of(top.get(i),i+1,scoreKind));

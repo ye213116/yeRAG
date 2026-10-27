@@ -1,0 +1,3 @@
+Georg Cantor's first set theory article
+
+Georg Cantor's first set theory article was published in 1874 and contains the first theorems of transfinite set theory, which studies infinite sets and their properties. One of these theorems is "Cantor's revolutionary discovery" that the set of all real numbers is uncountably, rather than countably, infinite. This theorem is proved using Cantor's first uncountability proof, which differs from the more familiar proof using his diagonal argument. The title of the article, "On a Property of the Collection of All Real Algebraic Numbers" ("Ueber eine Eigenschaft des Inbegriffes aller reellen algebraischen Zahlen "), refers to its first theorem: the set of real algebraic numbers is countable.

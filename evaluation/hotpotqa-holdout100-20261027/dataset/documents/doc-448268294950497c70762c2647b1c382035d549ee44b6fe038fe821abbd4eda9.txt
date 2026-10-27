@@ -1,0 +1,3 @@
+Far Ultraviolet Spectroscopic Explorer
+
+The Far Ultraviolet Spectroscopic Explorer (FUSE) is a space-based telescope operated by the Johns Hopkins University Applied Physics Laboratory. "FUSE" was launched on a Delta II rocket on 24 June 1999, as a part of NASA's Origins program. "FUSE" detected light in the far ultraviolet portion of the electromagnetic spectrum, between 90.5-119.5 nanometres, which is mostly unobservable by other telescopes. Its primary mission was to characterize universal deuterium in an effort to learn about the stellar processing times of deuterium left over from the Big Bang.

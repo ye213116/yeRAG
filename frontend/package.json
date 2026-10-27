@@ -1,27 +1,27 @@
 {
-  "name": "pi-smart",
+  "name": "yerag-web",
   "type": "module",
   "version": "1.3.13",
-  "description": "PaiSmart",
+  "description": "yeRAG — RAG knowledge base and memory assistant",
   "author": {
-    "name": "PaiSmart",
-    "url": "https://github.com/itwanger/PaiSmart.git"
+    "name": "yeRAG",
+    "url": "https://github.com/ye213116/yeRAG"
   },
   "license": "MIT",
-  "homepage": "https://github.com/itwanger/PaiSmart.git",
+  "homepage": "https://github.com/ye213116/yeRAG",
   "repository": {
-    "url": "https://github.com/itwanger/PaiSmart.git"
+    "url": "https://github.com/ye213116/yeRAG"
   },
   "bugs": {
-    "url": "https://github.com/itwanger/PaiSmart/issues"
+    "url": "https://github.com/ye213116/yeRAG/issues"
   },
   "keywords": [
     "ai",
     "rag",
     "llm",
     "chat",
-    "itwanger",
-    "pai-smart"
+    "yerag",
+    "knowledge-base"
   ],
   "engines": {
     "node": ">=18.20.0",
@@ -117,5 +117,5 @@
     "commit-msg": "pnpm sa git-commit-verify",
     "pre-commit": "cd frontend && pnpm typecheck && pnpm lint && git diff --exit-code"
   },
-  "website": "https://github.com/itwanger/PaiSmart.git"
+  "website": "https://github.com/ye213116/yeRAG"
 }

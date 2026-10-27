@@ -1,0 +1,70 @@
+{
+  "status": "VERIFIED",
+  "date": "2026-10-27",
+  "branch": "agent",
+  "baseHead": "fd8d6a3134f48f7a34422a5b3dc4e1547ae74334",
+  "worktreeState": "UNCOMMITTED",
+  "tasksCompleted": 4,
+  "tasksTotal": 4,
+  "rawProvenanceVerifiedRuns": [
+    "target/hotpotqa-holdout100-20261027-001/rrf-01",
+    "target/hotpotqa-holdout100-20261027-001/rrf-02",
+    "target/hotpotqa-holdout100-20261027-001/rrf-rerank-01",
+    "target/hotpotqa-holdout100-20261027-001/rrf-rerank-02",
+    "target/hotpotqa-study200-experiment-20261027-001/development",
+    "target/hotpotqa-study200-experiment-20261027-001/holdout/baseline",
+    "target/hotpotqa-study200-experiment-20261027-001/holdout/candidate",
+    "target/hotpotqa50-matrix-20261027-002/bm25-01",
+    "target/hotpotqa50-matrix-20261027-002/bm25-02",
+    "target/hotpotqa50-matrix-20261027-002/hybrid-01",
+    "target/hotpotqa50-matrix-20261027-002/hybrid-02",
+    "target/hotpotqa50-matrix-20261027-002/vector-01",
+    "target/hotpotqa50-matrix-20261027-002/vector-02",
+    "target/hotpotqa50-rerank-20261027-002/rrf-01",
+    "target/hotpotqa50-rerank-20261027-002/rrf-02",
+    "target/hotpotqa50-rerank-20261027-002/rrf-rerank-01",
+    "target/hotpotqa50-rerank-20261027-002/rrf-rerank-02",
+    "target/phase1-enterprise-live-20261027-001"
+  ],
+  "rawProvenanceCount": 18,
+  "humanLabels": {
+    "reviewer": "zyh",
+    "approved": 50,
+    "generatedAnswersHumanApproved": 0,
+    "reviewFileSha256": "7b6da74ce84593736b8355f60a110d78e5d59d32ea4306e0985744ff2bd2298b"
+  },
+  "datasetsFilesValid": {
+    "phase1": 50,
+    "hotpotqa50": 50,
+    "study200/development": 100,
+    "study200/holdout": 100,
+    "holdout100-20261027": 100
+  },
+  "studyProtocolUnchanged": true,
+  "holdoutProtocolAndDatasetUnchanged": true,
+  "runtimeCodeVersion": "fd8d6a3134f48f7a34422a5b3dc4e1547ae74334+714edce6b8f2584f85c9ae0e394fcff38fa6557ced2b54250999ac399f35fb9f",
+  "public100ExecutionCodeVersion": "fd8d6a3134f48f7a34422a5b3dc4e1547ae74334+d92ca6760836064530cded5df872d268f5373fb2264407dbd5a856879a6bfff5",
+  "masterLocalLinksValid": 57,
+  "masterPublic100MetricValuesMatched": 20,
+  "enterpriseSummaryMatchesActualReviewedReport": true,
+  "javaTests": {
+    "tests": 258,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 10,
+    "passed": 248,
+    "source": "target/surefire-reports/TEST-*.xml; target/eval-closeout-backend-all-tests.log"
+  },
+  "pythonTests": {
+    "tests": 36,
+    "passed": 36,
+    "log": "target/eval-closeout-python-tests-final.log",
+    "logSha256": "4d92857931b42f50aab2b457dfd634707336a27f526ba479446e5f07ef2a183a"
+  },
+  "finalArchiveProof": "evaluation/experiments/archive-complete-2026-10-27.json",
+  "finalArchiveProofSha256": "da838471367892dea270eb2f9417a3fc86cf013bc437a42620ae2119001e3ea7",
+  "gitDiffCheck": "PASS",
+  "modelCallsDuringFinalChecks": 0,
+  "scope": "Local evaluation closeout; no commit, production deployment or all-scenario authorization claim",
+  "masterDocumentSha256": "7ebdb75c086721482023f3e553be774b2b33e6d31e5ae65c2dd9da50e4d6f51e"
+}

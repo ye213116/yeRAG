@@ -1,0 +1,3 @@
+Probability axioms
+
+In Kolmogorov's probability theory, the probability "P" of some event "E", denoted formula_1, is usually defined such that "P" satisfies the Kolmogorov axioms, named after the Russian mathematician Andrey Kolmogorov, which are described below.

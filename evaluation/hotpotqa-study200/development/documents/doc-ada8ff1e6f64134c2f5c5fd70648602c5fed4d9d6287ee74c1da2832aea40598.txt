@@ -1,0 +1,3 @@
+Leonid Khachiyan
+
+Leonid Genrikhovich Khachiyan (Armenian: Լեոնիդ Գենրիխովիչ Խաչիյան ; Russian: Леонид Генрихович Хачиян ; May 3, 1952 – April 29, 2005) was a Soviet mathematician of Armenian descent who taught Computer Science at Rutgers University. He was most famous for his ellipsoid algorithm (1979) for linear programming, which was the first such algorithm known to have a polynomial running time. Even though this algorithm was shown to be impractical due to the high degree of the polynomial in its running time, it has inspired other randomized algorithms for convex programming and is considered a significant theoretical breakthrough.

@@ -1,0 +1,3 @@
+Wave Mate Bullet
+
+The Wave Mate Bullet was a Z80 single-board computer from the late 1970s and early 1980s which used the CP/M operating system. This computer is rarely seen now but has historical value as an early microcomputer pioneer. It was sold in Australia, the United States and Europe and was apparently popular in academic settings.

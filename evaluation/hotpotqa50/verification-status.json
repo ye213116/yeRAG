@@ -1,0 +1,87 @@
+{
+  "date": "2026-10-26",
+  "startedAt": "2026-10-26T23:22:53.927974+08:00",
+  "branch": "agent",
+  "head": "fd8d6a3134f48f7a34422a5b3dc4e1547ae74334",
+  "implementation": "未提交",
+  "status": "COMPLETED",
+  "datasetHash": "2d6ba2d7326b81d67e7b88e5548b82eea5c24c1ab374dc5bbc1b93e9b35d9dff",
+  "cases": 50,
+  "strata": {
+    "bridge": 25,
+    "comparison": 25
+  },
+  "documents": 500,
+  "indexedChunks": 1022,
+  "preflightReady": 50,
+  "preflightDirectory": "target/hotpotqa50-check-20261026-001",
+  "runDirectory": "target/hotpotqa50-run-20261026-001",
+  "identity": "id:1",
+  "environment": {
+    "scope": "isolated local Docker environment",
+    "analyzer": "standard",
+    "embeddingDimension": 2048,
+    "rewriteEnabled": false,
+    "productionMappingModified": false
+  },
+  "modelConnectivity": [
+    {
+      "kind": "embedding",
+      "model": "text-embedding-v4",
+      "httpStatus": 200,
+      "dimension": 2048
+    },
+    {
+      "kind": "generation",
+      "model": "deepseek-chat",
+      "httpStatus": 200,
+      "hasAnswer": true
+    }
+  ],
+  "notice": "Shared candidate subset; not official distractor/fullwiki leaderboard conditions. Public labels are not human approval.",
+  "finishedAt": "2026-10-26T23:27:27.747145+08:00",
+  "snapshotVerified": true,
+  "publicBenchmark": {
+    "configuration": {
+      "dataset": "hotpotqa",
+      "language": "en",
+      "split": "validation",
+      "setting": "shared-candidate-subset",
+      "answerStyle": "short",
+      "scorer": "hotpotqa-answer-v1"
+    },
+    "labelSource": "PUBLIC_SOURCE_MAPPED_NOT_HUMAN_REVIEWED",
+    "count": 50,
+    "completed": 50,
+    "answerMetricCount": 50,
+    "incomplete": 0,
+    "em": 0.64,
+    "f1": 0.6833333333333332,
+    "observedSupportingEvidence": {
+      "count": 50,
+      "hitAt5": 0.98,
+      "coverageAt5": 0.8266666666666667
+    },
+    "judgeFailures": 0,
+    "judgeUnavailable": 0
+  },
+  "tests": {
+    "tests": 238,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 10
+  },
+  "verification": {
+    "cases": 50,
+    "offlineReplayExactMatch": true,
+    "officialScorerAgreement": true,
+    "officialScorerSha256": "d35fc91a6db21d791dbdda11daf3856e9359f5701d54e3eefba20d88fecc02c0",
+    "fullSourceReimportIdentical": true
+  },
+  "offlineReportDirectory": "target/hotpotqa50-report-replay-20261026-001",
+  "excludedScope": [
+    "official fullwiki/distractor leaderboard comparison",
+    "BEIR/qrels and DuReader-specific adapters",
+    "human approval of enterprise phase1 labels"
+  ]
+}

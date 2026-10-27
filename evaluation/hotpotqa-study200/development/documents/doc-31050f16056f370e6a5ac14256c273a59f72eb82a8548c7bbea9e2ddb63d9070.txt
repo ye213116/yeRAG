@@ -1,0 +1,3 @@
+Treehouse (game)
+
+Treehouse is a game in which players try to get their configuration of Icehouse pieces to match the central configuration, shared by all players. The rolling of the special "Treehouse Die" tells the player what kind of move to make to change his own or the central configuration, and then he does so to best move towards the goal.

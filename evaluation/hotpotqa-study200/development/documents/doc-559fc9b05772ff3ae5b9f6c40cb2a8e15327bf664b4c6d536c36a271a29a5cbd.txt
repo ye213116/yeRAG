@@ -1,0 +1,3 @@
+Sinclair BASIC
+
+Sinclair BASIC is a dialect of the programming language BASIC used in the 8-bit home computers from Sinclair Research and Timex Sinclair. The Sinclair BASIC interpreter was made by Nine Tiles Networks Ltd.

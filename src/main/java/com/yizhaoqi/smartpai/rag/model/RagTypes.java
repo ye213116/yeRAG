@@ -8,6 +8,7 @@ public final class RagTypes {
     public enum StageKey { QUERY, RETRIEVE, RERANK, MERGE, ASSEMBLE, GENERATE }
     public enum Status { SUCCEEDED, SKIPPED, DEGRADED, NO_EVIDENCE, FAILED, CANCELLED, TIMED_OUT, TRUNCATED }
     public enum Mode { RETRIEVE_ONLY, FIXED_QA }
+    public enum RecallStrategy { HYBRID, BM25, VECTOR }
     public record Candidate(String id, String fileMd5, int chunkIndex, String owner, String title,
                             String text, double score, Map<String, Double> routeScores,
                             List<String> sources, String esIndex, String esHitId) {
@@ -63,11 +64,32 @@ public final class RagTypes {
                           int candidateK, double rrfK, int evidenceTokens, int contextTokens,
                           int safetyTokens, double rerankThreshold) {}
     public record Request(String userId, String question, List<AgentMessage> history, Mode mode,
-                          int topK, int referenceOffset, Options options) {
+                          int topK, int referenceOffset, Options options, List<String> corpusMd5s, boolean conciseAnswer, RecallStrategy recallStrategy) {
+        public Request(String userId,String question,List<AgentMessage> history,Mode mode,int topK,int referenceOffset,Options options) {
+            this(userId,question,history,mode,topK,referenceOffset,options,List.of(),false,RecallStrategy.HYBRID);
+        }
+        public Request(String userId,String question,List<AgentMessage> history,Mode mode,int topK,int referenceOffset,Options options,List<String> corpusMd5s,boolean conciseAnswer) {
+            this(userId,question,history,mode,topK,referenceOffset,options,corpusMd5s,conciseAnswer,RecallStrategy.HYBRID);
+        }
         public Request {
             if (userId == null || userId.isBlank() || question == null || question.isBlank() || topK < 1)
                 throw new IllegalArgumentException("Authenticated user, query and positive topK required");
             history = List.copyOf(history);
+            Objects.requireNonNull(recallStrategy);
+            corpusMd5s = List.copyOf(corpusMd5s);
+            if(corpusMd5s.size()>1000 || corpusMd5s.stream().anyMatch(v -> !v.matches("[a-f0-9]{32}")))
+                throw new IllegalArgumentException("Invalid bounded corpus scope");
+        }
+        /** Trusted evaluation runner only; never populated from model tool arguments. */
+        public Request forEvaluation(List<String> md5s,boolean concise) {
+            if(md5s.isEmpty()) throw new IllegalArgumentException("Evaluation corpus cannot be empty");
+            return new Request(userId,question,history,mode,topK,referenceOffset,options,md5s,concise,recallStrategy);
+        }
+        /** Only opt-in offline baselines select a route; production callers retain HYBRID. */
+        public Request forBaseline(RecallStrategy strategy) {
+            Options fixed=new Options(false,false,options.merge(),options.legacyClipping(),options.candidateK(),options.rrfK(),
+                options.evidenceTokens(),options.contextTokens(),options.safetyTokens(),options.rerankThreshold());
+            return new Request(userId,question,history,mode,topK,referenceOffset,fixed,corpusMd5s,conciseAnswer,strategy);
         }
     }
     public record StageOutcome(Status status, String reason, Object evidence) {}

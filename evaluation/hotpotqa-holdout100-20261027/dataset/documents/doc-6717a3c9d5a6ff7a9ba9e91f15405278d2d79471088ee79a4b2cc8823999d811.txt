@@ -1,0 +1,3 @@
+Kolmogorov's inequality
+
+In probability theory, Kolmogorov's inequality is a so-called "maximal inequality" that gives a bound on the probability that the partial sums of a finite collection of independent random variables exceed some specified bound. The inequality is named after the Russian mathematician Andrey Kolmogorov.

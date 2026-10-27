@@ -16,10 +16,22 @@ public final class EvaluationPreflight {
             .put("corpusFingerprint",fingerprint(visible)).put("createdAt",java.time.Instant.now().toString());
         Map<String,JsonNode> documents=new HashMap<>();
         for(JsonNode document:dataset.manifest().path("documents")) documents.put(document.path("id").asText(),document);
+        boolean publicDataset=dataset.manifest().path("schemaVersion").asInt()==3;
+        if(publicDataset) {
+            result.set("benchmark",dataset.manifest().path("benchmark").deepCopy());
+            result.put("sourceSha256",dataset.manifest().path("source").path("sha256").asText());
+            result.set("corpusMd5s",json.valueToTree(documents.values().stream().map(d -> d.path("fileMd5").asText()).distinct().sorted().toList()));
+        }
+        Set<String> indexed=new HashSet<>(); for(Candidate c:visible) indexed.add(c.fileMd5());
+        long missing=publicDataset?documents.values().stream().filter(d -> !indexed.contains(d.path("fileMd5").asText())).count():0;
         ArrayNode checked=result.putArray("cases");
         for(ObjectNode sample:dataset.cases()) {
             ObjectNode check=checked.addObject().put("id",sample.path("id").asText()).put("status","READY");
             ArrayNode units=check.putArray("units"); List<String> issues=new ArrayList<>();
+            if(publicDataset) {
+                check.put("publicSourceMapped",true).put("evidenceAnnotation",sample.path("evidenceAnnotation").asText());
+                if(missing>0) issues.add("PUBLIC_CORPUS_INCOMPLETE: "+missing+" documents (including distractors)");
+            }
             for(JsonNode unit:sample.path("evidenceUnits")) {
                 ObjectNode resolved=units.addObject().put("id",unit.path("id").asText()); ArrayNode anchors=resolved.putArray("anchors");
                 Set<String> seen=new HashSet<>();
@@ -34,6 +46,21 @@ public final class EvaluationPreflight {
                                 .put("chunkId",candidate.chunkIndex()).put("esIndex",candidate.esIndex()).put("esHitId",candidate.esHitId())
                                 .put("start",position.start()).put("end",position.end());
                         }
+                    }
+                }
+                if(anchors.isEmpty() && publicDataset && "supporting-sentence".equals(sample.path("evidenceAnnotation").asText())) {
+                    ArrayNode groups=json.createArrayNode();
+                    for(JsonNode alternative:unit.path("alternatives")) {
+                        JsonNode doc=documents.get(alternative.path("document").asText());
+                        try {
+                            String body=java.nio.file.Files.readString(PublicDatasetSource.localFile(dataset.directory(),doc.path("path").asText()));
+                            groups.addAll(EvidenceSpanMapping.groups(json,doc,body,alternative.path("quote").asText(),visible));
+                        } catch(java.io.IOException e) { throw new IllegalStateException("Source span unavailable",e); }
+                        catch(Exception e) { throw new IllegalStateException("Invalid source-span mapping",e); }
+                    }
+                    if(!groups.isEmpty()) {
+                        resolved.put("mapping","CONTIGUOUS_SOURCE_SPAN").set("anchorGroups",groups);
+                        for(JsonNode group:groups) for(JsonNode anchor:group.path("anchors")) anchors.add(anchor.deepCopy());
                     }
                 }
                 if(anchors.isEmpty()) issues.add("EVIDENCE_NOT_IN_VISIBLE_CHILD: "+unit.path("id").asText());

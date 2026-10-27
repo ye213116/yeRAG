@@ -1,0 +1,3 @@
+Michigan Democratic primary, 2016
+
+The 2016 Michigan Democratic primary took place on March 8 in the U.S. state of Michigan as one of the Democratic Party's primaries ahead of the 2016 presidential election.

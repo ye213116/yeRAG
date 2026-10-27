@@ -1,0 +1,1385 @@
+{
+  "status": "VERIFIED",
+  "date": "2026-10-27",
+  "branch": "agent",
+  "baseHead": "fd8d6a3134f48f7a34422a5b3dc4e1547ae74334",
+  "worktreeState": "UNCOMMITTED",
+  "codeVersion": "fd8d6a3134f48f7a34422a5b3dc4e1547ae74334+d92ca6760836064530cded5df872d268f5373fb2264407dbd5a856879a6bfff5",
+  "datasetHash": "2d6ba2d7326b81d67e7b88e5548b82eea5c24c1ab374dc5bbc1b93e9b35d9dff",
+  "runs": [
+    {
+      "variant": "rrf-01",
+      "directory": "target/hotpotqa50-rerank-20261027-002/rrf-01",
+      "captureSha256": "18b5d210e006b87552c4ee187ec27ecfe0445164f9cdde5e92125b902bc065e7",
+      "provenanceSha256": "04f869942d1823dccae9379dc081ee3189d6785b0e8d6f479863de015fbe678d",
+      "publicBenchmark": {
+        "configuration": {
+          "dataset": "hotpotqa",
+          "language": "en",
+          "split": "validation",
+          "setting": "shared-candidate-subset",
+          "answerStyle": "short",
+          "scorer": "hotpotqa-answer-v1"
+        },
+        "labelSource": "PUBLIC_SOURCE_MAPPED_NOT_HUMAN_REVIEWED",
+        "count": 50,
+        "completed": 50,
+        "answerMetricCount": 50,
+        "incomplete": 0,
+        "em": 0.66,
+        "f1": 0.69,
+        "observedSupportingEvidence": {
+          "count": 50,
+          "hitAt5": 0.98,
+          "coverageAt5": 0.7933333333333333,
+          "completeHitAt5": 0.6
+        },
+        "judgeFailures": 0,
+        "judgeUnavailable": 0
+      },
+      "measurements": {
+        "percentileMethod": "NEAREST_RANK",
+        "pipelineLatencyMs": {
+          "count": 50,
+          "unavailable": 0,
+          "mean": 975.1,
+          "p50": 911.0,
+          "p95": 1464.0
+        },
+        "firstAnswerLatencyMs": {
+          "count": 50,
+          "unavailable": 0,
+          "mean": 887.08,
+          "p50": 821.0,
+          "p95": 1348.0
+        },
+        "contextEstimatedTokens": {
+          "count": 50,
+          "unavailable": 0,
+          "mean": 1875.06,
+          "p50": 1872.0,
+          "p95": 2611.0
+        },
+        "tokenScope": "GENERATION_AND_EVALUATION_JUDGES_ONLY; embedding/rerank billing excluded; no monetary cost inferred",
+        "generationUsage": {
+          "reportedCalls": 50,
+          "missingOrNotCalled": 0,
+          "promptTokens": 32993,
+          "completionTokens": 188,
+          "totalTokens": 33181
+        },
+        "judgeUsage": {
+          "reportedCalls": 50,
+          "missingOrNotCalled": 0,
+          "promptTokens": 42647,
+          "completionTokens": 4936,
+          "totalTokens": 47583
+        },
+        "supportUsage": {
+          "reportedCalls": 0,
+          "missingOrNotCalled": 50
+        }
+      },
+      "rerankExecution": {
+        "requested": 0,
+        "statuses": {
+          "SKIPPED": 50
+        },
+        "reasons": {
+          "DISABLED_OR_EMPTY": 50
+        },
+        "models": {
+          "NOT_USED": 50
+        }
+      },
+      "rerankRequestsVerified": 0,
+      "actualSuccessfulReranks": 0,
+      "nativeOfficialAgreementCount": 50,
+      "offlineReplayByteIdentical": true
+    },
+    {
+      "variant": "rrf-rerank-01",
+      "directory": "target/hotpotqa50-rerank-20261027-002/rrf-rerank-01",
+      "captureSha256": "8ea3e5430e6b7cbe7ba472869fb9df3a7b234b0a9cf9c01366f7692bd57bdc58",
+      "provenanceSha256": "e140470782ebad9445912a2df03cc275b65107024e7abf53fe00c6c2f67b8555",
+      "publicBenchmark": {
+        "configuration": {
+          "dataset": "hotpotqa",
+          "language": "en",
+          "split": "validation",
+          "setting": "shared-candidate-subset",
+          "answerStyle": "short",
+          "scorer": "hotpotqa-answer-v1"
+        },
+        "labelSource": "PUBLIC_SOURCE_MAPPED_NOT_HUMAN_REVIEWED",
+        "count": 50,
+        "completed": 50,
+        "answerMetricCount": 50,
+        "incomplete": 0,
+        "em": 0.72,
+        "f1": 0.7738095238095238,
+        "observedSupportingEvidence": {
+          "count": 50,
+          "hitAt5": 1.0,
+          "coverageAt5": 0.9716666666666667,
+          "completeHitAt5": 0.94
+        },
+        "judgeFailures": 0,
+        "judgeUnavailable": 0
+      },
+      "measurements": {
+        "percentileMethod": "NEAREST_RANK",
+        "pipelineLatencyMs": {
+          "count": 50,
+          "unavailable": 0,
+          "mean": 1119.74,
+          "p50": 1081.0,
+          "p95": 1507.0
+        },
+        "firstAnswerLatencyMs": {
+          "count": 50,
+          "unavailable": 0,
+          "mean": 1025.08,
+          "p50": 1004.0,
+          "p95": 1374.0
+        },
+        "contextEstimatedTokens": {
+          "count": 50,
+          "unavailable": 0,
+          "mean": 1944.7,
+          "p50": 1963.0,
+          "p95": 2555.0
+        },
+        "tokenScope": "GENERATION_AND_EVALUATION_JUDGES_ONLY; embedding/rerank billing excluded; no monetary cost inferred",
+        "generationUsage": {
+          "reportedCalls": 50,
+          "missingOrNotCalled": 0,
+          "promptTokens": 33846,
+          "completionTokens": 176,
+          "totalTokens": 34022
+        },
+        "judgeUsage": {
+          "reportedCalls": 50,
+          "missingOrNotCalled": 0,
+          "promptTokens": 43484,
+          "completionTokens": 4694,
+          "totalTokens": 48178
+        },
+        "supportUsage": {
+          "reportedCalls": 0,
+          "missingOrNotCalled": 50
+        }
+      },
+      "rerankExecution": {
+        "requested": 50,
+        "statuses": {
+          "SUCCEEDED": 50
+        },
+        "reasons": {
+          "RERANKED": 50
+        },
+        "models": {
+          "gte-rerank-v2": 50
+        }
+      },
+      "rerankRequestsVerified": 50,
+      "actualSuccessfulReranks": 50,
+      "nativeOfficialAgreementCount": 50,
+      "offlineReplayByteIdentical": true
+    },
+    {
+      "variant": "rrf-02",
+      "directory": "target/hotpotqa50-rerank-20261027-002/rrf-02",
+      "captureSha256": "0122b911a74b0f2e1342d0d837b6bda58acbcd2fa4bbec22ec309064be694be6",
+      "provenanceSha256": "dcf5155e13e3b57c1762e7974298ee1b0ae5731d68a99b10adc5d0aae9f0bc96",
+      "publicBenchmark": {
+        "configuration": {
+          "dataset": "hotpotqa",
+          "language": "en",
+          "split": "validation",
+          "setting": "shared-candidate-subset",
+          "answerStyle": "short",
+          "scorer": "hotpotqa-answer-v1"
+        },
+        "labelSource": "PUBLIC_SOURCE_MAPPED_NOT_HUMAN_REVIEWED",
+        "count": 50,
+        "completed": 50,
+        "answerMetricCount": 50,
+        "incomplete": 0,
+        "em": 0.66,
+        "f1": 0.69,
+        "observedSupportingEvidence": {
+          "count": 50,
+          "hitAt5": 0.98,
+          "coverageAt5": 0.7933333333333333,
+          "completeHitAt5": 0.6
+        },
+        "judgeFailures": 0,
+        "judgeUnavailable": 0
+      },
+      "measurements": {
+        "percentileMethod": "NEAREST_RANK",
+        "pipelineLatencyMs": {
+          "count": 50,
+          "unavailable": 0,
+          "mean": 1050.78,
+          "p50": 1002.0,
+          "p95": 1595.0
+        },
+        "firstAnswerLatencyMs": {
+          "count": 50,
+          "unavailable": 0,
+          "mean": 964.74,
+          "p50": 901.0,
+          "p95": 1463.0
+        },
+        "contextEstimatedTokens": {
+          "count": 50,
+          "unavailable": 0,
+          "mean": 1875.06,
+          "p50": 1872.0,
+          "p95": 2611.0
+        },
+        "tokenScope": "GENERATION_AND_EVALUATION_JUDGES_ONLY; embedding/rerank billing excluded; no monetary cost inferred",
+        "generationUsage": {
+          "reportedCalls": 50,
+          "missingOrNotCalled": 0,
+          "promptTokens": 32993,
+          "completionTokens": 173,
+          "totalTokens": 33166
+        },
+        "judgeUsage": {
+          "reportedCalls": 50,
+          "missingOrNotCalled": 0,
+          "promptTokens": 42632,
+          "completionTokens": 4996,
+          "totalTokens": 47628
+        },
+        "supportUsage": {
+          "reportedCalls": 0,
+          "missingOrNotCalled": 50
+        }
+      },
+      "rerankExecution": {
+        "requested": 0,
+        "statuses": {
+          "SKIPPED": 50
+        },
+        "reasons": {
+          "DISABLED_OR_EMPTY": 50
+        },
+        "models": {
+          "NOT_USED": 50
+        }
+      },
+      "rerankRequestsVerified": 0,
+      "actualSuccessfulReranks": 0,
+      "nativeOfficialAgreementCount": 50,
+      "offlineReplayByteIdentical": true
+    },
+    {
+      "variant": "rrf-rerank-02",
+      "directory": "target/hotpotqa50-rerank-20261027-002/rrf-rerank-02",
+      "captureSha256": "bc48c5af24985928edc6894064d5679749e40945552dfe84b928d1a99ffa5f68",
+      "provenanceSha256": "64bd602d3fe3b261f373d0e093c6ab4eb6dc4396ea0182c0f47f10ce517b0a96",
+      "publicBenchmark": {
+        "configuration": {
+          "dataset": "hotpotqa",
+          "language": "en",
+          "split": "validation",
+          "setting": "shared-candidate-subset",
+          "answerStyle": "short",
+          "scorer": "hotpotqa-answer-v1"
+        },
+        "labelSource": "PUBLIC_SOURCE_MAPPED_NOT_HUMAN_REVIEWED",
+        "count": 50,
+        "completed": 50,
+        "answerMetricCount": 50,
+        "incomplete": 0,
+        "em": 0.72,
+        "f1": 0.7738095238095238,
+        "observedSupportingEvidence": {
+          "count": 50,
+          "hitAt5": 1.0,
+          "coverageAt5": 0.9716666666666667,
+          "completeHitAt5": 0.94
+        },
+        "judgeFailures": 0,
+        "judgeUnavailable": 0
+      },
+      "measurements": {
+        "percentileMethod": "NEAREST_RANK",
+        "pipelineLatencyMs": {
+          "count": 50,
+          "unavailable": 0,
+          "mean": 1189.08,
+          "p50": 1136.0,
+          "p95": 1841.0
+        },
+        "firstAnswerLatencyMs": {
+          "count": 50,
+          "unavailable": 0,
+          "mean": 1100.92,
+          "p50": 1037.0,
+          "p95": 1784.0
+        },
+        "contextEstimatedTokens": {
+          "count": 50,
+          "unavailable": 0,
+          "mean": 1943.88,
+          "p50": 1961.0,
+          "p95": 2555.0
+        },
+        "tokenScope": "GENERATION_AND_EVALUATION_JUDGES_ONLY; embedding/rerank billing excluded; no monetary cost inferred",
+        "generationUsage": {
+          "reportedCalls": 50,
+          "missingOrNotCalled": 0,
+          "promptTokens": 33859,
+          "completionTokens": 176,
+          "totalTokens": 34035
+        },
+        "judgeUsage": {
+          "reportedCalls": 50,
+          "missingOrNotCalled": 0,
+          "promptTokens": 43497,
+          "completionTokens": 4690,
+          "totalTokens": 48187
+        },
+        "supportUsage": {
+          "reportedCalls": 0,
+          "missingOrNotCalled": 50
+        }
+      },
+      "rerankExecution": {
+        "requested": 50,
+        "statuses": {
+          "SUCCEEDED": 50
+        },
+        "reasons": {
+          "RERANKED": 50
+        },
+        "models": {
+          "gte-rerank-v2": 50
+        }
+      },
+      "rerankRequestsVerified": 50,
+      "actualSuccessfulReranks": 50,
+      "nativeOfficialAgreementCount": 50,
+      "offlineReplayByteIdentical": true
+    }
+  ],
+  "comparisons": [
+    {
+      "baseline": "/home/zyh/projects/yeRAG-agent/target/hotpotqa50-rerank-20261027-002/rrf-01",
+      "candidate": "/home/zyh/projects/yeRAG-agent/target/hotpotqa50-rerank-20261027-002/rrf-rerank-01",
+      "allowCodeChange": false,
+      "datasetHash": "2d6ba2d7326b81d67e7b88e5548b82eea5c24c1ab374dc5bbc1b93e9b35d9dff",
+      "comparability": "MATCHED",
+      "allowedConfigChanges": [
+        "options.rerank"
+      ],
+      "configurationChanges": [
+        {
+          "field": "options.rerank",
+          "baseline": false,
+          "candidate": true
+        }
+      ],
+      "notice": "Paired exploratory comparison on this frozen sample; a single run does not establish stable model gains or production acceptance.",
+      "metrics": {
+        "hitAt5": {
+          "pairedCount": 50,
+          "totalCases": 50,
+          "unpaired": 0,
+          "wins": 1,
+          "losses": 0,
+          "ties": 49,
+          "changes": [
+            {
+              "caseId": "hotpotqa-5adc6c4c5542994650320ce0",
+              "baseline": 0,
+              "candidate": 1,
+              "delta": 1
+            }
+          ],
+          "baseline": 0.98,
+          "candidate": 1.0,
+          "delta": 0.020000000000000018
+        },
+        "coverageAt5": {
+          "pairedCount": 50,
+          "totalCases": 50,
+          "unpaired": 0,
+          "wins": 18,
+          "losses": 1,
+          "ties": 31,
+          "changes": [
+            {
+              "caseId": "hotpotqa-5a7299e75542991f9a20c524",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a75d00a5542992db94736d1",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a7f95685542995d8a8ddeaa",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a81737155429903bc27b96f",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a8173fa554299260e20a28e",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a8a32d65542992d82986ef4",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a8c30f6554299240d9c20d1",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a8ec7cc5542995a26add518",
+              "baseline": 0.25,
+              "candidate": 0.75,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a9094ba55429933b8a2056d",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5ab2b8fe5542991669774070",
+              "baseline": 0.6666666666666666,
+              "candidate": 0.3333333333333333,
+              "delta": -0.3333333333333333
+            },
+            {
+              "caseId": "hotpotqa-5ab2be12554299295394686b",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5ab5744e554299494045efdf",
+              "baseline": 0.6666666666666666,
+              "candidate": 1.0,
+              "delta": 0.33333333333333337
+            },
+            {
+              "caseId": "hotpotqa-5ab816b05542990e739ec815",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5aba85335542994dbf01992d",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5abcf46255429959677d6b6b",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5abfd83f5542997ec76fd45c",
+              "baseline": 0.75,
+              "candidate": 1.0,
+              "delta": 0.25
+            },
+            {
+              "caseId": "hotpotqa-5adc6c4c5542994650320ce0",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ae18ae6554299234fd04289",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5ae26af3554299492dc91c1c",
+              "baseline": 0.3333333333333333,
+              "candidate": 1.0,
+              "delta": 0.6666666666666667
+            }
+          ],
+          "baseline": 0.7933333333333334,
+          "candidate": 0.9716666666666666,
+          "delta": 0.17833333333333312
+        },
+        "completeHitAt5": {
+          "pairedCount": 50,
+          "totalCases": 50,
+          "unpaired": 0,
+          "wins": 17,
+          "losses": 0,
+          "ties": 33,
+          "changes": [
+            {
+              "caseId": "hotpotqa-5a7299e75542991f9a20c524",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a75d00a5542992db94736d1",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a7f95685542995d8a8ddeaa",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a81737155429903bc27b96f",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a8173fa554299260e20a28e",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a8a32d65542992d82986ef4",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a8c30f6554299240d9c20d1",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a9094ba55429933b8a2056d",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ab2be12554299295394686b",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ab5744e554299494045efdf",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ab816b05542990e739ec815",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5aba85335542994dbf01992d",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5abcf46255429959677d6b6b",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5abfd83f5542997ec76fd45c",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5adc6c4c5542994650320ce0",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ae18ae6554299234fd04289",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ae26af3554299492dc91c1c",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            }
+          ],
+          "baseline": 0.6,
+          "candidate": 0.94,
+          "delta": 0.33999999999999997
+        },
+        "em": {
+          "pairedCount": 50,
+          "totalCases": 50,
+          "unpaired": 0,
+          "wins": 4,
+          "losses": 1,
+          "ties": 45,
+          "changes": [
+            {
+              "caseId": "hotpotqa-5a7299e75542991f9a20c524",
+              "baseline": 1.0,
+              "candidate": 0.0,
+              "delta": -1.0
+            },
+            {
+              "caseId": "hotpotqa-5a81737155429903bc27b96f",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a8c30f6554299240d9c20d1",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a8ec7cc5542995a26add518",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ab816b05542990e739ec815",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            }
+          ],
+          "baseline": 0.66,
+          "candidate": 0.72,
+          "delta": 0.05999999999999994
+        },
+        "f1": {
+          "pairedCount": 50,
+          "totalCases": 50,
+          "unpaired": 0,
+          "wins": 6,
+          "losses": 2,
+          "ties": 42,
+          "changes": [
+            {
+              "caseId": "hotpotqa-5a7299e75542991f9a20c524",
+              "baseline": 1.0,
+              "candidate": 0.0,
+              "delta": -1.0
+            },
+            {
+              "caseId": "hotpotqa-5a81737155429903bc27b96f",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a8c30f6554299240d9c20d1",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a8ec7cc5542995a26add518",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a9094ba55429933b8a2056d",
+              "baseline": 0.0,
+              "candidate": 0.5714285714285714,
+              "delta": 0.5714285714285714
+            },
+            {
+              "caseId": "hotpotqa-5ab816b05542990e739ec815",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5adfb790554299603e418389",
+              "baseline": 0.3333333333333333,
+              "candidate": 0.2857142857142857,
+              "delta": -0.047619047619047616
+            },
+            {
+              "caseId": "hotpotqa-5ae18ae6554299234fd04289",
+              "baseline": 0.0,
+              "candidate": 0.6666666666666666,
+              "delta": 0.6666666666666666
+            }
+          ],
+          "baseline": 0.69,
+          "candidate": 0.7738095238095238,
+          "delta": 0.08380952380952389
+        },
+        "judgeClaimSupportRate": {
+          "pairedCount": 0,
+          "totalCases": 50,
+          "unpaired": 50,
+          "wins": 0,
+          "losses": 0,
+          "ties": 0,
+          "changes": []
+        }
+      },
+      "measurements": {
+        "pipelineLatencyMs": {
+          "baseline": {
+            "count": 50,
+            "unavailable": 0,
+            "mean": 975.1,
+            "p50": 911.0,
+            "p95": 1464.0
+          },
+          "candidate": {
+            "count": 50,
+            "unavailable": 0,
+            "mean": 1119.74,
+            "p50": 1081.0,
+            "p95": 1507.0
+          }
+        },
+        "generationUsage": {
+          "baseline": {
+            "reportedCalls": 50,
+            "missingOrNotCalled": 0,
+            "promptTokens": 32993,
+            "completionTokens": 188,
+            "totalTokens": 33181
+          },
+          "candidate": {
+            "reportedCalls": 50,
+            "missingOrNotCalled": 0,
+            "promptTokens": 33846,
+            "completionTokens": 176,
+            "totalTokens": 34022
+          }
+        }
+      },
+      "gates": [
+        {
+          "metric": "completeHitAt5",
+          "maxDrop": 0,
+          "status": "PASS"
+        },
+        {
+          "metric": "em",
+          "maxDrop": 0,
+          "status": "PASS"
+        },
+        {
+          "metric": "candidate.rerankExecution",
+          "status": "PASS",
+          "notice": "Every case must actually rerank to establish a pure RRF + rerank comparison; fallback counts remain visible."
+        }
+      ],
+      "incompleteAnswers": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "rerankExecution": {
+        "baseline": {
+          "requested": 0,
+          "statuses": {
+            "SKIPPED": 50
+          },
+          "reasons": {
+            "DISABLED_OR_EMPTY": 50
+          },
+          "models": {
+            "NOT_USED": 50
+          }
+        },
+        "candidate": {
+          "requested": 50,
+          "statuses": {
+            "SUCCEEDED": 50
+          },
+          "reasons": {
+            "RERANKED": 50
+          },
+          "models": {
+            "gte-rerank-v2": 50
+          }
+        }
+      },
+      "gateStatus": "PASS"
+    },
+    {
+      "baseline": "/home/zyh/projects/yeRAG-agent/target/hotpotqa50-rerank-20261027-002/rrf-02",
+      "candidate": "/home/zyh/projects/yeRAG-agent/target/hotpotqa50-rerank-20261027-002/rrf-rerank-02",
+      "allowCodeChange": false,
+      "datasetHash": "2d6ba2d7326b81d67e7b88e5548b82eea5c24c1ab374dc5bbc1b93e9b35d9dff",
+      "comparability": "MATCHED",
+      "allowedConfigChanges": [
+        "options.rerank"
+      ],
+      "configurationChanges": [
+        {
+          "field": "options.rerank",
+          "baseline": false,
+          "candidate": true
+        }
+      ],
+      "notice": "Paired exploratory comparison on this frozen sample; a single run does not establish stable model gains or production acceptance.",
+      "metrics": {
+        "hitAt5": {
+          "pairedCount": 50,
+          "totalCases": 50,
+          "unpaired": 0,
+          "wins": 1,
+          "losses": 0,
+          "ties": 49,
+          "changes": [
+            {
+              "caseId": "hotpotqa-5adc6c4c5542994650320ce0",
+              "baseline": 0,
+              "candidate": 1,
+              "delta": 1
+            }
+          ],
+          "baseline": 0.98,
+          "candidate": 1.0,
+          "delta": 0.020000000000000018
+        },
+        "coverageAt5": {
+          "pairedCount": 50,
+          "totalCases": 50,
+          "unpaired": 0,
+          "wins": 18,
+          "losses": 1,
+          "ties": 31,
+          "changes": [
+            {
+              "caseId": "hotpotqa-5a7299e75542991f9a20c524",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a75d00a5542992db94736d1",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a7f95685542995d8a8ddeaa",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a81737155429903bc27b96f",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a8173fa554299260e20a28e",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a8a32d65542992d82986ef4",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a8c30f6554299240d9c20d1",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a8ec7cc5542995a26add518",
+              "baseline": 0.25,
+              "candidate": 0.75,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a9094ba55429933b8a2056d",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5ab2b8fe5542991669774070",
+              "baseline": 0.6666666666666666,
+              "candidate": 0.3333333333333333,
+              "delta": -0.3333333333333333
+            },
+            {
+              "caseId": "hotpotqa-5ab2be12554299295394686b",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5ab5744e554299494045efdf",
+              "baseline": 0.6666666666666666,
+              "candidate": 1.0,
+              "delta": 0.33333333333333337
+            },
+            {
+              "caseId": "hotpotqa-5ab816b05542990e739ec815",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5aba85335542994dbf01992d",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5abcf46255429959677d6b6b",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5abfd83f5542997ec76fd45c",
+              "baseline": 0.75,
+              "candidate": 1.0,
+              "delta": 0.25
+            },
+            {
+              "caseId": "hotpotqa-5adc6c4c5542994650320ce0",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ae18ae6554299234fd04289",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5ae26af3554299492dc91c1c",
+              "baseline": 0.3333333333333333,
+              "candidate": 1.0,
+              "delta": 0.6666666666666667
+            }
+          ],
+          "baseline": 0.7933333333333334,
+          "candidate": 0.9716666666666666,
+          "delta": 0.17833333333333312
+        },
+        "completeHitAt5": {
+          "pairedCount": 50,
+          "totalCases": 50,
+          "unpaired": 0,
+          "wins": 17,
+          "losses": 0,
+          "ties": 33,
+          "changes": [
+            {
+              "caseId": "hotpotqa-5a7299e75542991f9a20c524",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a75d00a5542992db94736d1",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a7f95685542995d8a8ddeaa",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a81737155429903bc27b96f",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a8173fa554299260e20a28e",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a8a32d65542992d82986ef4",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a8c30f6554299240d9c20d1",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a9094ba55429933b8a2056d",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ab2be12554299295394686b",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ab5744e554299494045efdf",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ab816b05542990e739ec815",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5aba85335542994dbf01992d",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5abcf46255429959677d6b6b",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5abfd83f5542997ec76fd45c",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5adc6c4c5542994650320ce0",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ae18ae6554299234fd04289",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ae26af3554299492dc91c1c",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            }
+          ],
+          "baseline": 0.6,
+          "candidate": 0.94,
+          "delta": 0.33999999999999997
+        },
+        "em": {
+          "pairedCount": 50,
+          "totalCases": 50,
+          "unpaired": 0,
+          "wins": 4,
+          "losses": 1,
+          "ties": 45,
+          "changes": [
+            {
+              "caseId": "hotpotqa-5a7299e75542991f9a20c524",
+              "baseline": 1.0,
+              "candidate": 0.0,
+              "delta": -1.0
+            },
+            {
+              "caseId": "hotpotqa-5a81737155429903bc27b96f",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a8c30f6554299240d9c20d1",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a8ec7cc5542995a26add518",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ab816b05542990e739ec815",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            }
+          ],
+          "baseline": 0.66,
+          "candidate": 0.72,
+          "delta": 0.05999999999999994
+        },
+        "f1": {
+          "pairedCount": 50,
+          "totalCases": 50,
+          "unpaired": 0,
+          "wins": 6,
+          "losses": 2,
+          "ties": 42,
+          "changes": [
+            {
+              "caseId": "hotpotqa-5a7299e75542991f9a20c524",
+              "baseline": 1.0,
+              "candidate": 0.0,
+              "delta": -1.0
+            },
+            {
+              "caseId": "hotpotqa-5a81737155429903bc27b96f",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a8c30f6554299240d9c20d1",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a8ec7cc5542995a26add518",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a9094ba55429933b8a2056d",
+              "baseline": 0.0,
+              "candidate": 0.5714285714285714,
+              "delta": 0.5714285714285714
+            },
+            {
+              "caseId": "hotpotqa-5ab816b05542990e739ec815",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5adfb790554299603e418389",
+              "baseline": 0.3333333333333333,
+              "candidate": 0.2857142857142857,
+              "delta": -0.047619047619047616
+            },
+            {
+              "caseId": "hotpotqa-5ae18ae6554299234fd04289",
+              "baseline": 0.0,
+              "candidate": 0.6666666666666666,
+              "delta": 0.6666666666666666
+            }
+          ],
+          "baseline": 0.69,
+          "candidate": 0.7738095238095238,
+          "delta": 0.08380952380952389
+        },
+        "judgeClaimSupportRate": {
+          "pairedCount": 0,
+          "totalCases": 50,
+          "unpaired": 50,
+          "wins": 0,
+          "losses": 0,
+          "ties": 0,
+          "changes": []
+        }
+      },
+      "measurements": {
+        "pipelineLatencyMs": {
+          "baseline": {
+            "count": 50,
+            "unavailable": 0,
+            "mean": 1050.78,
+            "p50": 1002.0,
+            "p95": 1595.0
+          },
+          "candidate": {
+            "count": 50,
+            "unavailable": 0,
+            "mean": 1189.08,
+            "p50": 1136.0,
+            "p95": 1841.0
+          }
+        },
+        "generationUsage": {
+          "baseline": {
+            "reportedCalls": 50,
+            "missingOrNotCalled": 0,
+            "promptTokens": 32993,
+            "completionTokens": 173,
+            "totalTokens": 33166
+          },
+          "candidate": {
+            "reportedCalls": 50,
+            "missingOrNotCalled": 0,
+            "promptTokens": 33859,
+            "completionTokens": 176,
+            "totalTokens": 34035
+          }
+        }
+      },
+      "gates": [
+        {
+          "metric": "completeHitAt5",
+          "maxDrop": 0,
+          "status": "PASS"
+        },
+        {
+          "metric": "em",
+          "maxDrop": 0,
+          "status": "PASS"
+        },
+        {
+          "metric": "candidate.rerankExecution",
+          "status": "PASS",
+          "notice": "Every case must actually rerank to establish a pure RRF + rerank comparison; fallback counts remain visible."
+        }
+      ],
+      "incompleteAnswers": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "rerankExecution": {
+        "baseline": {
+          "requested": 0,
+          "statuses": {
+            "SKIPPED": 50
+          },
+          "reasons": {
+            "DISABLED_OR_EMPTY": 50
+          },
+          "models": {
+            "NOT_USED": 50
+          }
+        },
+        "candidate": {
+          "requested": 50,
+          "statuses": {
+            "SUCCEEDED": 50
+          },
+          "reasons": {
+            "RERANKED": 50
+          },
+          "models": {
+            "gte-rerank-v2": 50
+          }
+        }
+      },
+      "gateStatus": "PASS"
+    }
+  ],
+  "pairedRetrievalPools": [
+    {
+      "repeat": 1,
+      "pairedCases": 50,
+      "identicalOrderedRrfInputPools": 50
+    },
+    {
+      "repeat": 2,
+      "pairedCases": 50,
+      "identicalOrderedRrfInputPools": 50
+    }
+  ],
+  "officialScorerSha256": "d35fc91a6db21d791dbdda11daf3856e9359f5701d54e3eefba20d88fecc02c0",
+  "diagnosticBeforeFix": [
+    {
+      "directory": "rrf-01",
+      "capturedCases": 50,
+      "states": {
+        "SKIPPED": 50
+      },
+      "captureFile": "capture.json"
+    },
+    {
+      "directory": "rrf-rerank-01",
+      "capturedCases": 47,
+      "states": {
+        "DEGRADED": 47
+      },
+      "captureFile": "capture.partial.json"
+    }
+  ],
+  "backendTests": {
+    "tests": 257,
+    "passed": 247,
+    "skipped": 10,
+    "failures": 0,
+    "errors": 0
+  },
+  "pythonTests": {
+    "tests": 30,
+    "passed": 30
+  },
+  "testLogSha256": {
+    "target/eval-rerank-window-before.log": "f814fcadcfa201cb7bac541042050e5d406b2738988cd871d4d9ccd8b230c85b",
+    "target/eval-rerank-window-after.log": "39d8379348d8979039373859622f7ad14e5b5735ed70bc8b368d199a1ee3e3b0",
+    "target/eval-rerank-all-tests.log": "202d3f498276cd620fb3093131e5e7bc72b390baba46a7b835c5dd50e015ee69",
+    "target/eval-rerank-python-tests.log": "9297d1bee9400fe0d28fe9e5aa3b885f6e4f6c2ed4347211c51aee12d9a9e3d9"
+  },
+  "offlineReplayDirectory": "target/hotpotqa50-rerank-20261027-002-offline-replay",
+  "scriptSha256": {
+    "scripts/rag-eval-experiment.py": "079ae2cb7f5c103e0b2d02a9bfa54ec44563e030bff6245271f54a42ed0cdbd8",
+    "scripts/rag-eval.sh": "7c75d67e45bc9c4ecd684ed4fe79c87b5d0fe7dd24bbe14a577dbc91e07bf2fe"
+  },
+  "limitations": [
+    "Repeated diagnostic on the original 50 English HotpotQA questions; not a new independent holdout",
+    "shared-candidate-subset; not official distractor/fullwiki protocol",
+    "Uses gte-rerank-v2; old gte-rerank returned HTTP 403 and is documented as discontinued",
+    "Retrieval/rerank production implementation; fixed QA with rewrite disabled; not an Agent/memory end-to-end acceptance",
+    "No production configuration defaults changed; no independent claim-support judge in these runs; no embedding/rerank bill or monetary estimate"
+  ]
+}

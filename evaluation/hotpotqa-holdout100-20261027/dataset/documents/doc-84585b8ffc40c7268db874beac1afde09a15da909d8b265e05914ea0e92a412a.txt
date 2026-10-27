@@ -1,0 +1,3 @@
+GOES 7
+
+GOES 7, known as GOES-H before becoming operational, is an American satellite. It was originally built as a weather satellite, and formed part of the US National Oceanic and Atmospheric Administration's Geostationary Operational Environmental Satellite system. Originally built as a ground spare, GOES-H was launched in 1987 due to delays with the next series of satellites. It was operated by NOAA until 1999, before being leased to Peacesat, who use it as a communications satellite. As of 2009, it was operational over the Pacific Ocean, providing communications for the Pacific Islands. On April 12, 2012, the spacecraft was finally decommissioned and moved to a graveyard orbit.

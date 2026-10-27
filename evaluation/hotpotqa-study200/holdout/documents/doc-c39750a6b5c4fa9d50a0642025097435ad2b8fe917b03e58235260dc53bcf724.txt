@@ -1,0 +1,3 @@
+Humphrey Goodman
+
+Detective Inspector Humphrey Goodman is a character in the crime drama television series "Death in Paradise", portrayed by Kris Marshall.

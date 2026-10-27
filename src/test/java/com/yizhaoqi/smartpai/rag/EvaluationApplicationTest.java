@@ -17,6 +17,7 @@ class EvaluationApplicationTest {
         @Bean Object adminUserInitializer() { sideEffects.incrementAndGet(); return new Object(); }
         @Bean Object orgTagInitializer() { sideEffects.incrementAndGet(); return new Object(); }
         @Bean Object legacyMemoryMigration() { sideEffects.incrementAndGet(); return new Object(); }
+        @Bean Object fileProcessingConsumer() { sideEffects.incrementAndGet(); return new Object(); }
         @Bean Object memoryController() { return new Object(); }
         @Bean String sharedPipelineDependency() { return "kept"; }
     }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Upload the synthetic corpus through existing chunk+merge APIs. Does not create an ES index."""
+"""Upload a versioned evaluation corpus through existing chunk+merge APIs."""
 import hashlib
 import json
 import os
@@ -30,8 +30,9 @@ def main():
     base = sys.argv[2].rstrip("/")
     public_token = os.environ.get("YERAG_EVAL_TOKEN", "")
     restricted_token = os.environ.get("YERAG_EVAL_SETUP_TOKEN", "")
-    if not public_token or not restricted_token:
-        raise SystemExit("Set both YERAG_EVAL_TOKEN and YERAG_EVAL_SETUP_TOKEN; no files uploaded")
+    needs_restricted = any(doc.get("visibility") == "restricted" for doc in manifest["documents"])
+    if not public_token or (needs_restricted and not restricted_token):
+        raise SystemExit("Set YERAG_EVAL_TOKEN (and YERAG_EVAL_SETUP_TOKEN for restricted documents); no files uploaded")
     documents = []
     for doc in manifest["documents"]:
         path = (root / doc["path"]).resolve()

@@ -1,0 +1,3 @@
+Herbert Akroyd Stuart
+
+Herbert Akroyd-Stuart (28 January 1864, Halifax, Yorkshire, England – 19 February 1927, Halifax) was an English inventor who is noted for his invention of the hot bulb engine, or heavy oil engine.

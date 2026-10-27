@@ -1,0 +1,109 @@
+{
+  "status": "VERIFIED",
+  "date": "2026-10-27",
+  "archiveDirectory": "/home/zyh/yerag-eval-archive/2026-10-27-closeout-v4-complete",
+  "archiveManifestSha256": "62927f9bd651706a3f80f055fdaea6c3e1672dad6afbb3933057e1df26c1a7bf",
+  "archivedFiles": 23228,
+  "rawRuns": 18,
+  "restoredReportSets": 19,
+  "restoredCoreFiles": 76,
+  "recoveryDirectory": "/home/zyh/yerag-eval-archive/restore-check-2026-10-27-closeout-v4-complete",
+  "recoverySha256": "89ede2ff54146d4131e6c119877f9be9ed65b37e8762451d523fdbd9666b29a0",
+  "servicesContacted": false,
+  "mavenRequired": false,
+  "recovery": {
+    "status": "VERIFIED",
+    "archiveManifestSha256": "62927f9bd651706a3f80f055fdaea6c3e1672dad6afbb3933057e1df26c1a7bf",
+    "runs": [
+      {
+        "run": "runs/hotpotqa-holdout100-20261027-001/rrf-01",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa-holdout100-20261027-001/rrf-02",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa-holdout100-20261027-001/rrf-rerank-01",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa-holdout100-20261027-001/rrf-rerank-02",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa-study200-experiment-20261027-001/development",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa-study200-experiment-20261027-001/holdout/baseline",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa-study200-experiment-20261027-001/holdout/candidate",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa50-matrix-20261027-002/bm25-01",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa50-matrix-20261027-002/bm25-02",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa50-matrix-20261027-002/hybrid-01",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa50-matrix-20261027-002/hybrid-02",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa50-matrix-20261027-002/vector-01",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa50-matrix-20261027-002/vector-02",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa50-rerank-20261027-002/rrf-01",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa50-rerank-20261027-002/rrf-02",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa50-rerank-20261027-002/rrf-rerank-01",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa50-rerank-20261027-002/rrf-rerank-02",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/phase1-enterprise-live-20261027-001",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/phase1-enterprise-live-20261027-001:reviewed",
+        "fourReportFilesByteIdentical": true,
+        "humanReviewInputSha256": "7b6da74ce84593736b8355f60a110d78e5d59d32ea4306e0985744ff2bd2298b"
+      }
+    ],
+    "servicesContacted": false,
+    "mavenRequired": false,
+    "notice": "Java is required; dependencies/classes come from this archive."
+  },
+  "reportAnalysisJavaPomSha256": "714edce6b8f2584f85c9ae0e394fcff38fa6557ced2b54250999ac399f35fb9f",
+  "public100OriginalExecutionArchive": "/home/zyh/yerag-eval-archive/2026-10-27-closeout-v3-public100",
+  "public100ExecutionJavaPomSha256": "d92ca6760836064530cded5df872d268f5373fb2264407dbd5a856879a6bfff5",
+  "privateConfigurationIncluded": false,
+  "limitations": [
+    "Persistent local copy outside build output; no offsite disaster-recovery claim",
+    "Raw execution source versions remain bound to original captures; current classes only replay reports",
+    "Working primary document may gain closure references after the sealed source snapshot"
+  ]
+}

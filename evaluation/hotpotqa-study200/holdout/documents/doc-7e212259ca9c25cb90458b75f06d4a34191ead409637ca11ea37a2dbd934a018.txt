@@ -1,0 +1,3 @@
+Separation (statistics)
+
+In statistics, separation is a phenomenon associated with models for dichotomous or categorical outcomes, including logistic and probit regression. Separation occurs if the predictor (or a linear combination of some subset of the predictors) is associated with only one outcome value when the predictor is greater than some constant.

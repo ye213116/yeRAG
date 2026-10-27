@@ -1,0 +1,87 @@
+{
+  "status": "VERIFIED",
+  "archiveDirectory": "/home/zyh/yerag-eval-archive/2026-10-27-closeout-v3-public100",
+  "archiveManifestSha256": "88c2b2ead4fc955f3358ce5238238218f95c47c703d4681496c01faf40de43bc",
+  "archivedFiles": 22942,
+  "restoredRuns": 17,
+  "restoredCoreFiles": 68,
+  "servicesContacted": false,
+  "mavenRequired": false,
+  "recovery": {
+    "status": "VERIFIED",
+    "archiveManifestSha256": "88c2b2ead4fc955f3358ce5238238218f95c47c703d4681496c01faf40de43bc",
+    "runs": [
+      {
+        "run": "runs/hotpotqa-holdout100-20261027-001/rrf-01",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa-holdout100-20261027-001/rrf-02",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa-holdout100-20261027-001/rrf-rerank-01",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa-holdout100-20261027-001/rrf-rerank-02",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa-study200-experiment-20261027-001/development",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa-study200-experiment-20261027-001/holdout/baseline",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa-study200-experiment-20261027-001/holdout/candidate",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa50-matrix-20261027-002/bm25-01",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa50-matrix-20261027-002/bm25-02",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa50-matrix-20261027-002/hybrid-01",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa50-matrix-20261027-002/hybrid-02",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa50-matrix-20261027-002/vector-01",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa50-matrix-20261027-002/vector-02",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa50-rerank-20261027-002/rrf-01",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa50-rerank-20261027-002/rrf-02",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa50-rerank-20261027-002/rrf-rerank-01",
+        "fourReportFilesByteIdentical": true
+      },
+      {
+        "run": "runs/hotpotqa50-rerank-20261027-002/rrf-rerank-02",
+        "fourReportFilesByteIdentical": true
+      }
+    ],
+    "servicesContacted": false,
+    "mavenRequired": false,
+    "notice": "Java is required; dependencies/classes come from this archive."
+  }
+}

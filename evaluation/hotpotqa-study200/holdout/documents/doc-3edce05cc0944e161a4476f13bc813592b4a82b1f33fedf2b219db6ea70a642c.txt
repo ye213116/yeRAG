@@ -1,0 +1,3 @@
+Semantic Scholar
+
+Semantic Scholar is a project developed at the Allen Institute for Artificial Intelligence, released in November 2015. It is designed to be a "smart" search service for journal articles. The project uses a combination of machine learning, natural language processing, machine vision to add a layer of semantic analysis to the traditional methods of citation analysis. In comparison to Google Scholar and PubMed, it is designed to quickly highlight the most important papers and identify the connections between them.

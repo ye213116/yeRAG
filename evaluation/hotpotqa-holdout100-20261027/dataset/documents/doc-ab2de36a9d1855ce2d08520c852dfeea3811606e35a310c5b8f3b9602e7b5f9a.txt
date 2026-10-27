@@ -1,0 +1,3 @@
+Kolmogorov's criterion
+
+In probability theory, Kolmogorov's criterion, named after Andrey Kolmogorov, is a theorem giving a necessary and sufficient condition for a Markov chain or continuous-time Markov chain to be stochastically identical to its time-reversed version.

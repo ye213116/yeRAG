@@ -45,8 +45,11 @@ const bgColor = computed(() => {
 </script>
 
 <template>
-  <div class="relative size-full flex-center" :style="{ backgroundColor: bgColor }">
-    <NCard :bordered="false" class="relative z-4 w-auto card-wrapper">
+  <div class="relative size-full flex-center overflow-hidden" :style="{ backgroundColor: bgColor }">
+    <div class="login-orb login-orb-a" />
+    <div class="login-orb login-orb-b" />
+    <div class="login-orb login-orb-c" />
+    <NCard :bordered="false" class="login-card relative z-4 w-auto card-wrapper">
       <div class="w-400px lt-sm:w-300px">
         <header class="flex-y-center justify-between">
           <SystemLogo class="text-64px text-primary lt-sm:text-48px" />
@@ -80,4 +83,48 @@ const bgColor = computed(() => {
   </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+.login-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  pointer-events: none;
+}
+
+.login-orb-a {
+  top: -160px;
+  left: -120px;
+  width: 480px;
+  height: 480px;
+  background: radial-gradient(circle, rgb(var(--primary-color) / 0.35), transparent 65%);
+}
+
+.login-orb-b {
+  right: -100px;
+  bottom: -140px;
+  width: 420px;
+  height: 420px;
+  background: radial-gradient(circle, rgb(8 145 178 / 0.3), transparent 65%);
+}
+
+.login-orb-c {
+  top: 35%;
+  right: 18%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgb(163 230 53 / 0.22), transparent 65%);
+}
+
+.login-card {
+  border-radius: 20px;
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.1);
+}
+
+html.dark .login-card {
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.45);
+}
+
+html.dark .login-orb {
+  opacity: 0.55;
+}
+</style>

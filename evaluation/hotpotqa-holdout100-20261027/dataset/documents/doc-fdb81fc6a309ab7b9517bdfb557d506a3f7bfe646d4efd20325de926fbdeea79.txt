@@ -1,0 +1,3 @@
+EXOSAT
+
+The European X-ray Observatory Satellite (EXOSAT), originally named HELOS, was an X-ray telescope operational from May 1983 until April 1986 and in that time made 1780 observations in the X-ray band of most classes of astronomical object including active galactic nuclei, stellar coronae, cataclysmic variables, white dwarfs, X-ray binaries, clusters of galaxies, and supernova remnants.

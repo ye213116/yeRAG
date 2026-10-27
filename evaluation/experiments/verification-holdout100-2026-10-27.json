@@ -1,0 +1,1680 @@
+{
+  "status": "VERIFIED",
+  "date": "2026-10-27",
+  "branch": "agent",
+  "baseHead": "fd8d6a3134f48f7a34422a5b3dc4e1547ae74334",
+  "worktreeState": "UNCOMMITTED",
+  "codeVersion": "fd8d6a3134f48f7a34422a5b3dc4e1547ae74334+d92ca6760836064530cded5df872d268f5373fb2264407dbd5a856879a6bfff5",
+  "study": "evaluation/hotpotqa-holdout100-20261027",
+  "protocolSha256": "3ee097993ddd58e99a398a21217088187823bf5ad2075f93b3349e6cb9fa94ee",
+  "openedSha256": "1d8fb7194ee965043a5f327b939e3c7757ac3b10f3214f748502b2fe25682670",
+  "independentQuestions": 100,
+  "observations": 400,
+  "excludedSourceIds": 250,
+  "sourceIdOverlap": 0,
+  "normalizedQuestionOverlap": 0,
+  "candidateDocuments": 958,
+  "runs": [
+    {
+      "variant": "rrf-01",
+      "directory": "target/hotpotqa-holdout100-20261027-001/rrf-01",
+      "captureSha256": "0ecff38b4b4904bf4fb183ace6500ee29498fd94f86c8b58af5a8a40aa117e90",
+      "provenanceSha256": "20ca0c6b9f731aabdcea6d8d20adf92e951c3c16ccca080927d10237c6f026bd",
+      "publicBenchmark": {
+        "configuration": {
+          "dataset": "hotpotqa",
+          "language": "en",
+          "split": "validation",
+          "setting": "shared-candidate-subset",
+          "answerStyle": "short",
+          "scorer": "hotpotqa-answer-v1"
+        },
+        "labelSource": "PUBLIC_SOURCE_MAPPED_NOT_HUMAN_REVIEWED",
+        "count": 100,
+        "completed": 100,
+        "answerMetricCount": 100,
+        "incomplete": 0,
+        "em": 0.63,
+        "f1": 0.7628921568627451,
+        "observedSupportingEvidence": {
+          "count": 100,
+          "hitAt5": 0.98,
+          "coverageAt5": 0.8441666666666667,
+          "completeHitAt5": 0.67
+        },
+        "judgeFailures": 0,
+        "judgeUnavailable": 0
+      },
+      "measurements": {
+        "percentileMethod": "NEAREST_RANK",
+        "pipelineLatencyMs": {
+          "count": 100,
+          "unavailable": 0,
+          "mean": 967.53,
+          "p50": 942.0,
+          "p95": 1297.0
+        },
+        "firstAnswerLatencyMs": {
+          "count": 100,
+          "unavailable": 0,
+          "mean": 870.31,
+          "p50": 858.0,
+          "p95": 1148.0
+        },
+        "contextEstimatedTokens": {
+          "count": 100,
+          "unavailable": 0,
+          "mean": 1937.06,
+          "p50": 1962.0,
+          "p95": 2573.0
+        },
+        "tokenScope": "GENERATION_AND_EVALUATION_JUDGES_ONLY; embedding/rerank billing excluded; no monetary cost inferred",
+        "generationUsage": {
+          "reportedCalls": 100,
+          "missingOrNotCalled": 0,
+          "promptTokens": 68127,
+          "completionTokens": 305,
+          "totalTokens": 68432
+        },
+        "judgeUsage": {
+          "reportedCalls": 100,
+          "missingOrNotCalled": 0,
+          "promptTokens": 87298,
+          "completionTokens": 9429,
+          "totalTokens": 96727
+        },
+        "supportUsage": {
+          "reportedCalls": 0,
+          "missingOrNotCalled": 100
+        }
+      },
+      "rerankExecution": {
+        "requested": 0,
+        "statuses": {
+          "SKIPPED": 100
+        },
+        "reasons": {
+          "DISABLED_OR_EMPTY": 100
+        },
+        "models": {
+          "NOT_USED": 100
+        }
+      },
+      "officialAnswerScoreAgreementCount": 100,
+      "offlineFourFilesByteIdentical": true
+    },
+    {
+      "variant": "rrf-rerank-01",
+      "directory": "target/hotpotqa-holdout100-20261027-001/rrf-rerank-01",
+      "captureSha256": "013941d9ae259d32dd5ee17e2288938c225ae86ed52b31c8e90950ff52d8026a",
+      "provenanceSha256": "f23158e943cc7589b990d1584b75a0a89861bbc3f4b67a6df2653da7ae477cd9",
+      "publicBenchmark": {
+        "configuration": {
+          "dataset": "hotpotqa",
+          "language": "en",
+          "split": "validation",
+          "setting": "shared-candidate-subset",
+          "answerStyle": "short",
+          "scorer": "hotpotqa-answer-v1"
+        },
+        "labelSource": "PUBLIC_SOURCE_MAPPED_NOT_HUMAN_REVIEWED",
+        "count": 100,
+        "completed": 100,
+        "answerMetricCount": 100,
+        "incomplete": 0,
+        "em": 0.7,
+        "f1": 0.8280588235294118,
+        "observedSupportingEvidence": {
+          "count": 100,
+          "hitAt5": 1.0,
+          "coverageAt5": 0.9525,
+          "completeHitAt5": 0.89
+        },
+        "judgeFailures": 0,
+        "judgeUnavailable": 0
+      },
+      "measurements": {
+        "percentileMethod": "NEAREST_RANK",
+        "pipelineLatencyMs": {
+          "count": 100,
+          "unavailable": 0,
+          "mean": 1113.77,
+          "p50": 1097.0,
+          "p95": 1465.0
+        },
+        "firstAnswerLatencyMs": {
+          "count": 100,
+          "unavailable": 0,
+          "mean": 1024.19,
+          "p50": 1018.0,
+          "p95": 1398.0
+        },
+        "contextEstimatedTokens": {
+          "count": 100,
+          "unavailable": 0,
+          "mean": 2034.4,
+          "p50": 2012.0,
+          "p95": 2635.0
+        },
+        "tokenScope": "GENERATION_AND_EVALUATION_JUDGES_ONLY; embedding/rerank billing excluded; no monetary cost inferred",
+        "generationUsage": {
+          "reportedCalls": 100,
+          "missingOrNotCalled": 0,
+          "promptTokens": 70504,
+          "completionTokens": 303,
+          "totalTokens": 70807
+        },
+        "judgeUsage": {
+          "reportedCalls": 100,
+          "missingOrNotCalled": 0,
+          "promptTokens": 89759,
+          "completionTokens": 9137,
+          "totalTokens": 98896
+        },
+        "supportUsage": {
+          "reportedCalls": 0,
+          "missingOrNotCalled": 100
+        }
+      },
+      "rerankExecution": {
+        "requested": 100,
+        "statuses": {
+          "SUCCEEDED": 100
+        },
+        "reasons": {
+          "RERANKED": 100
+        },
+        "models": {
+          "gte-rerank-v2": 100
+        }
+      },
+      "officialAnswerScoreAgreementCount": 100,
+      "offlineFourFilesByteIdentical": true
+    },
+    {
+      "variant": "rrf-rerank-02",
+      "directory": "target/hotpotqa-holdout100-20261027-001/rrf-rerank-02",
+      "captureSha256": "be314cd390095d2e5bed9bdbe8a43c3040f3dc934aa0c02620b6d167c2e1c90d",
+      "provenanceSha256": "90a1fe42a6cd596f7d2e086be402ecdf4360b23ab67647b43b3a009d17e8c917",
+      "publicBenchmark": {
+        "configuration": {
+          "dataset": "hotpotqa",
+          "language": "en",
+          "split": "validation",
+          "setting": "shared-candidate-subset",
+          "answerStyle": "short",
+          "scorer": "hotpotqa-answer-v1"
+        },
+        "labelSource": "PUBLIC_SOURCE_MAPPED_NOT_HUMAN_REVIEWED",
+        "count": 100,
+        "completed": 100,
+        "answerMetricCount": 100,
+        "incomplete": 0,
+        "em": 0.71,
+        "f1": 0.8380588235294119,
+        "observedSupportingEvidence": {
+          "count": 100,
+          "hitAt5": 1.0,
+          "coverageAt5": 0.9525,
+          "completeHitAt5": 0.89
+        },
+        "judgeFailures": 0,
+        "judgeUnavailable": 0
+      },
+      "measurements": {
+        "percentileMethod": "NEAREST_RANK",
+        "pipelineLatencyMs": {
+          "count": 100,
+          "unavailable": 0,
+          "mean": 1156.95,
+          "p50": 1150.0,
+          "p95": 1456.0
+        },
+        "firstAnswerLatencyMs": {
+          "count": 100,
+          "unavailable": 0,
+          "mean": 1053.81,
+          "p50": 1047.0,
+          "p95": 1389.0
+        },
+        "contextEstimatedTokens": {
+          "count": 100,
+          "unavailable": 0,
+          "mean": 2037.1,
+          "p50": 2013.0,
+          "p95": 2635.0
+        },
+        "tokenScope": "GENERATION_AND_EVALUATION_JUDGES_ONLY; embedding/rerank billing excluded; no monetary cost inferred",
+        "generationUsage": {
+          "reportedCalls": 100,
+          "missingOrNotCalled": 0,
+          "promptTokens": 70547,
+          "completionTokens": 313,
+          "totalTokens": 70860
+        },
+        "judgeUsage": {
+          "reportedCalls": 100,
+          "missingOrNotCalled": 0,
+          "promptTokens": 89811,
+          "completionTokens": 9115,
+          "totalTokens": 98926
+        },
+        "supportUsage": {
+          "reportedCalls": 0,
+          "missingOrNotCalled": 100
+        }
+      },
+      "rerankExecution": {
+        "requested": 100,
+        "statuses": {
+          "SUCCEEDED": 100
+        },
+        "reasons": {
+          "RERANKED": 100
+        },
+        "models": {
+          "gte-rerank-v2": 100
+        }
+      },
+      "officialAnswerScoreAgreementCount": 100,
+      "offlineFourFilesByteIdentical": true
+    },
+    {
+      "variant": "rrf-02",
+      "directory": "target/hotpotqa-holdout100-20261027-001/rrf-02",
+      "captureSha256": "15f155e080e805d033c10d965ed29f22ebc43178872a9fe3f7b8ccc67a3047c6",
+      "provenanceSha256": "eafa7cd2146f8dca10d39286df5ac7b18db64e3dbd346e7bce7f336cdc6a40bc",
+      "publicBenchmark": {
+        "configuration": {
+          "dataset": "hotpotqa",
+          "language": "en",
+          "split": "validation",
+          "setting": "shared-candidate-subset",
+          "answerStyle": "short",
+          "scorer": "hotpotqa-answer-v1"
+        },
+        "labelSource": "PUBLIC_SOURCE_MAPPED_NOT_HUMAN_REVIEWED",
+        "count": 100,
+        "completed": 100,
+        "answerMetricCount": 100,
+        "incomplete": 0,
+        "em": 0.62,
+        "f1": 0.7493921568627451,
+        "observedSupportingEvidence": {
+          "count": 100,
+          "hitAt5": 0.98,
+          "coverageAt5": 0.8441666666666667,
+          "completeHitAt5": 0.67
+        },
+        "judgeFailures": 0,
+        "judgeUnavailable": 0
+      },
+      "measurements": {
+        "percentileMethod": "NEAREST_RANK",
+        "pipelineLatencyMs": {
+          "count": 100,
+          "unavailable": 0,
+          "mean": 991.38,
+          "p50": 947.0,
+          "p95": 1457.0
+        },
+        "firstAnswerLatencyMs": {
+          "count": 100,
+          "unavailable": 0,
+          "mean": 898.6,
+          "p50": 848.0,
+          "p95": 1382.0
+        },
+        "contextEstimatedTokens": {
+          "count": 100,
+          "unavailable": 0,
+          "mean": 1937.06,
+          "p50": 1962.0,
+          "p95": 2573.0
+        },
+        "tokenScope": "GENERATION_AND_EVALUATION_JUDGES_ONLY; embedding/rerank billing excluded; no monetary cost inferred",
+        "generationUsage": {
+          "reportedCalls": 100,
+          "missingOrNotCalled": 0,
+          "promptTokens": 68127,
+          "completionTokens": 311,
+          "totalTokens": 68438
+        },
+        "judgeUsage": {
+          "reportedCalls": 100,
+          "missingOrNotCalled": 0,
+          "promptTokens": 87304,
+          "completionTokens": 9416,
+          "totalTokens": 96720
+        },
+        "supportUsage": {
+          "reportedCalls": 0,
+          "missingOrNotCalled": 100
+        }
+      },
+      "rerankExecution": {
+        "requested": 0,
+        "statuses": {
+          "SKIPPED": 100
+        },
+        "reasons": {
+          "DISABLED_OR_EMPTY": 100
+        },
+        "models": {
+          "NOT_USED": 100
+        }
+      },
+      "officialAnswerScoreAgreementCount": 100,
+      "offlineFourFilesByteIdentical": true
+    }
+  ],
+  "comparisons": [
+    {
+      "baseline": "/home/zyh/projects/yeRAG-agent/target/hotpotqa-holdout100-20261027-001/rrf-01",
+      "candidate": "/home/zyh/projects/yeRAG-agent/target/hotpotqa-holdout100-20261027-001/rrf-rerank-01",
+      "allowCodeChange": false,
+      "datasetHash": "5b971b9f8b0dde6c86272584f4b4fcebe3f4d2792355db62b0a6a03aecdde32d",
+      "comparability": "MATCHED",
+      "allowedConfigChanges": [
+        "options.rerank"
+      ],
+      "configurationChanges": [
+        {
+          "field": "options.rerank",
+          "baseline": false,
+          "candidate": true
+        }
+      ],
+      "notice": "Paired exploratory comparison on this frozen sample; a single run does not establish stable model gains or production acceptance.",
+      "metrics": {
+        "hitAt5": {
+          "pairedCount": 100,
+          "totalCases": 100,
+          "unpaired": 0,
+          "wins": 2,
+          "losses": 0,
+          "ties": 98,
+          "changes": [
+            {
+              "caseId": "hotpotqa-5a8ac38855429970aeb70300",
+              "baseline": 0,
+              "candidate": 1,
+              "delta": 1
+            },
+            {
+              "caseId": "hotpotqa-5add84a15542997545bbbd5e",
+              "baseline": 0,
+              "candidate": 1,
+              "delta": 1
+            }
+          ],
+          "baseline": 0.98,
+          "candidate": 1.0,
+          "delta": 0.020000000000000018
+        },
+        "coverageAt5": {
+          "pairedCount": 100,
+          "totalCases": 100,
+          "unpaired": 0,
+          "wins": 24,
+          "losses": 1,
+          "ties": 75,
+          "changes": [
+            {
+              "caseId": "hotpotqa-5a728f3c5542992359bc30f4",
+              "baseline": 0.6666666666666666,
+              "candidate": 1.0,
+              "delta": 0.33333333333333337
+            },
+            {
+              "caseId": "hotpotqa-5a747a3755429974ef308c09",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a7b4fee554299042af8f748",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a7ccc1e55429909bec7680e",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a7cd0fd55429909bec76823",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a820f2c55429926c1cdae17",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a8712095542991e771816af",
+              "baseline": 0.6666666666666666,
+              "candidate": 1.0,
+              "delta": 0.33333333333333337
+            },
+            {
+              "caseId": "hotpotqa-5a88bb4a554299206df2b353",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a89a13c55429946c8d6e97a",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a89ddf25542992e4fca83ff",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a8ac38855429970aeb70300",
+              "baseline": 0.0,
+              "candidate": 0.5,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5ab2eff05542991669774140",
+              "baseline": 0.6666666666666666,
+              "candidate": 1.0,
+              "delta": 0.33333333333333337
+            },
+            {
+              "caseId": "hotpotqa-5abd0b685542996583600501",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5ac06191554299294b218fab",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5ac3b8b8554299741d48a301",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5ac4a94a5542996feb3fe92b",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5add74b95542992ae4cec56f",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5add84a15542997545bbbd5e",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ade66f055429939a52fe8a0",
+              "baseline": 0.6666666666666666,
+              "candidate": 1.0,
+              "delta": 0.33333333333333337
+            },
+            {
+              "caseId": "hotpotqa-5ae01b8855429925eb1afc14",
+              "baseline": 0.6666666666666666,
+              "candidate": 0.3333333333333333,
+              "delta": -0.3333333333333333
+            },
+            {
+              "caseId": "hotpotqa-5ae034bd55429925eb1afc2a",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5ae0b8bb55429924de1b7145",
+              "baseline": 0.3333333333333333,
+              "candidate": 0.6666666666666666,
+              "delta": 0.3333333333333333
+            },
+            {
+              "caseId": "hotpotqa-5ae12b6755429920d52342e4",
+              "baseline": 0.6666666666666666,
+              "candidate": 1.0,
+              "delta": 0.33333333333333337
+            },
+            {
+              "caseId": "hotpotqa-5ae2b83c5542992decbdcd7f",
+              "baseline": 0.6666666666666666,
+              "candidate": 1.0,
+              "delta": 0.33333333333333337
+            },
+            {
+              "caseId": "hotpotqa-5ae527085542993aec5ec165",
+              "baseline": 0.6666666666666666,
+              "candidate": 1.0,
+              "delta": 0.33333333333333337
+            }
+          ],
+          "baseline": 0.8441666666666668,
+          "candidate": 0.9525,
+          "delta": 0.10833333333333317
+        },
+        "completeHitAt5": {
+          "pairedCount": 100,
+          "totalCases": 100,
+          "unpaired": 0,
+          "wins": 22,
+          "losses": 0,
+          "ties": 78,
+          "changes": [
+            {
+              "caseId": "hotpotqa-5a728f3c5542992359bc30f4",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a747a3755429974ef308c09",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a7b4fee554299042af8f748",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a7ccc1e55429909bec7680e",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a7cd0fd55429909bec76823",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a820f2c55429926c1cdae17",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a8712095542991e771816af",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a88bb4a554299206df2b353",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a89a13c55429946c8d6e97a",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a89ddf25542992e4fca83ff",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ab2eff05542991669774140",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5abd0b685542996583600501",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ac06191554299294b218fab",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ac3b8b8554299741d48a301",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ac4a94a5542996feb3fe92b",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5add74b95542992ae4cec56f",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5add84a15542997545bbbd5e",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ade66f055429939a52fe8a0",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ae034bd55429925eb1afc2a",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ae12b6755429920d52342e4",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ae2b83c5542992decbdcd7f",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ae527085542993aec5ec165",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            }
+          ],
+          "baseline": 0.67,
+          "candidate": 0.89,
+          "delta": 0.21999999999999997
+        },
+        "em": {
+          "pairedCount": 100,
+          "totalCases": 100,
+          "unpaired": 0,
+          "wins": 9,
+          "losses": 2,
+          "ties": 89,
+          "changes": [
+            {
+              "caseId": "hotpotqa-5a747a3755429974ef308c09",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a7ccc1e55429909bec7680e",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a7cd0fd55429909bec76823",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a8712095542991e771816af",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a8bc1b85542997f31a41db8",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ab985eb554299131ca42360",
+              "baseline": 1.0,
+              "candidate": 0.0,
+              "delta": -1.0
+            },
+            {
+              "caseId": "hotpotqa-5ac06191554299294b218fab",
+              "baseline": 1.0,
+              "candidate": 0.0,
+              "delta": -1.0
+            },
+            {
+              "caseId": "hotpotqa-5ac3b8b8554299741d48a301",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ac4a94a5542996feb3fe92b",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5add74b95542992ae4cec56f",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ade66f055429939a52fe8a0",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            }
+          ],
+          "baseline": 0.63,
+          "candidate": 0.7,
+          "delta": 0.06999999999999995
+        },
+        "f1": {
+          "pairedCount": 100,
+          "totalCases": 100,
+          "unpaired": 0,
+          "wins": 12,
+          "losses": 3,
+          "ties": 85,
+          "changes": [
+            {
+              "caseId": "hotpotqa-5a747a3755429974ef308c09",
+              "baseline": 0.6666666666666666,
+              "candidate": 1.0,
+              "delta": 0.33333333333333337
+            },
+            {
+              "caseId": "hotpotqa-5a7ccc1e55429909bec7680e",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a7cd0fd55429909bec76823",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a8712095542991e771816af",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a89a13c55429946c8d6e97a",
+              "baseline": 0.4,
+              "candidate": 0.8,
+              "delta": 0.4
+            },
+            {
+              "caseId": "hotpotqa-5a8bc1b85542997f31a41db8",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ab985eb554299131ca42360",
+              "baseline": 1.0,
+              "candidate": 0.0,
+              "delta": -1.0
+            },
+            {
+              "caseId": "hotpotqa-5ac06191554299294b218fab",
+              "baseline": 1.0,
+              "candidate": 0.6666666666666666,
+              "delta": -0.33333333333333337
+            },
+            {
+              "caseId": "hotpotqa-5ac3b8b8554299741d48a301",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ac4a94a5542996feb3fe92b",
+              "baseline": 0.75,
+              "candidate": 1.0,
+              "delta": 0.25
+            },
+            {
+              "caseId": "hotpotqa-5add74b95542992ae4cec56f",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5add84a15542997545bbbd5e",
+              "baseline": 0.4,
+              "candidate": 0.6666666666666666,
+              "delta": 0.2666666666666666
+            },
+            {
+              "caseId": "hotpotqa-5ade66f055429939a52fe8a0",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ae527085542993aec5ec165",
+              "baseline": 0.0,
+              "candidate": 0.4,
+              "delta": 0.4
+            },
+            {
+              "caseId": "hotpotqa-5ae6b6065542991bbc976168",
+              "baseline": 0.8,
+              "candidate": 0.0,
+              "delta": -0.8
+            }
+          ],
+          "baseline": 0.762892156862745,
+          "candidate": 0.8280588235294118,
+          "delta": 0.06516666666666682
+        },
+        "judgeClaimSupportRate": {
+          "pairedCount": 0,
+          "totalCases": 100,
+          "unpaired": 100,
+          "wins": 0,
+          "losses": 0,
+          "ties": 0,
+          "changes": []
+        }
+      },
+      "measurements": {
+        "pipelineLatencyMs": {
+          "baseline": {
+            "count": 100,
+            "unavailable": 0,
+            "mean": 967.53,
+            "p50": 942.0,
+            "p95": 1297.0
+          },
+          "candidate": {
+            "count": 100,
+            "unavailable": 0,
+            "mean": 1113.77,
+            "p50": 1097.0,
+            "p95": 1465.0
+          }
+        },
+        "generationUsage": {
+          "baseline": {
+            "reportedCalls": 100,
+            "missingOrNotCalled": 0,
+            "promptTokens": 68127,
+            "completionTokens": 305,
+            "totalTokens": 68432
+          },
+          "candidate": {
+            "reportedCalls": 100,
+            "missingOrNotCalled": 0,
+            "promptTokens": 70504,
+            "completionTokens": 303,
+            "totalTokens": 70807
+          }
+        }
+      },
+      "gates": [
+        {
+          "metric": "completeHitAt5",
+          "maxDrop": 0,
+          "status": "PASS"
+        },
+        {
+          "metric": "em",
+          "maxDrop": 0,
+          "status": "PASS"
+        },
+        {
+          "metric": "candidate.rerankExecution",
+          "status": "PASS",
+          "notice": "Every case must actually rerank to establish a pure RRF + rerank comparison; fallback counts remain visible."
+        }
+      ],
+      "incompleteAnswers": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "rerankExecution": {
+        "baseline": {
+          "requested": 0,
+          "statuses": {
+            "SKIPPED": 100
+          },
+          "reasons": {
+            "DISABLED_OR_EMPTY": 100
+          },
+          "models": {
+            "NOT_USED": 100
+          }
+        },
+        "candidate": {
+          "requested": 100,
+          "statuses": {
+            "SUCCEEDED": 100
+          },
+          "reasons": {
+            "RERANKED": 100
+          },
+          "models": {
+            "gte-rerank-v2": 100
+          }
+        }
+      },
+      "gateStatus": "PASS"
+    },
+    {
+      "baseline": "/home/zyh/projects/yeRAG-agent/target/hotpotqa-holdout100-20261027-001/rrf-02",
+      "candidate": "/home/zyh/projects/yeRAG-agent/target/hotpotqa-holdout100-20261027-001/rrf-rerank-02",
+      "allowCodeChange": false,
+      "datasetHash": "5b971b9f8b0dde6c86272584f4b4fcebe3f4d2792355db62b0a6a03aecdde32d",
+      "comparability": "MATCHED",
+      "allowedConfigChanges": [
+        "options.rerank"
+      ],
+      "configurationChanges": [
+        {
+          "field": "options.rerank",
+          "baseline": false,
+          "candidate": true
+        }
+      ],
+      "notice": "Paired exploratory comparison on this frozen sample; a single run does not establish stable model gains or production acceptance.",
+      "metrics": {
+        "hitAt5": {
+          "pairedCount": 100,
+          "totalCases": 100,
+          "unpaired": 0,
+          "wins": 2,
+          "losses": 0,
+          "ties": 98,
+          "changes": [
+            {
+              "caseId": "hotpotqa-5a8ac38855429970aeb70300",
+              "baseline": 0,
+              "candidate": 1,
+              "delta": 1
+            },
+            {
+              "caseId": "hotpotqa-5add84a15542997545bbbd5e",
+              "baseline": 0,
+              "candidate": 1,
+              "delta": 1
+            }
+          ],
+          "baseline": 0.98,
+          "candidate": 1.0,
+          "delta": 0.020000000000000018
+        },
+        "coverageAt5": {
+          "pairedCount": 100,
+          "totalCases": 100,
+          "unpaired": 0,
+          "wins": 24,
+          "losses": 1,
+          "ties": 75,
+          "changes": [
+            {
+              "caseId": "hotpotqa-5a728f3c5542992359bc30f4",
+              "baseline": 0.6666666666666666,
+              "candidate": 1.0,
+              "delta": 0.33333333333333337
+            },
+            {
+              "caseId": "hotpotqa-5a747a3755429974ef308c09",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a7b4fee554299042af8f748",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a7ccc1e55429909bec7680e",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a7cd0fd55429909bec76823",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a820f2c55429926c1cdae17",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a8712095542991e771816af",
+              "baseline": 0.6666666666666666,
+              "candidate": 1.0,
+              "delta": 0.33333333333333337
+            },
+            {
+              "caseId": "hotpotqa-5a88bb4a554299206df2b353",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a89a13c55429946c8d6e97a",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a89ddf25542992e4fca83ff",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5a8ac38855429970aeb70300",
+              "baseline": 0.0,
+              "candidate": 0.5,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5ab2eff05542991669774140",
+              "baseline": 0.6666666666666666,
+              "candidate": 1.0,
+              "delta": 0.33333333333333337
+            },
+            {
+              "caseId": "hotpotqa-5abd0b685542996583600501",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5ac06191554299294b218fab",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5ac3b8b8554299741d48a301",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5ac4a94a5542996feb3fe92b",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5add74b95542992ae4cec56f",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5add84a15542997545bbbd5e",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ade66f055429939a52fe8a0",
+              "baseline": 0.6666666666666666,
+              "candidate": 1.0,
+              "delta": 0.33333333333333337
+            },
+            {
+              "caseId": "hotpotqa-5ae01b8855429925eb1afc14",
+              "baseline": 0.6666666666666666,
+              "candidate": 0.3333333333333333,
+              "delta": -0.3333333333333333
+            },
+            {
+              "caseId": "hotpotqa-5ae034bd55429925eb1afc2a",
+              "baseline": 0.5,
+              "candidate": 1.0,
+              "delta": 0.5
+            },
+            {
+              "caseId": "hotpotqa-5ae0b8bb55429924de1b7145",
+              "baseline": 0.3333333333333333,
+              "candidate": 0.6666666666666666,
+              "delta": 0.3333333333333333
+            },
+            {
+              "caseId": "hotpotqa-5ae12b6755429920d52342e4",
+              "baseline": 0.6666666666666666,
+              "candidate": 1.0,
+              "delta": 0.33333333333333337
+            },
+            {
+              "caseId": "hotpotqa-5ae2b83c5542992decbdcd7f",
+              "baseline": 0.6666666666666666,
+              "candidate": 1.0,
+              "delta": 0.33333333333333337
+            },
+            {
+              "caseId": "hotpotqa-5ae527085542993aec5ec165",
+              "baseline": 0.6666666666666666,
+              "candidate": 1.0,
+              "delta": 0.33333333333333337
+            }
+          ],
+          "baseline": 0.8441666666666668,
+          "candidate": 0.9525,
+          "delta": 0.10833333333333317
+        },
+        "completeHitAt5": {
+          "pairedCount": 100,
+          "totalCases": 100,
+          "unpaired": 0,
+          "wins": 22,
+          "losses": 0,
+          "ties": 78,
+          "changes": [
+            {
+              "caseId": "hotpotqa-5a728f3c5542992359bc30f4",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a747a3755429974ef308c09",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a7b4fee554299042af8f748",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a7ccc1e55429909bec7680e",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a7cd0fd55429909bec76823",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a820f2c55429926c1cdae17",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a8712095542991e771816af",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a88bb4a554299206df2b353",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a89a13c55429946c8d6e97a",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a89ddf25542992e4fca83ff",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ab2eff05542991669774140",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5abd0b685542996583600501",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ac06191554299294b218fab",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ac3b8b8554299741d48a301",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ac4a94a5542996feb3fe92b",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5add74b95542992ae4cec56f",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5add84a15542997545bbbd5e",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ade66f055429939a52fe8a0",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ae034bd55429925eb1afc2a",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ae12b6755429920d52342e4",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ae2b83c5542992decbdcd7f",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ae527085542993aec5ec165",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            }
+          ],
+          "baseline": 0.67,
+          "candidate": 0.89,
+          "delta": 0.21999999999999997
+        },
+        "em": {
+          "pairedCount": 100,
+          "totalCases": 100,
+          "unpaired": 0,
+          "wins": 10,
+          "losses": 1,
+          "ties": 89,
+          "changes": [
+            {
+              "caseId": "hotpotqa-5a747a3755429974ef308c09",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a7ccc1e55429909bec7680e",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a7cd0fd55429909bec76823",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a8712095542991e771816af",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a87d8215542994775f60800",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a8bc1b85542997f31a41db8",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ab985eb554299131ca42360",
+              "baseline": 1.0,
+              "candidate": 0.0,
+              "delta": -1.0
+            },
+            {
+              "caseId": "hotpotqa-5ac3b8b8554299741d48a301",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ac4a94a5542996feb3fe92b",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5add74b95542992ae4cec56f",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ade66f055429939a52fe8a0",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            }
+          ],
+          "baseline": 0.62,
+          "candidate": 0.71,
+          "delta": 0.08999999999999997
+        },
+        "f1": {
+          "pairedCount": 100,
+          "totalCases": 100,
+          "unpaired": 0,
+          "wins": 14,
+          "losses": 2,
+          "ties": 84,
+          "changes": [
+            {
+              "caseId": "hotpotqa-5a747a3755429974ef308c09",
+              "baseline": 0.6666666666666666,
+              "candidate": 1.0,
+              "delta": 0.33333333333333337
+            },
+            {
+              "caseId": "hotpotqa-5a7ccc1e55429909bec7680e",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a7cd0fd55429909bec76823",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a8712095542991e771816af",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a87d8215542994775f60800",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5a89a13c55429946c8d6e97a",
+              "baseline": 0.4,
+              "candidate": 0.8,
+              "delta": 0.4
+            },
+            {
+              "caseId": "hotpotqa-5a8bc1b85542997f31a41db8",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ab985eb554299131ca42360",
+              "baseline": 1.0,
+              "candidate": 0.0,
+              "delta": -1.0
+            },
+            {
+              "caseId": "hotpotqa-5ac06191554299294b218fab",
+              "baseline": 0.0,
+              "candidate": 0.6666666666666666,
+              "delta": 0.6666666666666666
+            },
+            {
+              "caseId": "hotpotqa-5ac3b8b8554299741d48a301",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ac4a94a5542996feb3fe92b",
+              "baseline": 0.8,
+              "candidate": 1.0,
+              "delta": 0.19999999999999996
+            },
+            {
+              "caseId": "hotpotqa-5add74b95542992ae4cec56f",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5add84a15542997545bbbd5e",
+              "baseline": 0.0,
+              "candidate": 0.6666666666666666,
+              "delta": 0.6666666666666666
+            },
+            {
+              "caseId": "hotpotqa-5ade66f055429939a52fe8a0",
+              "baseline": 0.0,
+              "candidate": 1.0,
+              "delta": 1.0
+            },
+            {
+              "caseId": "hotpotqa-5ae527085542993aec5ec165",
+              "baseline": 0.0,
+              "candidate": 0.4,
+              "delta": 0.4
+            },
+            {
+              "caseId": "hotpotqa-5ae6b6065542991bbc976168",
+              "baseline": 0.8,
+              "candidate": 0.0,
+              "delta": -0.8
+            }
+          ],
+          "baseline": 0.749392156862745,
+          "candidate": 0.8380588235294119,
+          "delta": 0.0886666666666669
+        },
+        "judgeClaimSupportRate": {
+          "pairedCount": 0,
+          "totalCases": 100,
+          "unpaired": 100,
+          "wins": 0,
+          "losses": 0,
+          "ties": 0,
+          "changes": []
+        }
+      },
+      "measurements": {
+        "pipelineLatencyMs": {
+          "baseline": {
+            "count": 100,
+            "unavailable": 0,
+            "mean": 991.38,
+            "p50": 947.0,
+            "p95": 1457.0
+          },
+          "candidate": {
+            "count": 100,
+            "unavailable": 0,
+            "mean": 1156.95,
+            "p50": 1150.0,
+            "p95": 1456.0
+          }
+        },
+        "generationUsage": {
+          "baseline": {
+            "reportedCalls": 100,
+            "missingOrNotCalled": 0,
+            "promptTokens": 68127,
+            "completionTokens": 311,
+            "totalTokens": 68438
+          },
+          "candidate": {
+            "reportedCalls": 100,
+            "missingOrNotCalled": 0,
+            "promptTokens": 70547,
+            "completionTokens": 313,
+            "totalTokens": 70860
+          }
+        }
+      },
+      "gates": [
+        {
+          "metric": "completeHitAt5",
+          "maxDrop": 0,
+          "status": "PASS"
+        },
+        {
+          "metric": "em",
+          "maxDrop": 0,
+          "status": "PASS"
+        },
+        {
+          "metric": "candidate.rerankExecution",
+          "status": "PASS",
+          "notice": "Every case must actually rerank to establish a pure RRF + rerank comparison; fallback counts remain visible."
+        }
+      ],
+      "incompleteAnswers": {
+        "baseline": 0,
+        "candidate": 0
+      },
+      "rerankExecution": {
+        "baseline": {
+          "requested": 0,
+          "statuses": {
+            "SKIPPED": 100
+          },
+          "reasons": {
+            "DISABLED_OR_EMPTY": 100
+          },
+          "models": {
+            "NOT_USED": 100
+          }
+        },
+        "candidate": {
+          "requested": 100,
+          "statuses": {
+            "SUCCEEDED": 100
+          },
+          "reasons": {
+            "RERANKED": 100
+          },
+          "models": {
+            "gte-rerank-v2": 100
+          }
+        }
+      },
+      "gateStatus": "PASS"
+    }
+  ],
+  "gateStatus": "PASS",
+  "pairedRrfInputAgreement": [
+    {
+      "repeat": 1,
+      "identicalOrderedInputPools": 100,
+      "total": 100
+    },
+    {
+      "repeat": 2,
+      "identicalOrderedInputPools": 100,
+      "total": 100
+    }
+  ],
+  "indexBefore": {
+    "documents": 6960,
+    "indexTotal": 5938,
+    "holdoutFiles": 958
+  },
+  "indexAfter": {
+    "documents": 6960,
+    "indexTotal": 5938,
+    "holdoutFiles": 958
+  },
+  "officialScorerSha256": "d35fc91a6db21d791dbdda11daf3856e9359f5701d54e3eefba20d88fecc02c0",
+  "pythonTests": {
+    "tests": 36,
+    "passed": 36
+  },
+  "validatorAmendment": {
+    "reason": "POST_RUN_JSON_CONTAINER_COMPATIBILITY",
+    "createdAt": "2026-10-27T07:30:50.230176+00:00",
+    "protocolSha256": "3ee097993ddd58e99a398a21217088187823bf5ad2075f93b3349e6cb9fa94ee",
+    "originalScriptSha256": "7f3905aa9e30d5cacf2543372cfdba40ecfde3d6a58ccb3e252b886699c25fc0",
+    "correctedValidatorSha256": "4354784ae62f0cb0ad8e0893b9ddcf851f87fdd28942394d486e82957cdef99d",
+    "noExperimentalConfigurationOrLabelChanges": true,
+    "modelReruns": 0,
+    "regressionBefore": "target/eval-closeout-judge-json-before.log",
+    "regressionAfter": "target/eval-closeout-python-tests.log"
+  },
+  "validatorAmendmentSha256": "9604657ec9d6fd3862fab9328f8998990c1d797d509178e892032395fef07d2b",
+  "javaSourceUnchangedFromPreviouslyTested257": true,
+  "offlineReplayDirectory": "target/hotpotqa-holdout100-20261027-001-offline-replay",
+  "limitations": [
+    "Shared-candidate subset, not official distractor/fullwiki",
+    "No claim of absence from provider pretraining",
+    "Two repetitions on the same100 questions, not200 distinct questions",
+    "Exploratory gate, not production acceptance",
+    "Embedding/rerank bill excluded; no monetary cost inference"
+  ]
+}

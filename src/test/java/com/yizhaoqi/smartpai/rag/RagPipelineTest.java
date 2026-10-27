@@ -57,7 +57,7 @@ class RagPipelineTest {
         assertTrue(first.context().observation().contains("untrusted_content"));
         assertEquals("file",first.context().references().get(1));
         JsonNode trace=store.read(first.runId(),"name:alice");
-        assertEquals(List.of("request","retrievalConfig","QUERY","RETRIEVE","RERANK","TOP_K","MERGE","ASSEMBLE"),
+        assertEquals(List.of("request","retrievalConfig","rerankConfig","QUERY","RETRIEVE","RERANK","TOP_K","MERGE","ASSEMBLE"),
             java.util.stream.StreamSupport.stream(trace.path("events").spliterator(),false).map(e -> e.get("name").asText()).toList());
         verifyNoInteractions(llm,reranker);
     }
@@ -67,12 +67,44 @@ class RagPipelineTest {
         assertEquals(Status.NO_EVIDENCE,result.status()); assertTrue(result.answer().contains("没有足够资料"));
         verifyNoInteractions(llm);
     }
+    @Test void rerankConfigurationIsRecordedWithoutEndpointOrCredentials() throws Exception {
+        retrieval.getRerank().setUrl("https://example.invalid/rerank?private=hidden");
+        retrieval.getRerank().setApiKey("private-api-key");
+        retrieval.getRerank().setModel("test-reranker");
+        recall(List.of(candidate("i:1",0,"body")));
+        var result=pipeline.run(request(Mode.RETRIEVE_ONLY),new RagObserver(){}).block();
+        JsonNode trace=store.read(result.runId(),"name:alice");
+        JsonNode recorded=java.util.stream.StreamSupport.stream(trace.path("events").spliterator(),false)
+            .filter(e -> "rerankConfig".equals(e.path("name").asText())).findFirst().orElseThrow().path("data");
+        assertEquals("test-reranker",recorded.path("model").asText());
+        assertEquals(50,recorded.path("topN").asInt());
+        assertEquals(1500,recorded.path("timeoutMs").asInt());
+        assertEquals(EvidenceRecorder.hash(retrieval.getRerank().getUrl()),recorded.path("serviceFingerprint").asText());
+        assertFalse(trace.toString().contains("private-api-key"));
+        assertFalse(trace.toString().contains("private=hidden"));
+    }
     @Test void rerankFailureDegradesButSuccessfulFilterDoesNotRestoreCandidates() {
         recall(List.of(candidate("i:1",0,"body"))); config.setRerankEnabled(true);
         when(reranker.rerank(anyString(),anyList())).thenReturn(Mono.error(new IllegalStateException()));
         assertEquals(Status.DEGRADED,pipeline.run(request(Mode.RETRIEVE_ONLY),new RagObserver(){}).block().status());
         when(reranker.rerank(anyString(),anyList())).thenReturn(Mono.just(Map.of("i:1",-1.0)));
         assertEquals(Status.NO_EVIDENCE,pipeline.run(request(Mode.RETRIEVE_ONLY),new RagObserver(){}).block().status());
+    }
+    @Test void successfulRerankWindowDoesNotDegradeWhenRecallHasUnscoredTail() throws Exception {
+        config.setRerankEnabled(true); retrieval.getRerank().setTopN(1);
+        recall(List.of(candidate("i:1",0,"ranked head"),candidate("i:2",1,"unscored tail")));
+        when(reranker.rerank(anyString(),anyList())).thenReturn(Mono.just(Map.of("i:1",0.9)));
+        var result=pipeline.run(request(Mode.RETRIEVE_ONLY),new RagObserver(){}).block();
+        assertEquals(Status.SUCCEEDED,result.status());
+        assertTrue(result.context().content().contains("ranked head"));
+        assertFalse(result.context().content().contains("unscored tail"));
+        JsonNode trace=store.read(result.runId(),"name:alice");
+        JsonNode outcome=java.util.stream.StreamSupport.stream(trace.path("events").spliterator(),false)
+            .filter(e -> "RERANK".equals(e.path("name").asText())).findFirst().orElseThrow().path("data").path("outcome");
+        assertEquals("RERANKED",outcome.path("reason").asText());
+        JsonNode tail=outcome.path("evidence").path("decisions").path(1);
+        assertEquals("OUTSIDE_RERANK_WINDOW",tail.path("reason").asText());
+        assertTrue(tail.path("score").isNull());
     }
     @Test void adjacentMergePreservesSourceRangesAndBudgetClippingIsVisible() {
         config.setMergeEnabled(true); config.setLegacyClipping(true);

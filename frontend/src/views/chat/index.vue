@@ -5,7 +5,7 @@ const chatStore = useChatStore();
 </script>
 
 <template>
-  <div class="flex-col gap-4">
+  <div class="mx-auto w-full max-w-1080px flex-col gap-4">
     <div class="flex items-center gap-4">
       <NButton :disabled="!chatStore.memoryReady" @click="chatStore.newConversation">新建对话</NButton>
       <NSelect

@@ -1,0 +1,3 @@
+ACRISS Car Classification Code
+
+The ACRISS Car Classification Code developed and maintained by ACRISS (the Association of Car Rental Industry Systems Standards) and is designed to enable customers and travel professionals to make an informed choice when booking car rental in Europe, Middle East and Africa. ACRISS Members include Avis, Budget, Alamo, National, Enterprise, Europcar, Hertz and Maggiore
