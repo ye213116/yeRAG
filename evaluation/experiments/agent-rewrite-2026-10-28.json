@@ -1,0 +1,106 @@
+{
+  "date": "2026-10-28",
+  "scope": "Synthetic Agent/rewrite regression, not a broad quality benchmark",
+  "runs": [
+    {
+      "directory": "target/agent-rewrite-20261028-001",
+      "executionStatus": "PASS",
+      "cases": [
+        {
+          "id": "rewrite-id",
+          "status": "SUCCEEDED",
+          "assertions": "PASS",
+          "elapsedMs": 1248
+        },
+        {
+          "id": "rewrite-date",
+          "status": "SUCCEEDED",
+          "assertions": "PASS",
+          "elapsedMs": 701
+        },
+        {
+          "id": "rewrite-followup",
+          "status": "SUCCEEDED",
+          "assertions": "PASS",
+          "elapsedMs": 830
+        },
+        {
+          "id": "rewrite-no-invention",
+          "status": "SUCCEEDED",
+          "assertions": "PASS",
+          "elapsedMs": 596
+        },
+        {
+          "id": "agent-greeting",
+          "status": "SUCCEEDED",
+          "assertions": "PASS",
+          "elapsedMs": 697
+        },
+        {
+          "id": "agent-recent-context",
+          "status": "SUCCEEDED",
+          "assertions": "PASS",
+          "elapsedMs": 768
+        }
+      ],
+      "summarySha256": "3ed9860166f58fc1e86e36141570c6a29d5526a98e5289d1b2eb024b1a79c54c",
+      "protocolSha256": "42d45ce7610b7a2d3b27eb492c9a2b595b8a51c01a01ab2f4c8f2ea4602082e1"
+    },
+    {
+      "directory": "target/agent-rewrite-20261028-002",
+      "executionStatus": "PASS",
+      "cases": [
+        {
+          "id": "rewrite-id",
+          "status": "SUCCEEDED",
+          "assertions": "PASS",
+          "elapsedMs": 1083
+        },
+        {
+          "id": "rewrite-date",
+          "status": "SUCCEEDED",
+          "assertions": "PASS",
+          "elapsedMs": 648
+        },
+        {
+          "id": "rewrite-followup",
+          "status": "SUCCEEDED",
+          "assertions": "PASS",
+          "elapsedMs": 631
+        },
+        {
+          "id": "rewrite-no-invention",
+          "status": "SUCCEEDED",
+          "assertions": "PASS",
+          "elapsedMs": 714
+        },
+        {
+          "id": "agent-greeting",
+          "status": "SUCCEEDED",
+          "assertions": "PASS",
+          "elapsedMs": 480
+        },
+        {
+          "id": "agent-recent-context",
+          "status": "SUCCEEDED",
+          "assertions": "PASS",
+          "elapsedMs": 607
+        }
+      ],
+      "summarySha256": "c18be0198637e69ae93d234bb9480d3a72090ddb7734bc1df34bfeecb18923c0",
+      "protocolSha256": "42d45ce7610b7a2d3b27eb492c9a2b595b8a51c01a01ab2f4c8f2ea4602082e1"
+    }
+  ],
+  "providerUsage": {
+    "deepseek-chat": {
+      "calls": 6,
+      "reported": 6,
+      "missingUsage": 0,
+      "promptTokens": 2560,
+      "completionTokens": 78,
+      "totalTokens": 2638
+    }
+  },
+  "humanApproval": false,
+  "sourceFingerprintScope": "Second run trace codeVersion binds HEAD plus all main Java/pom bytes; first run only recorded HEAD"
+}

@@ -1,0 +1,12 @@
+{
+  "version": "yerag-agent-rewrite-regression-v1",
+  "scope": "Synthetic regression fixtures; fixed before execution; no statistical quality or human approval claim",
+  "cases": [
+    {"id":"rewrite-id","kind":"rewrite","question":"您好呀，请问海棠项目HT-2026-017的报销上限是多少呀？","expectedAll":["HT-2026-017"],"forbidden":["500元","300元"]},
+    {"id":"rewrite-date","kind":"rewrite","question":"查一下2027年1月15日之后生效的海棠项目报销规则，排除2026年旧版。","expectedAll":["2027","2026","海棠"]},
+    {"id":"rewrite-followup","kind":"rewrite","history":[{"role":"user","content":"我现在问的是海棠项目HT-2026-017的差旅政策。"},{"role":"assistant","content":"好的，可以继续询问该项目的差旅政策。"}],"question":"它的报销上限呢？","expectedAny":["海棠","HT-2026-017"],"forbidden":["500元","300元"]},
+    {"id":"rewrite-no-invention","kind":"rewrite","question":"海棠项目HT-2026-017由谁审批？","expectedAll":["HT-2026-017"],"forbidden":["张三","李四","管理员批准"]},
+    {"id":"agent-greeting","kind":"agent","question":"你好，请只回复：你好。无需查询任何资料。","expectedAll":["你好"],"expectedTools":[]},
+    {"id":"agent-recent-context","kind":"agent","history":[{"role":"user","content":"本次测试的临时校验码是HT-7319，只用于当前对话。"},{"role":"assistant","content":"已知本次测试临时校验码为HT-7319。"}],"question":"请只重复刚才的临时校验码，不要检索。","expectedAll":["HT-7319"],"expectedTools":[]}
+  ]
+}

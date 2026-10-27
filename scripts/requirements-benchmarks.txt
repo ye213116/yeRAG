@@ -1,0 +1,3 @@
+# Optional isolated scoring environment; the application does not depend on these.
+pytrec-eval-terrier==0.5.10
+six==1.17.0

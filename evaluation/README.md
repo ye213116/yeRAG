@@ -602,6 +602,43 @@ python3 scripts/rag-eval-calibrate.py score \
 
 门槛为运行前固定的本地冒烟约束（检索P95≤5秒、聊天完成P95≤60秒、零错误），不是生产容量或生产SLO。WebSocket目前不暴露完整Agent调用usage，本次并发费用保持UNAVAILABLE；固定QA报告中的供应商token用量仍有效，不能按字符估算成真实账单。生产目标和价格/计费范围仍须明确。
 
+### 11.6 Agent、改写与中文/纯检索扩展（2026-10-28）
+
+新增独立 `EvaluationScenarioApplication` CLI，复用现有Spring Agent、QueryRewriteService、RagPipeline和权限检索，不新增网络接口，启动隔离沿用EvaluationApplication。身份仅由可信环境变量提供，history只接受user/assistant角色；检索/QA通过可信文件列表与原ACL取交集。实测基线为 `fb64eccfabd0387e692621343fa93219670f072b+a851773c59451602e4f75dbbd7d3c87fc21ca49bdd03b25c844a98f855569552`（HEAD＋全部main Java/pom指纹，运行时新CLI尚未提交，源码随本次提交保存）。
+
+[Agent/改写协议](protocols/agent-rewrite-v1.json)预先定义编号、日期约束、指代补全、禁止新增事实、问候不调用工具、近期上下文取值等6个断言；两次真实运行均6/6通过，见 [运行证据](experiments/agent-rewrite-2026-10-28.json)。这只是合成回归场景，不能替代大规模Agent质量或长期Memory评估。真实MySQL持久化与浏览器多轮、取消、迟到事件隔离另有工程验收。
+
+中文与BEIR采用各自原生评分，不复用英文分词或必要证据Coverage：
+
+| 套件 | 实际范围 | 真实结果 |
+| --- | --- | --- |
+| DuReader-Robust | 按seed20261028预选dev5题，共享5份原文；原始完整回答，固定官方脚本哈希 | 初次EM60%、F1 66.729%；完整索引快照复测EM80%、F1 87.273%；均TOTAL5/SKIP0，两次保留 |
+| SciFact/BEIR | 固定test6题，包含这些题全部有标注文档＋40份确定性其他文档；Top10块去重为原文档 | 两次Hybrid nDCG@10=1.000、BM25=0.938488；两者Recall@10=1.000 |
+
+不是完整DuReader或BEIR基准，也不是生产泛化结论。重复环境的临时身份、ES物理ID不同，不能把全部中文波动归因于模型；未依据成绩换题、选参或只取高分。一次索引检查器把上传分片误当文本块，模型调用前中止并清理；已改为对照document_vectors，完整复测保存55文档/244文本块运行前后相同快照。证据与所有原始目录、来源哈希、两次分数见 [原生评测证据](experiments/native-benchmarks-2026-10-28.json)。原始数据及许可保存在本机，不在Git重复分发。
+
+DuReader评分器固定到[官方提交](https://github.com/baidu/DuReader/blob/c625076b06da8f56d59f19c41c73bd580a98a347/DuReader-Robust/evaluate.py)（SHA256 `f04d391a690147e6842d261ca4e878737a6e5936dcdbe091626fda4f19dcbb04`）；BEIR沿用[官方TREC指标接口](https://github.com/beir-cellar/beir/blob/ef83d29307061c65d04b035b4f4e7c18bd8374af/beir/retrieval/evaluation.py)，由 `pytrec-eval-terrier==0.5.10` 计算文档级nDCG/MAP/Recall/P，保留TREC分级增益语义。缺失查询计零并保留所有被评查询作为分母，避免悄悄删除失败请求；同ID查询/文档按BEIR默认排除。
+
+```bash
+# 在独立Python环境安装 scripts/requirements-benchmarks.txt。
+python scripts/rag-eval-benchmarks.py dureader reference.json predictions.json NEW_SCORE.json \
+  --scorer /path/to/pinned-official-evaluate.py --setting YOUR_EXPLICIT_SETTING
+python scripts/rag-eval-benchmarks.py beir qrels.tsv document-run.json NEW_SCORE.json \
+  --k 1,3,5,10 --setting YOUR_EXPLICIT_SETTING
+
+# 复用已有服务的固定子集运行；输入目录包含官方scifact.zip、dureader.tar.gz及固定评分脚本。
+python3 scripts/rag-eval-benchmark-smoke.py target/benchmark-sources target/NEW_RUN \
+  --python /path/to/isolated/python
+```
+
+50项Python测试在带原生评分依赖的独立环境中全部通过，覆盖缺失查询、TREC分级增益、评分脚本替换拒绝、人工记录绑定、备份恢复及费用缺失值。启用真实MySQL/ES后，后端267项本次全部通过、0跳过（后续权限删除修复另行记录）。
+
+### 11.7 可核对用量与费用边界
+
+新增 `rag-eval-cost.py ARTIFACTS NEW_OUTPUT [--rates RATES_JSON]`，按唯一模型run聚合供应商返回的prompt/completion/total，不用字符估算代替usage。第二次Agent/改写6次调用与中文5次调用均有完整供应商用量，详情随各自机器证据保存；检索部分没有生成调用。未报告的usage仍记missing，价格缺失不记零。
+
+`--rates`可提供 `currency`、`source`、`effectiveAt` 与 `models.{模型名}.{inputPerMillion,outputPerMillion}`；Decimal计算只得到所记录模型调用的小计。embedding、rerank、存储、网络、缓存价差及未记录调用均明确排除，`totalBillAvailable=false`。当前用户尚未提供实际价格与生产时延/并发/费用目标，所以不生成真实总费用或生产上线通过结论。本机并发指标和预设冒烟门槛见11.5。
+
 ## 12. 后续只维护本文的规则
 
 1. **当前事实只写在本文。** 新的进展增量修改对应章节、结果表和待办状态，不按对话轮次创建新的计划/复盘/汇总Markdown。更新日期、分支、完整HEAD、实际源码指纹及检查范围；未提交内容明确标未提交。
