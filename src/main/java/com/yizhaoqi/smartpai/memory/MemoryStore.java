@@ -165,6 +165,18 @@ public class MemoryStore {
         var rows = db.queryForList("SELECT * FROM chat_turn WHERE user_id=? AND session_id=? AND status='COMPLETED' AND content_expires_at>? ORDER BY id DESC LIMIT 200", user, session, time(Instant.now()));
         List<Turn> turns = new ArrayList<>(); rows.forEach(r -> turns.add(turn(r))); Collections.reverse(turns); return turns;
     }
+    /** Cross-session history for the administrator-only endpoint; retention still applies. */
+    public List<Turn> completedHistory(long user, Instant start, Instant endExclusive) {
+        var rows = db.queryForList("""
+            SELECT * FROM chat_turn WHERE user_id=? AND status='COMPLETED' AND content_expires_at>?
+              AND created_at>=? AND created_at<? AND question IS NOT NULL AND answer IS NOT NULL
+            ORDER BY created_at DESC,id DESC LIMIT 200
+            """, user, time(Instant.now()), time(start), time(endExclusive));
+        List<Turn> turns = new ArrayList<>();
+        rows.forEach(row -> turns.add(turn(row)));
+        Collections.reverse(turns);
+        return turns;
+    }
     public List<Turn> uncoveredHistory(long user, String session, long covered) {
         session(user,session);
         return db.queryForList("""

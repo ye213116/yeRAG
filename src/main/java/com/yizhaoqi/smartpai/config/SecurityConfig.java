@@ -58,6 +58,8 @@ public class SecurityConfig {
                     .csrf(csrf -> csrf.disable())
                     // 配置请求的授权规则
                     .authorizeHttpRequests(authorize -> authorize
+                            // Preserve the original HTTP status on internal error dispatches.
+                            .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR).permitAll()
                             // 允许静态资源访问
                             .requestMatchers("/", "/test.html", "/static/test.html", "/static/**", "/*.js", "/*.css", "/*.ico").permitAll()
                             // 允许 WebSocket 连接
@@ -78,6 +80,17 @@ public class SecurityConfig {
                             .requestMatchers("/api/v1/users/primary-org").hasAnyRole("USER", "ADMIN")
                             // 其他请求需要认证
                             .anyRequest().authenticated())
+                    .exceptionHandling(exceptions -> exceptions
+                            .authenticationEntryPoint((request, response, exception) -> {
+                                response.setStatus(401);
+                                response.setContentType("application/json;charset=UTF-8");
+                                response.getWriter().write("{\"code\":401,\"message\":\"Unauthorized\"}");
+                            })
+                            .accessDeniedHandler((request, response, exception) -> {
+                                response.setStatus(403);
+                                response.setContentType("application/json;charset=UTF-8");
+                                response.getWriter().write("{\"code\":403,\"message\":\"Forbidden\"}");
+                            }))
                     // 配置会话管理策略
                     // 设置会话创建策略为STATELESS，表示不会创建会话，通常用于无状态的API应用
                     .sessionManagement(session -> session

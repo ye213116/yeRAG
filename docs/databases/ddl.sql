@@ -116,6 +116,8 @@ CREATE TABLE chat_session (
     CONSTRAINT ck_chat_session_status CHECK (status IN ('OPEN', 'CLOSED'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Memory-aware chat sessions';
 
+-- Administrator date-range history reads only completed, unexpired turns for one user.
+-- The API returns at most the latest 200 turns in chronological order.
 CREATE TABLE chat_turn (
     id BIGINT NOT NULL AUTO_INCREMENT COMMENT 'Turn primary key',
     session_id CHAR(36) NOT NULL COMMENT 'Owning session UUID',

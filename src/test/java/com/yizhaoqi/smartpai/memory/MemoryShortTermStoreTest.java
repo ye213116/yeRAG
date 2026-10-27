@@ -88,4 +88,45 @@ class MemoryShortTermStoreTest {
         assertTrue(store.hasContextGap(1,first.sessionId(),first.id(),third.id()));
         assertFalse(store.hasContextGap(1,first.sessionId(),second.id(),third.id()));
     }
+
+    @Test void administratorHistoryFiltersOwnerDatesCompletionAndRetentionAcrossSessions() {
+        Instant start = Instant.parse("2026-10-20T00:00:00Z");
+        Instant end = start.plusSeconds(86400);
+        var first = store.begin(1, null, "first", "first question").turn();
+        store.complete(first, "first answer");
+        var second = store.begin(1, store.current(1, true), "second", "second question").turn();
+        store.complete(second, "second answer");
+        var outside = store.begin(1, second.sessionId(), "outside", "outside").turn();
+        store.complete(outside, "outside");
+        var expired = store.begin(1, second.sessionId(), "expired", "expired").turn();
+        store.complete(expired, "expired");
+        var running = store.begin(1, second.sessionId(), "running", "partial").turn();
+        var foreign = store.begin(2, null, "foreign", "foreign").turn();
+        store.complete(foreign, "foreign");
+        db.update("UPDATE chat_turn SET created_at=?", Timestamp.from(start));
+        // Include the final instant before the exclusive boundary, but not the next day.
+        db.update("UPDATE chat_turn SET created_at=? WHERE id=?", Timestamp.from(end.minusMillis(1)), second.id());
+        db.update("UPDATE chat_turn SET created_at=? WHERE id=?", Timestamp.from(end), outside.id());
+        db.update("UPDATE chat_turn SET content_expires_at=? WHERE id=?", Timestamp.from(Instant.now().minusSeconds(1)), expired.id());
+
+        assertEquals(List.of(first.id(), second.id()), store.completedHistory(1, start, end)
+                .stream().map(MemoryTypes.Turn::id).toList());
+        assertEquals("RUNNING", db.queryForObject("SELECT status FROM chat_turn WHERE id=?", String.class, running.id()));
+    }
+
+    @Test void administratorHistoryReturnsLatest200TurnsInChronologicalOrder() {
+        Instant start = Instant.now().minusSeconds(1000);
+        String session = store.current(1, false);
+        for (int i = 0; i < 205; i++) {
+            db.update("""
+                INSERT INTO chat_turn(session_id,user_id,request_id,request_hash,question,answer,status,created_at,content_expires_at)
+                VALUES (?,1,?,?,'question','answer','COMPLETED',?,?)
+                """, session, "history-" + i, MemoryStore.hash("question"), Timestamp.from(start.plusSeconds(i)),
+                    Timestamp.from(Instant.now().plusSeconds(3600)));
+        }
+        var history = store.completedHistory(1, start, Instant.now());
+        assertEquals(200, history.size());
+        assertEquals("history-5", history.get(0).requestId());
+        assertEquals("history-204", history.get(199).requestId());
+    }
 }

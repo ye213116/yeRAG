@@ -192,6 +192,8 @@ Memory 只保存两类长期记忆：
 - `request_id` 重用时必须同时匹配 `request_hash` 和目标会话。
 - 完成回合后才创建长期记忆提取任务。
 
+管理员聊天记录接口 `GET /api/v1/admin/conversation` 按 `userid`、`start_date`、`end_date` 查询此表；两端日期均包含在内，按服务端时区解释。仅管理员可跨会话查看所选用户已完成、未过期且正文完整的问答，最多返回最近 200 个回合，并按时间正序展开为用户和助手消息。普通用户仍通过 `/api/v1/memory/sessions/{id}/messages` 查看自己的会话；不读取已停用的 `conversations` 表。此查询不需要数据库结构迁移。
+
 ### 6.3 `memory_extraction_task`
 
 | 字段 | 类型 | 可空/默认 | 约束与说明 |

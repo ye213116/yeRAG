@@ -1,6 +1,7 @@
 package com.yizhaoqi.smartpai.controller;
 
 import com.yizhaoqi.smartpai.exception.CustomException;
+import com.yizhaoqi.smartpai.memory.MemoryStore;
 import com.yizhaoqi.smartpai.model.OrganizationTag;
 import com.yizhaoqi.smartpai.model.User;
 import com.yizhaoqi.smartpai.repository.OrganizationTagRepository;
@@ -10,11 +11,15 @@ import com.yizhaoqi.smartpai.utils.JwtUtils;
 import com.yizhaoqi.smartpai.utils.LogUtils;
 import com.yizhaoqi.smartpai.utils.MinioMigrationUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -38,6 +43,32 @@ public class AdminController {
     
     @Autowired
     private MinioMigrationUtil migrationUtil;
+
+    @Autowired
+    private MemoryStore memoryStore;
+
+    /** Administrator history uses the durable chat store, not the retired conversations table. */
+    @GetMapping("/conversation")
+    public ResponseEntity<?> getConversation(
+            @RequestHeader("Authorization") String token,
+            @RequestParam("userid") long userId,
+            @RequestParam("start_date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam("end_date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+        validateAdmin(jwtUtils.extractUsernameFromToken(token.replace("Bearer ", "")));
+        if (userId <= 0 || start.isAfter(end) || end.equals(LocalDate.MAX)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "用户或日期范围无效");
+        }
+        var zone = ZoneId.systemDefault();
+        List<Map<String, Object>> messages = new ArrayList<>();
+        for (var turn : memoryStore.completedHistory(userId, start.atStartOfDay(zone).toInstant(),
+                end.plusDays(1).atStartOfDay(zone).toInstant())) {
+            messages.add(Map.of("role", "user", "content", turn.question(),
+                    "timestamp", turn.createdAt().toString()));
+            messages.add(Map.of("role", "assistant", "content", turn.answer(),
+                    "timestamp", turn.createdAt().toString(), "status", "finished"));
+        }
+        return ResponseEntity.ok(Map.of("code", 200, "message", "success", "data", messages));
+    }
 
     /**
      * 获取所有用户列表

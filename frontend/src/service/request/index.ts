@@ -36,6 +36,9 @@ function getFlatRequest(options: Partial<RequestOption<App.Service.Response>> = 
         const authStore = useAuthStore();
         const responseCode = String(response.data.code);
 
+        // A permission denial does not invalidate the authenticated session.
+        if (responseCode === '403') return null;
+
         function handleLogout() {
           authStore.resetStore();
         }
@@ -102,8 +105,8 @@ function getFlatRequest(options: Partial<RequestOption<App.Service.Response>> = 
 
         if (error.code === 'ERR_CANCELED') return;
 
-        // handle 403 Forbidden error - user needs to login
-        if (error.response?.status === 403) {
+        // Only an authentication failure should clear the login state.
+        if (error.response?.status === 401) {
           const authStore = useAuthStore();
           authStore.resetStore();
           return;
