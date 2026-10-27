@@ -8,6 +8,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+import tarfile
 
 
 def sha(path):
@@ -81,6 +82,40 @@ def replay(root, output):
     return result
 
 
+def bundle(root, output):
+    """Portable checked copy; transfer to another machine is a separate explicit step."""
+    manifest = verify(root)
+    with output.open('xb') as stream:
+        with tarfile.open(fileobj=stream, mode='w:gz') as archive:
+            for name in [*sorted(manifest['files']), 'archive.json', 'archive.sha256']:
+                archive.add(root / name, arcname=name, recursive=False)
+    checksum = sha(output)
+    output.with_name(output.name + '.sha256').write_text(checksum + '  ' + output.name + '\n')
+    return {'status': 'BUNDLE_READY_NOT_OFFSITE', 'file': str(output), 'bytes': output.stat().st_size,
+            'sha256': checksum, 'archiveManifestSha256': sha(root / 'archive.json'), 'files': len(manifest['files'])}
+
+
+def unpack(source, output):
+    expected = source.with_name(source.name + '.sha256').read_text().split()[0]
+    if sha(source) != expected: raise ValueError('Transfer bundle checksum mismatch')
+    output.mkdir(parents=True, exist_ok=False, mode=0o700)
+    with tarfile.open(source, 'r:gz') as archive:
+        members = archive.getmembers()
+        names = set()
+        for member in members:
+            path = (output / member.name).resolve()
+            if not member.isfile() or not path.is_relative_to(output.resolve()) or member.name in names:
+                raise ValueError('Unsafe or duplicate bundle member')
+            names.add(member.name)
+        for member in members:
+            path = output / member.name
+            path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            with archive.extractfile(member) as src, path.open('xb') as dst: shutil.copyfileobj(src, dst)
+            path.chmod(0o600)
+    manifest = verify(output)
+    return {'status': 'UNPACK_VERIFIED', 'files': len(manifest['files']), 'archiveManifestSha256': sha(output / 'archive.json')}
+
+
 def create(args):
     repo = Path.cwd().resolve(); root = args.output.resolve()
     if root.is_relative_to(repo / 'target'): raise ValueError('Persistent archive must be outside target')
@@ -143,9 +178,13 @@ def main():
     p.add_argument('--private-config', action='append', type=Path, default=[], help='Only scan for leaked values; configuration is never copied')
     p = sub.add_parser('verify'); p.add_argument('archive', type=Path)
     p = sub.add_parser('replay'); p.add_argument('archive', type=Path); p.add_argument('output', type=Path)
+    p = sub.add_parser('bundle'); p.add_argument('archive', type=Path); p.add_argument('output', type=Path)
+    p = sub.add_parser('unpack'); p.add_argument('bundle', type=Path); p.add_argument('output', type=Path)
     args = parser.parse_args()
     if args.action == 'create': create(args)
     elif args.action == 'verify': print('VERIFIED', len(verify(args.archive)['files']), 'files')
+    elif args.action == 'bundle': print(json.dumps(bundle(args.archive.resolve(), args.output.resolve()), indent=2))
+    elif args.action == 'unpack': print(json.dumps(unpack(args.bundle.resolve(), args.output.resolve()), indent=2))
     else: replay(args.archive, args.output.resolve())
 
 

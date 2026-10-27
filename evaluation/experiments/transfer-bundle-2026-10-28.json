@@ -1,0 +1,14 @@
+{
+  "status": "BUNDLE_READY_NOT_OFFSITE",
+  "file": "/home/zyh/yerag-eval-archive/20261028-transfer.tar.gz",
+  "bytes": 514734490,
+  "sha256": "d831e38ea36f202e596c5d21889be39b1536cb62048877fc062a36eba0233c8e",
+  "archiveManifestSha256": "62927f9bd651706a3f80f055fdaea6c3e1672dad6afbb3933057e1df26c1a7bf",
+  "files": 23228,
+  "restore": {
+    "status": "UNPACK_VERIFIED",
+    "files": 23228,
+    "archiveManifestSha256": "62927f9bd651706a3f80f055fdaea6c3e1672dad6afbb3933057e1df26c1a7bf"
+  },
+  "offsiteTransferred": false
+}

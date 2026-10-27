@@ -553,6 +553,12 @@ python3 /home/zyh/yerag-eval-archive/2026-10-27-closeout-v4-complete/source/scri
 
 最终v4-complete包加入企业50题、真实人工标签输入、reviewed-report和完整测试证据，共23228文件。已在`/tmp`仅使用归档类与依赖重算18组原始报告和1组人审报告，76个核心文件逐字节一致，无Maven、ES或模型调用。恢复产物为 `/home/zyh/yerag-eval-archive/restore-check-2026-10-27-closeout-v4-complete`，见[最终恢复证据](experiments/archive-complete-2026-10-27.json)。v4中的当前类用于重算报告；原执行代码版本仍分别绑定capture，旧版本实测源码/类保留在v3，不混称同一次运行。归档封存后，工作区本文只追加收工状态和证据链接，封存副本不回写。
 
+2026-10-28新增便携压缩包 `/home/zyh/yerag-eval-archive/20261028-transfer.tar.gz`（514734490字节，SHA256 `d831e38ea36f202e596c5d21889be39b1536cb62048877fc062a36eba0233c8e`）。已通过新 `bundle/unpack` 命令在独立目录恢复23228文件，并逐项核对原始归档清单，见 [传输包证据](experiments/transfer-bundle-2026-10-28.json)。同目录 `.sha256` 用于接收端校验；工具拒绝变更压缩包、路径越界、链接和重复成员。43项Python测试本次通过。等待用户提供异机/远端目录，当前状态仍为本机备份已验证、异机传输未完成。
+
+```bash
+python3 scripts/rag-eval-archive.py unpack /remote/path/20261028-transfer.tar.gz /remote/path/new-restored-directory
+```
+
 ### 11.2 新100题预登记
 
 套件位于 `evaluation/hotpotqa-holdout100-20261027/`，含dataset、protocol.json和SHA锁；种子2026102702，bridge/comparison各50，排除既有250个来源ID及规范化问题，合并全部958份候选文档，不删除干扰文档。
