@@ -1,0 +1,335 @@
+{
+  "date": "2026-10-28",
+  "audit": "Read-only audit of retained native-smoke pipeline artifacts; no model calls",
+  "runs": [
+    {
+      "directory": "target/native-benchmark-smoke-20261028-001/run",
+      "pipelines": 17,
+      "counts": {
+        "RETRIEVE_ONLY/BM25/SKIPPED/DISABLED_OR_EMPTY": 6,
+        "FIXED_QA/HYBRID/SKIPPED/NOT_CONFIGURED": 5,
+        "RETRIEVE_ONLY/HYBRID/SKIPPED/NOT_CONFIGURED": 6
+      },
+      "artifacts": [
+        {
+          "runId": "0a338b98-36f4-4ad2-acd9-727646011127",
+          "artifactSha256": "7d96e85329564ccb01d4a4d36d211af2de01d2b1600977af6e07bf38120cb636",
+          "mode": "RETRIEVE_ONLY",
+          "recallStrategy": "BM25",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "DISABLED_OR_EMPTY",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "1e16ad6f-eb91-47b4-a043-37d588f634cb",
+          "artifactSha256": "7c7e083aa4c30e4a08e2c38a5c5e500b75aa9b7ac3796745d1ccf5546aaa7b0e",
+          "mode": "FIXED_QA",
+          "recallStrategy": "HYBRID",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "NOT_CONFIGURED",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "22324769-4d23-4d55-a4dc-1b7ef81490bf",
+          "artifactSha256": "dc43146d5af168705ab2ae8ce1efc65d9caf8363ccccc7dfe96e6cc717ca19d4",
+          "mode": "RETRIEVE_ONLY",
+          "recallStrategy": "HYBRID",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "NOT_CONFIGURED",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "321b9928-e7b1-41d2-9df7-9ada45bed9d2",
+          "artifactSha256": "0f2c1f88f340c4945b3791fb4b7cea21b981749d249889a806b5b0e167e4d3bb",
+          "mode": "FIXED_QA",
+          "recallStrategy": "HYBRID",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "NOT_CONFIGURED",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "42b459bf-4ef0-4e76-ab09-24533deb2efe",
+          "artifactSha256": "65dfbbebea42cc26ed8767c61363119fbbf3b6b46fba13ff51ca683af398504b",
+          "mode": "RETRIEVE_ONLY",
+          "recallStrategy": "BM25",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "DISABLED_OR_EMPTY",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "4a3eb62e-3f5d-4e83-853d-cd71a09eaf40",
+          "artifactSha256": "d12258137b46612f854494227512cc9341fa442800c3d7a6bfb6a898d0c248e2",
+          "mode": "FIXED_QA",
+          "recallStrategy": "HYBRID",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "NOT_CONFIGURED",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "58e56fff-a8bf-45bd-a18b-6f8634b899c5",
+          "artifactSha256": "90b7706d64ed19364641e1462eafb0702cb4b94a474de158d8331ac023c90264",
+          "mode": "RETRIEVE_ONLY",
+          "recallStrategy": "HYBRID",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "NOT_CONFIGURED",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "678786b1-426c-4e02-847f-88bc81aa8460",
+          "artifactSha256": "59e6992619918129fefc2c827a84ca5242c74b994ea910f803779013ce1f7e0b",
+          "mode": "RETRIEVE_ONLY",
+          "recallStrategy": "HYBRID",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "NOT_CONFIGURED",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "68b97e81-32bc-4687-8d52-d99d719ea7cd",
+          "artifactSha256": "518cb8d2a64e71bf63086c3feef07cc4dc7973c04bf20b7d1421f952501a63c3",
+          "mode": "RETRIEVE_ONLY",
+          "recallStrategy": "BM25",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "DISABLED_OR_EMPTY",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "82b3f9ab-9a73-4ac3-b00b-4666e0719b20",
+          "artifactSha256": "d669e55a20a81f62dc61717d00fd03d8ae7d843f6733a3630d34fecd47dfae9b",
+          "mode": "RETRIEVE_ONLY",
+          "recallStrategy": "HYBRID",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "NOT_CONFIGURED",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "847c3b8a-9493-4dda-bb96-ffc1d95a6815",
+          "artifactSha256": "af81c4d159d11a5693cb2db3e5bc7bd0094cb286342108cfbe5638802a3ea86f",
+          "mode": "RETRIEVE_ONLY",
+          "recallStrategy": "HYBRID",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "NOT_CONFIGURED",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "8f549213-f43d-422e-b79a-a5f1aaffb120",
+          "artifactSha256": "9aeabc1195d274345e74dc7d76767ad3f6ae8bd712dd0aa0591edd10d75f74da",
+          "mode": "RETRIEVE_ONLY",
+          "recallStrategy": "BM25",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "DISABLED_OR_EMPTY",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "9786dade-5954-4f56-93d7-a015128dd9e3",
+          "artifactSha256": "349d01dc7ec565a793e912542de83153ca49c67efda9f2bc5c4421756ac37775",
+          "mode": "FIXED_QA",
+          "recallStrategy": "HYBRID",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "NOT_CONFIGURED",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "bedbd172-ee4a-4705-96d5-330a19a3469e",
+          "artifactSha256": "f96a91597bcafc46b42851ecfd7655918f2cbe324159466ce6f7ad38ace7249a",
+          "mode": "RETRIEVE_ONLY",
+          "recallStrategy": "BM25",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "DISABLED_OR_EMPTY",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "cc671f35-826d-45b7-9a61-5e4730cebc17",
+          "artifactSha256": "0701bf84a5665c0d4e0ad63fa7df08b204d1e8e77f67883a7df5aeccf050bc8d",
+          "mode": "FIXED_QA",
+          "recallStrategy": "HYBRID",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "NOT_CONFIGURED",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "f2e9d3c3-f231-4ba9-9c8a-920528dfa929",
+          "artifactSha256": "80004807e7332b698464f3bc4ed48abba63b4d8ca63a48ba227216a6414da155",
+          "mode": "RETRIEVE_ONLY",
+          "recallStrategy": "BM25",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "DISABLED_OR_EMPTY",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "f940c55c-96b1-44ed-8a38-8c110448e312",
+          "artifactSha256": "f444c21067428a40d9ee5144d2beefd3858e73bd45a0e4c3cdd6ca1f2e259893",
+          "mode": "RETRIEVE_ONLY",
+          "recallStrategy": "HYBRID",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "NOT_CONFIGURED",
+          "rerankConfiguredModel": "gte-rerank"
+        }
+      ]
+    },
+    {
+      "directory": "target/native-benchmark-smoke-20261028-003/run",
+      "pipelines": 17,
+      "counts": {
+        "RETRIEVE_ONLY/BM25/SKIPPED/DISABLED_OR_EMPTY": 6,
+        "FIXED_QA/HYBRID/SKIPPED/NOT_CONFIGURED": 5,
+        "RETRIEVE_ONLY/HYBRID/SKIPPED/NOT_CONFIGURED": 6
+      },
+      "artifacts": [
+        {
+          "runId": "0a6f667e-90ea-4de2-ac2e-2f865b359328",
+          "artifactSha256": "d552ec7eda88358b04733a25ada04975d43695a75bf066d42257e58084128bb3",
+          "mode": "RETRIEVE_ONLY",
+          "recallStrategy": "BM25",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "DISABLED_OR_EMPTY",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "472cd9db-b6a4-4daf-8490-219955410688",
+          "artifactSha256": "6d2268f7ce625f5b8cae06dc2a6ea97ef57d120d2d41bab6dce992fa4d70ff62",
+          "mode": "FIXED_QA",
+          "recallStrategy": "HYBRID",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "NOT_CONFIGURED",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "4c3131ac-3cb2-4cc6-80f5-4da45a594c2b",
+          "artifactSha256": "9e203bdba66920a8f80393e24fc6613a5ffd8f86734ae96f39abdf50fab2aefe",
+          "mode": "RETRIEVE_ONLY",
+          "recallStrategy": "HYBRID",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "NOT_CONFIGURED",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "4defce2f-7e1a-43be-a406-6862fdf8eac9",
+          "artifactSha256": "0aca95d7293cbe47d95967b49b41eecef6786cbd2e3cd1d724322c7f0e57f2da",
+          "mode": "RETRIEVE_ONLY",
+          "recallStrategy": "BM25",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "DISABLED_OR_EMPTY",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "621fbd66-d884-41a6-8ffa-8d2e7592076f",
+          "artifactSha256": "f06609fc8f83bd4f7a619a81c264b1ba6221e705147845ac88f26cdd7e7342e3",
+          "mode": "RETRIEVE_ONLY",
+          "recallStrategy": "HYBRID",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "NOT_CONFIGURED",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "67b0729c-36c5-4765-9b35-3fc5cf62dd0f",
+          "artifactSha256": "f8bfe287b032f4c68f691f899c9c66eb311388a617861b868a6be0b80653cf66",
+          "mode": "FIXED_QA",
+          "recallStrategy": "HYBRID",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "NOT_CONFIGURED",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "70a246e5-cb59-4384-9a4a-41759a3f8941",
+          "artifactSha256": "7f5ca0aa86c4aaada206dfd09159af42c211074dc25ea8c51a98be4dab259ba2",
+          "mode": "FIXED_QA",
+          "recallStrategy": "HYBRID",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "NOT_CONFIGURED",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "8974548f-f8c4-430d-98b3-41d1ecb34ab2",
+          "artifactSha256": "011fff2d005a7bd4b06d0740fa4da6d91998ae48ec75a1ff74c1f985f20aa452",
+          "mode": "FIXED_QA",
+          "recallStrategy": "HYBRID",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "NOT_CONFIGURED",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "8bb07aa8-f4bc-415e-9fe0-d6b819304b29",
+          "artifactSha256": "9c5e05fee2a657ccbb55475a9b470b0ce32d2c74c28f888211c0c27738f3173c",
+          "mode": "RETRIEVE_ONLY",
+          "recallStrategy": "HYBRID",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "NOT_CONFIGURED",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "945738a0-0747-4943-852e-9f83724c4ea7",
+          "artifactSha256": "f9e17b180ebb7c63fdeef518ebcc4aef33111d304b6a9768c686343017db2982",
+          "mode": "RETRIEVE_ONLY",
+          "recallStrategy": "HYBRID",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "NOT_CONFIGURED",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "97cb9378-fa17-406c-acb6-e5be7d50072e",
+          "artifactSha256": "47523a0c7a573fe29143d03c88ff0e86a70eb1e7e8fd6fc43f51ae2ca65b7e12",
+          "mode": "FIXED_QA",
+          "recallStrategy": "HYBRID",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "NOT_CONFIGURED",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "9fbcbb00-de5f-4c44-aca7-522fb254f44c",
+          "artifactSha256": "710bed2c9fd127726f0d127a429d71acef2dc22c0ea890c32dd93083947a73a6",
+          "mode": "RETRIEVE_ONLY",
+          "recallStrategy": "BM25",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "DISABLED_OR_EMPTY",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "a9bbf1f5-2f18-4f64-8e61-79074cef7022",
+          "artifactSha256": "7778644059cacb9798f328870bf2b3e2c89cb11c25def88b9ce5983ac01e604b",
+          "mode": "RETRIEVE_ONLY",
+          "recallStrategy": "BM25",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "DISABLED_OR_EMPTY",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "b59f9f69-338f-4906-8604-f1871128009c",
+          "artifactSha256": "594d4d39646511445b00f1aa17d38f61d431059c6130c3373c99850d710d732c",
+          "mode": "RETRIEVE_ONLY",
+          "recallStrategy": "HYBRID",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "NOT_CONFIGURED",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "e2b4a3b6-b098-4bca-baca-aa912ee07c69",
+          "artifactSha256": "737bbb21f3d4e320031244ea3211db9a82613abb2711e58b5d872b17f5bc9cc0",
+          "mode": "RETRIEVE_ONLY",
+          "recallStrategy": "BM25",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "DISABLED_OR_EMPTY",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "ee59980a-77f0-45f7-b589-63f152ee03f5",
+          "artifactSha256": "23138229eed090941067d3cb247ad907acde967cf051a694979447b8fabcfba0",
+          "mode": "RETRIEVE_ONLY",
+          "recallStrategy": "HYBRID",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "NOT_CONFIGURED",
+          "rerankConfiguredModel": "gte-rerank"
+        },
+        {
+          "runId": "f7d1f876-9d1d-424b-aafe-511833c0e251",
+          "artifactSha256": "4e6bec4f008a956592d34c74365ebfd29c2a5db3ba097400a96e93a9bb87f056",
+          "mode": "RETRIEVE_ONLY",
+          "recallStrategy": "BM25",
+          "rerankStatus": "SKIPPED",
+          "rerankReason": "DISABLED_OR_EMPTY",
+          "rerankConfiguredModel": "gte-rerank"
+        }
+      ]
+    }
+  ],
+  "conclusion": "Native smoke Hybrid means BM25+Vector/RRF. All Hybrid rerank stages were SKIPPED/NOT_CONFIGURED; BM25 stages SKIPPED/DISABLED_OR_EMPTY. These runs do not verify gte-rerank-v2 gains."
+}
