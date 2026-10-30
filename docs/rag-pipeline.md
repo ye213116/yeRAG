@@ -75,6 +75,8 @@ ai:
 
 当前工作区的公开覆盖配置位于 [config/application.properties](../config/application.properties)，由 Spring Boot 从项目根目录自动加载；部署环境仍可通过环境变量或命令行覆盖。现有 `.env` / `application.yml` 的跨仓库链接保持原样。换模型必须一起核实 profile、tokenizer、上下文和输出上限，不能把当前容量直接套到未知模型。
 
+MCP 标准结果中的 `text` 字符串数组也作为正文参与 token 裁剪，逐项保留安全的文本前缀与原数组位置，并在所属对象上标记 `truncated`。同一结果中未裁剪的文本块、安全声明、服务与工具标识及非正文字段保持完整；只有正文全部移除后元数据仍超预算时，才省略整份结果。
+
 资源上限和模型 token 预算分别检查：用户问题 8 MiB，Memory / 模型请求 32 MiB，单工具结果 4,194,304 字符；网页抓取 16 MiB、正文 1,048,576 字符，MCP 响应 32 MiB。WebSocket 接收缓冲同步采用 Memory 请求资源上限，避免旧的默认小缓冲拒绝长问题。Memory 默认 `max-recent-turns=0`，按模型预算保留完整历史回合；摘要上限 60,000 字节，长期记忆召回上限 256 KiB。`evidence-tokens=0` 让检索组装使用剩余上下文；显式正数仍可配置独立正文预算。工具参数、权限、topK、调用次数和请求超时继续独立校验。
 
 重排未配置记为 SKIPPED；调用失败/超时使用原 RRF 顺序并记 DEGRADED；成功但阈值筛空不恢复候选。仅对 `ai.retrieval.rerank.top-n` 内候选评分，尾部明确记 `OUTSIDE_RERANK_WINDOW`。正文送重排前的截取范围另有快照。

@@ -3,7 +3,9 @@ package com.yizhaoqi.smartpai.client;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import com.yizhaoqi.smartpai.rag.TokenBudget;
 
 import java.util.ArrayList;
@@ -42,8 +44,8 @@ final class ToolContextBudget {
                 }
             }
             if (largest != null && largest.tokens(tokens) > 0) {
-                String original = largest.parent.path(largest.field).asText();
-                largest.parent.put(largest.field, "");
+                String original = largest.text();
+                largest.replace("");
                 largest.parent.put("truncated", true);
                 largest.payload.root.put("context_truncated", true);
                 largest.payload.changed = true;
@@ -53,12 +55,12 @@ final class ToolContextBudget {
                     int low = 0, high = original.codePointCount(0, original.length());
                     while (low < high) {
                         int middle = low + (high - low + 1) / 2;
-                        largest.parent.put(largest.field, original.substring(0, original.offsetByCodePoints(0, middle)));
+                        largest.replace(original.substring(0, original.offsetByCodePoints(0, middle)));
                         largest.payload.write(json);
                         if (tokens.requestTokens(json.valueToTree(request)) <= limit) low = middle;
                         else high = middle - 1;
                     }
-                    largest.parent.put(largest.field, original.substring(0, original.offsetByCodePoints(0, low)));
+                    largest.replace(original.substring(0, original.offsetByCodePoints(0, low)));
                     largest.payload.write(json);
                 }
             } else {
@@ -100,9 +102,16 @@ final class ToolContextBudget {
         private void collect(JsonNode node, List<Slot> slots) {
             if (node instanceof ObjectNode object) {
                 object.fields().forEachRemaining(field -> {
-                    if (BODY_FIELDS.contains(field.getKey()) && field.getValue().isTextual())
-                        slots.add(new Slot(this, object, field.getKey()));
-                    else if (field.getValue().isContainerNode()) collect(field.getValue(), slots);
+                    if (BODY_FIELDS.contains(field.getKey())) {
+                        if (field.getValue().isTextual()) slots.add(new Slot(this, object, field.getKey(), -1));
+                        else if (field.getValue().isArray()) {
+                            for (int i = 0; i < field.getValue().size(); i++) {
+                                JsonNode child = field.getValue().get(i);
+                                if (child.isTextual()) slots.add(new Slot(this, object, field.getKey(), i));
+                                else if (child.isContainerNode()) collect(child, slots);
+                            }
+                        } else if (field.getValue().isContainerNode()) collect(field.getValue(), slots);
+                    } else if (field.getValue().isContainerNode()) collect(field.getValue(), slots);
                 });
             } else if (node.isArray()) node.forEach(child -> collect(child, slots));
         }
@@ -110,7 +119,12 @@ final class ToolContextBudget {
         void write(ObjectMapper json) throws JsonProcessingException { message.put("content", json.writeValueAsString(root)); }
     }
 
-    private record Slot(Payload payload, ObjectNode parent, String field) {
-        int tokens(TokenBudget.Counter counter) { return counter.count(parent.path(field).asText()); }
+    private record Slot(Payload payload, ObjectNode parent, String field, int index) {
+        String text() { return (index < 0 ? parent.path(field) : parent.path(field).path(index)).asText(); }
+        void replace(String value) {
+            if (index < 0) parent.put(field,value);
+            else ((ArrayNode) parent.get(field)).set(index,TextNode.valueOf(value));
+        }
+        int tokens(TokenBudget.Counter counter) { return counter.count(text()); }
     }
 }
