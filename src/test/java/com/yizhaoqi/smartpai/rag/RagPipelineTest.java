@@ -67,6 +67,13 @@ class RagPipelineTest {
         assertEquals(Status.NO_EVIDENCE,result.status()); assertTrue(result.answer().contains("没有足够资料"));
         verifyNoInteractions(llm);
     }
+    @Test void defaultEvidenceBudgetRetainsLongPassagesBelowTheModelContextLimit() {
+        String text="应当完整保留的企业资料及最后的例外条件。".repeat(1000);
+        recall(List.of(candidate("long-document",0,text)));
+        var result=pipeline.run(request(Mode.RETRIEVE_ONLY),new RagObserver(){}).block();
+        assertEquals(text,result.context().passages().get(0).text());
+        assertEquals("KEPT",result.context().decisions().get(0).reason());
+    }
     @Test void rerankConfigurationIsRecordedWithoutEndpointOrCredentials() throws Exception {
         retrieval.getRerank().setUrl("https://example.invalid/rerank?private=hidden");
         retrieval.getRerank().setApiKey("private-api-key");

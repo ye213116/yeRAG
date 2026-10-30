@@ -39,7 +39,7 @@ class KnowledgeAgentSourcesTest {
         var read = new EvidenceTool("read_knowledge_document", AgentTool.Source.KNOWLEDGE);
         var web = new EvidenceTool("search_web", AgentTool.Source.WEB);
         var page = new EvidenceTool("read_web_page", AgentTool.Source.WEB);
-        var client = new ScriptedClient(List.of(toolDecision(search.name()), toolDecision(read.name()),
+        var client = new ScriptedClient(List.of(answer("{\"steps\":[]}"), toolDecision(search.name()), toolDecision(read.name()),
                 toolDecision(web.name()), toolDecision(page.name()), answer("内部方案[来源#2]与官方建议[来源#4]有差异")));
         List<String> chunks = new ArrayList<>();
         var history = List.of(AgentMessage.user("上文是部署方案"));

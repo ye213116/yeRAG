@@ -27,8 +27,15 @@ class GenerationDecoderTest {
         decoder.accept("{\"choices\":[{\"finish_reason\":\"stop\"}]}");
         assertThrows(RagFailure.class,() -> decoder.accept("{\"choices\":[{\"finish_reason\":\"length\"}]}"));
     }
-    @Test void utf8BudgetNeverSplitsCodePoints() {
-        assertEquals("a",TokenBudget.prefix("a😀b",4)); assertEquals("a😀",TokenBudget.prefix("a😀b",5));
-        assertEquals(7,TokenBudget.count("汉😀"));
+    @Test void modelTokenBudgetNeverSplitsCodePoints() {
+        String value="a😀汉b";
+        for(int budget=0;budget<=TokenBudget.count(value);budget++) {
+            String prefix=TokenBudget.prefix(value,budget);
+            assertTrue(value.startsWith(prefix));
+            assertTrue(TokenBudget.count(prefix)<=budget);
+            assertFalse(!prefix.isEmpty() && Character.isHighSurrogate(prefix.charAt(prefix.length()-1)));
+        }
+        assertEquals(value,TokenBudget.prefix(value,TokenBudget.count(value)));
+        assertEquals(2,TokenBudget.count("Hello!"));
     }
 }

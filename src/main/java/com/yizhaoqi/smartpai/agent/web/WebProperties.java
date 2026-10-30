@@ -15,15 +15,15 @@ public class WebProperties {
     @lombok.ToString.Exclude private String apiKey = "";
     private String searchUrl = "https://api.search.brave.com/res/v1/web/search";
     private Duration timeout = Duration.ofSeconds(6);
-    private int maxResponseBytes = 1_048_576;
-    private int maxPageCharacters = 4000;
+    private int maxResponseBytes = 16 * 1024 * 1024;
+    private int maxPageCharacters = 1_048_576;
     private int maxResults = 5;
 
     @PostConstruct
     public void validate() {
         if (timeout == null || timeout.toMillis() < 1 || timeout.toSeconds() > 30
-                || maxResponseBytes < 1024 || maxResponseBytes > 5_242_880
-                || maxPageCharacters < 500 || maxPageCharacters > 20_000 || maxResults < 1 || maxResults > 10)
+                || maxResponseBytes < 1024 || maxResponseBytes > 32 * 1024 * 1024
+                || maxPageCharacters < 500 || maxPageCharacters > 4_194_304 || maxResults < 1 || maxResults > 10)
             throw new IllegalArgumentException("invalid ai.web limits");
         var uri = PublicWebHttpClient.validateUrl(searchUrl);
         if (!"https".equalsIgnoreCase(uri.getScheme())) throw new IllegalArgumentException("ai.web.search-url requires HTTPS");

@@ -13,7 +13,14 @@ import { WebSocketServer } from 'ws';
 
 const frontend = resolve(import.meta.dirname, '../..');
 const origin = 'http://127.0.0.1:19527';
-const state = { sessions: new Map(), sockets: new Map(), stopped: 0, historyStatus: 200, historyCode: 200 };
+const state = {
+  sessions: new Map(),
+  sockets: new Map(),
+  requests: new Map(),
+  stopped: 0,
+  historyStatus: 200,
+  historyCode: 200
+};
 let server;
 let websocket;
 let vite;
@@ -168,10 +175,15 @@ before(async () => {
         return;
       }
       if (message.type !== 'chat') return;
+      state.requests.set(owner, message);
       cancelled = false;
       const send = value =>
         socket.readyState === 1 &&
         socket.send(JSON.stringify({ requestId: message.requestId, conversationId: message.conversationId, ...value }));
+      if (message.message === 'plan') {
+        send(planEvent());
+        return;
+      }
       send({ type: 'agent_status', message: '正在回答' });
       send({ type: 'chunk', chunk: `${owner} answer: ` });
       await delay(message.message === 'slow' ? 2000 : 100);
@@ -276,6 +288,87 @@ async function clickText(page, text) {
     text
   );
 }
+
+function planEvent(statuses = ['running', 'pending', 'pending']) {
+  return {
+    type: 'agent_status',
+    status: 'plan_updated',
+    message: '任务执行进度',
+    details: {
+      tasks: ['阅读甲方案 <img src=x>', '阅读乙方案', '综合证据并生成回答'].map((title, index) => ({
+        id: String(index + 1),
+        title,
+        status: statuses[index],
+        message: '任务状态说明'
+      }))
+    }
+  };
+}
+
+function reply(owner, payload, request = state.requests.get(owner)) {
+  state.sockets
+    .get(owner)
+    .send(JSON.stringify({ requestId: request.requestId, conversationId: request.conversationId, ...payload }));
+}
+
+test('plan tasks render before the answer, update during streaming and reject late events', async () => {
+  const page = await newPage();
+  try {
+    await login(page);
+    await sendMessage(page, 'plan');
+    await page.waitForSelector('[aria-label="任务列表"] [data-task-status="running"]');
+    assert.equal(await page.$$eval('[aria-label="任务列表"] li', nodes => nodes.length), 3);
+    assert.equal(await page.$$eval('[aria-label="任务列表"] img', nodes => nodes.length), 0);
+    reply('admin', planEvent(['completed', 'running', 'pending']));
+    await page.waitForFunction(
+      () => document.querySelector('[aria-label="任务列表"] li').dataset.taskStatus === 'completed'
+    );
+    reply('admin', { type: 'chunk', chunk: 'planned answer' });
+    reply('admin', planEvent(['completed', 'completed', 'completed']));
+    reply('admin', { type: 'completion', status: 'finished' });
+    await page.waitForFunction(
+      () => document.body.textContent.includes('planned answer') && document.body.textContent.includes('3/3')
+    );
+    reply('admin', planEvent());
+    await delay(100);
+    assert.equal(await page.$$eval('[aria-label="任务列表"] [data-task-status="completed"]', nodes => nodes.length), 3);
+    const oldRequest = state.requests.get('admin');
+    await clickText(page, '新建对话');
+    reply('admin', planEvent(), oldRequest);
+    await delay(100);
+    assert.equal(await page.$$eval('[aria-label="任务列表"]', nodes => nodes.length), 0);
+    await sendMessage(page, 'simple');
+    await page.waitForFunction(() => document.body.textContent.includes('admin answer: simple'));
+    assert.equal(await page.$$eval('[aria-label="任务列表"]', nodes => nodes.length), 0);
+  } finally {
+    await page.browserContext().close();
+  }
+});
+
+test('stopping a plan before any answer preserves cancelled tasks and errors settle pending tasks', async () => {
+  const page = await newPage();
+  try {
+    await login(page);
+    await sendMessage(page, 'plan');
+    await page.waitForSelector('[aria-label="任务列表"]');
+    const previous = state.stopped;
+    await page.focus('button[aria-label="停止生成"]');
+    await page.keyboard.press('Enter');
+    await waitFor(() => state.stopped > previous, 'plan stop reaches the WebSocket');
+    await page.waitForSelector('[data-task-status="cancelled"]');
+    reply('admin', planEvent(['completed', 'completed', 'completed']));
+    await delay(100);
+    assert.equal(await page.$$eval('[data-task-status="skipped"]', nodes => nodes.length), 2);
+    await sendMessage(page, 'plan');
+    await page.waitForSelector('[data-task-status="running"]');
+    reply('admin', { type: 'error', error: '执行失败' });
+    await page.waitForSelector('[data-task-status="failed"]');
+    assert.equal(await page.$$eval('[data-task-status="running"]', nodes => nodes.length), 0);
+    assert.match(await page.$eval('body', element => element.textContent), /执行失败/);
+  } finally {
+    await page.browserContext().close();
+  }
+});
 
 test('history renders and both forms of 403 preserve authentication; 401 logs out', async () => {
   for (const [status, code] of [

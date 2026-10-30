@@ -22,6 +22,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final ConcurrentHashMap<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final JwtUtils jwtUtils;
+    private com.yizhaoqi.smartpai.memory.MemoryProperties limits = new com.yizhaoqi.smartpai.memory.MemoryProperties();
+    @org.springframework.beans.factory.annotation.Autowired
+    public void configureLimits(com.yizhaoqi.smartpai.memory.MemoryProperties limits) { this.limits = limits; }
     
     // 内部指令令牌 - 可以从配置文件读取
     private static final String INTERNAL_CMD_TOKEN = "WSS_STOP_CMD_" + System.currentTimeMillis() % 1000000;
@@ -40,6 +43,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             return;
         }
         sessions.put(userId, session);
+        session.setTextMessageSizeLimit(limits.getMaxInputBytes());
         session.getAttributes().put("authenticatedChatUser", userId);
         logger.info("WebSocket连接已建立，用户ID: {}，会话ID: {}，URI路径: {}",
                     userId, session.getId(), session.getUri().getPath());

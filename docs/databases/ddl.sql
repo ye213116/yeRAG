@@ -108,6 +108,7 @@ CREATE TABLE chat_session (
     created_at DATETIME(6) NOT NULL COMMENT 'Creation time',
     closed_at DATETIME(6) NULL COMMENT 'Close time',
     revision BIGINT NOT NULL DEFAULT 0 COMMENT 'Optimistic context revision',
+    -- Default application summary ceiling is 60,000 UTF-8 bytes, below MySQL TEXT's 65,535-byte limit.
     context_summary TEXT NULL COMMENT 'Durable rolling short-term summary',
     summary_covered_turn_seq BIGINT NOT NULL DEFAULT 0 COMMENT 'Last turn included in the summary',
     summary_revision BIGINT NOT NULL DEFAULT 0 COMMENT 'Summary compare-and-set version',
@@ -121,6 +122,7 @@ CREATE TABLE chat_session (
 -- Administrator date-range history reads only completed, unexpired turns for one user.
 -- The API returns at most the latest 200 turns in chronological order.
 CREATE TABLE chat_turn (
+    -- Application input ceiling: 8 MiB; MEDIUMTEXT holds up to 16,777,215 bytes.
     id BIGINT NOT NULL AUTO_INCREMENT COMMENT 'Turn primary key',
     session_id CHAR(36) NOT NULL COMMENT 'Owning session UUID',
     user_id BIGINT NOT NULL COMMENT 'Turn owner',

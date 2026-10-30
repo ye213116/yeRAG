@@ -44,6 +44,7 @@ class WebToolsTest {
     }
 
     @Test void limitsEscapedPageResultsAndReturnsCorrectContinuationOffset() throws Exception {
+        ai.getAgent().setMaxToolResultCharacters(6000);
         String text = "\"\\\n".repeat(3000);
         when(client.read("https://example.com", 100)).thenReturn(new WebResearchClient.Page("Title", "https://example.com", text, true, 100 + text.length()));
         var result = read.execute("{\"url\":\"https://example.com\",\"offset\":100}", new ToolExecutionContext("42", 2));

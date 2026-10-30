@@ -14,9 +14,13 @@ public class RagProperties {
     private boolean mergeEnabled;
     private boolean legacyClipping;
     private int candidateK; // 0 means use ai.retrieval.recall-multiplier * topK
-    private int contextTokens = 32000;
-    private int evidenceTokens = 4000;
-    private int safetyTokens = 512;
+    private String modelProfile = "deepseek-v4.1-flash";
+    private String tokenizerResource = "classpath:tokenizers/deepseek-v4/tokenizer.json.gz";
+    private int contextTokens = 1_048_576;
+    /** 0 uses the remaining model context instead of an independent small evidence ceiling. */
+    private int evidenceTokens = 0;
+    private int safetyTokens = 4096;
+    private double compressionTriggerRatio = 0.95;
     private double rerankThreshold = 0;
     private Duration stageTimeout = Duration.ofSeconds(10);
     private String codeVersion = "unknown";
@@ -28,10 +32,17 @@ public class RagProperties {
     private int retentionDays = 7;
 
     public void validate() {
-        if (candidateK < 0 || candidateK > 10000 || evidenceTokens < 1
+        if (candidateK < 0 || candidateK > 10000 || evidenceTokens < 0
                 || contextTokens < 1 || safetyTokens < 0 || stageTimeout.isNegative()
                 || stageTimeout.isZero() || maxEvidenceBytes < 4096 || maxEvidenceBytes > 64L*1024*1024 || retentionDays < 1
                 || !java.util.Set.of("local","minio").contains(evidenceBackend) || evidenceDirectory==null || evidenceDirectory.isBlank()
-                || !Double.isFinite(rerankThreshold)) throw new IllegalArgumentException("Invalid ai.rag configuration");
+                || !Double.isFinite(rerankThreshold) || !Double.isFinite(compressionTriggerRatio)
+                || compressionTriggerRatio <= 0 || compressionTriggerRatio > 1
+                || tokenizerResource == null || tokenizerResource.isBlank()) throw new IllegalArgumentException("Invalid ai.rag configuration");
+    }
+
+    public int inputTokenLimit(int outputTokens) {
+        long available = (long) contextTokens - outputTokens - safetyTokens;
+        return (int) Math.max(0, Math.floor(available * compressionTriggerRatio));
     }
 }

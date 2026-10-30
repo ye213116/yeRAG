@@ -34,7 +34,8 @@ public class DeepSeekClient implements AgentLlmClient {
 
     public DeepSeekClient(@Value("${deepseek.api.url}") String url,@Value("${deepseek.api.key}") String key,
                           @Value("${deepseek.api.model}") String model,AiProperties ai) {
-        var builder=WebClient.builder().baseUrl(url);
+        var builder=WebClient.builder().baseUrl(url)
+                .codecs(codecs -> codecs.defaultCodecs().maxInMemorySize(32 * 1024 * 1024));
         if(key!=null && !key.isBlank()) builder.defaultHeader(HttpHeaders.AUTHORIZATION,"Bearer "+key);
         webClient=builder.build(); this.model=model; this.ai=ai;
     }
@@ -60,7 +61,7 @@ public class DeepSeekClient implements AgentLlmClient {
             if(temperature!=null) request.put("temperature",temperature);
             if(modelOverride!=null && !modelOverride.isBlank()) request.put("model",modelOverride);
             if(!tools.isEmpty()) { request.put("tools",tools); request.put("tool_choice","auto"); }
-            var run=start(view,request);
+            var run=prepare(view,request);
             return Mono.fromRunnable(() -> dispatch(request,run)).then(webClient.post().uri("/chat/completions")
                 .contentType(MediaType.APPLICATION_JSON).bodyValue(request).retrieve().bodyToMono(String.class))
                 .publishOn(Schedulers.boundedElastic()).map(body -> {
@@ -93,7 +94,7 @@ public class DeepSeekClient implements AgentLlmClient {
     public reactor.core.publisher.Flux<GenerationEvent> streamDetailed(List<AgentMessage> messages) {
         return reactor.core.publisher.Flux.deferContextual(view -> {
             Map<String,Object> request=request(messages,true);
-            var run=start(view,request); var decoder=new GenerationDecoder(json);
+            var run=prepare(view,request); var decoder=new GenerationDecoder(json);
             StringBuilder answer=new StringBuilder(); long started=System.nanoTime(); long[] first={-1,-1};
             return Mono.fromRunnable(() -> dispatch(request,run)).thenMany(webClient.post().uri("/chat/completions")
                 .contentType(MediaType.APPLICATION_JSON).accept(MediaType.TEXT_EVENT_STREAM).bodyValue(request)
@@ -125,14 +126,34 @@ public class DeepSeekClient implements AgentLlmClient {
         context.remaining(); var run=recorder.start(context.owner(),context.parentRunId(),"model-call",request);
         context.child(run.id()); return run;
     }
+    private EvidenceRecorder.Run prepare(ContextView view,Map<String,Object> request) {
+        int output=ai.getGeneration().getMaxTokens()==null?8192:ai.getGeneration().getMaxTokens();
+        int limit=rag.inputTokenLimit(output);
+        try {
+            var counter=TokenBudget.counter(rag.getTokenizerResource());
+            var compacted=ToolContextBudget.fit(json,request,limit,counter);
+            var run=start(view,request);
+            if(run!=null && compacted.truncatedTools()>0) run.event("contextCompaction",Map.of(
+                "originalBytes",compacted.originalBytes(),"finalBytes",compacted.finalBytes(),
+                "originalTokens",compacted.originalTokens(),"finalTokens",compacted.finalTokens(),
+                "truncatedTools",compacted.truncatedTools(),"inputLimitTokens",limit,"tokenCountKind",counter.kind()));
+            return run;
+        } catch(com.fasterxml.jackson.core.JsonProcessingException invalid) {
+            throw new RagFailure(Status.FAILED,"MODEL_REQUEST_INVALID");
+        }
+    }
     private void dispatch(Map<String,Object> request,EvidenceRecorder.Run run) {
         try {
             byte[] encoded=json.writeValueAsBytes(request);
-            int output=ai.getGeneration().getMaxTokens()==null?2000:ai.getGeneration().getMaxTokens();
-            if(output<1 || (long)encoded.length+output+rag.getSafetyTokens()>rag.getContextTokens()) throw new RagFailure(Status.FAILED,"MODEL_INPUT_BUDGET_EXCEEDED");
+            int output=ai.getGeneration().getMaxTokens()==null?8192:ai.getGeneration().getMaxTokens();
+            var counter=TokenBudget.counter(rag.getTokenizerResource());
+            int inputTokens=counter.requestTokens(json.valueToTree(request));
+            if(output<1 || (long)inputTokens+output+rag.getSafetyTokens()>rag.getContextTokens()) throw new RagFailure(Status.FAILED,"MODEL_INPUT_BUDGET_EXCEEDED");
             if(memory!=null && encoded.length>memory.getMaxInputBytes()) throw new RagFailure(Status.FAILED,"MEMORY_INPUT_BUDGET_EXCEEDED");
             if(run!=null) run.event("dispatch",Map.of("requestSha256",EvidenceRecorder.hash(json.valueToTree(request).toString()),
-                "estimatedInputTokens",encoded.length,"reservedOutputTokens",output,"safetyTokens",rag.getSafetyTokens(),"tokenCountKind",TokenBudget.KIND));
+                "inputTokens",inputTokens,"inputBytes",encoded.length,"reservedOutputTokens",output,
+                "safetyTokens",rag.getSafetyTokens(),"modelContextTokens",rag.getContextTokens(),
+                "modelProfile",rag.getModelProfile(),"tokenCountKind",counter.kind()));
         } catch(com.fasterxml.jackson.core.JsonProcessingException invalid) { throw new RagFailure(Status.FAILED,"MODEL_REQUEST_INVALID"); }
     }
     private Map<String,Object> request(List<AgentMessage> messages,boolean stream) {

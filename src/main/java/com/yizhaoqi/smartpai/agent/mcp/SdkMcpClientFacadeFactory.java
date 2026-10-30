@@ -38,7 +38,7 @@ public class SdkMcpClientFacadeFactory implements McpClientFacadeFactory {
                 .builder(server.getBaseUrl())
                 .endpoint(server.getEndpoint())
                 .connectTimeout(properties.getConnectTimeout())
-                .maxResponseSize(1_048_576)
+                .maxResponseSize(32 * 1024 * 1024)
                 .httpRequestCustomizer((request, method, endpoint, body, context) -> {
                     if (server.getServiceToken() != null && !server.getServiceToken().isBlank()) {
                         request.setHeader("Authorization", "Bearer " + server.getServiceToken().trim());

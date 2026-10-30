@@ -60,7 +60,7 @@ Agent 入口是 `KnowledgeAgentService`，模型客户端通过 `AgentLlmClient`
 
 运行规则：
 
-- 根据当前问题和最近对话，在同一次 Agent 决策中识别任务与所需来源。内部资料优先知识库；涉及最新公开信息、外部资料或内外对比时联网。知识库无结果本身不是联网理由，不用公开资料替代内部依据。
+- 根据当前问题和最近对话识别任务与所需来源。简单问题直接进入原有 Loop；复杂比较、跨文档综合按需启用 Plan-and-Execute，见下文。内部资料优先知识库；涉及最新公开信息、外部资料或内外对比时联网。知识库无结果本身不是联网理由，不用公开资料替代内部依据。
 - 前端支持自动、仅知识库、仅联网三种来源模式。后端按每轮模式过滤工具目录并限制执行；MCP 工具未声明来源，当前仅在自动模式可用。
 - `userId` 由服务端从认证上下文传入，模型不能通过工具参数改变权限范围。
 - `query` 默认最多 500 个字符，`topK` 限制在 1～10，单次 Agent 默认最多调用工具 8 次，总超时仍为 60 秒。显式配置会覆盖默认值。一个决策中的多个调用按顺序执行并逐个回填结果，超过预算的调用返回预算耗尽错误。
@@ -68,6 +68,31 @@ Agent 入口是 `KnowledgeAgentService`，模型客户端通过 `AgentLlmClient`
 - WebSocket 保留 `chunk`、`completion` 消息，并发送 `agent_status` 的 `thinking`、`tool_started`、`tool_finished` 等状态。
 - 仅知识库模式下，Agent 失败且尚未输出答案时，可以按 `ai.agent.fallback-enabled` 切换到固定 RAG。自动及仅联网模式不做固定 RAG 降级，避免将内部检索当作公开证据；Agent 关闭时需选择仅知识库模式使用固定 RAG。
 - 统一来源包含编号、类型、标题、文档片段或网页 URL、获取时间和证据层级。服务端把可点击的来源列表附入完整答案后持久化，历史会话和重复请求仍能查看来源；完成事件额外带 `sources` 元数据。搜索摘要与已读取网页正文明确区分。
+
+### 按需 Plan-and-Execute
+
+默认开启。先用本地规则筛选复杂比较和跨文档综合候选（支持中英文，以及带指代的后续提问）；普通问答、单篇摘要和简单概念比较不增加规划模型调用。候选再通过一次无工具的模型调用确认，输出 2～3 个证据任务，服务端追加“综合证据并生成回答”。模型认为无需计划、返回非法结构、规划超时或失败时回到原有 Loop。规则筛选是启发式判断，可能漏掉未覆盖的表达，漏选问题仍由原有 Loop 处理。
+
+每个证据任务串行复用现有工具 Loop；整轮共享来源模式、认证身份、工具调用预算、引用编号和总超时，不为每个任务重置预算。中间记录留作最终综合的上下文，不作为用户答案输出或持久化，也不作为独立证据。只有最终综合通过 `chunk` 输出并由现有 Memory 路径保存完整回答。工具失败会标记任务未完成；预算耗尽会标记当前任务未完成、后续任务跳过，最终综合说明证据缺口。执行异常与取消沿用原有失败/fallback 和取消持久化规则。
+
+整轮输入采用当前实际模型 `deepseek-flash` 对应的官方 BPE tokenizer，默认上下文 1,048,576 tokens、回答预留 8,192 tokens、安全预留 4,096 tokens；只在达到剩余容量的 95% 时裁剪工具正文。Memory 默认按 token 预算保留完整回合，用户输入和工具结果同步放宽，HTTP JSON 转义不当作模型正文重复计量。公开覆盖配置在 [config/application.properties](config/application.properties)，计量口径、资源上限和换模型步骤见 [Pipeline 输入预算](docs/rag-pipeline.md#配置)。
+
+```yaml
+ai:
+  agent:
+    planning:
+      enabled: true  # false：所有问题直接进入原有 Loop
+      max-steps: 4   # 含最终综合，运行时限制在 3～6
+      timeout: 5s    # 单次规划上限，且受 llm-timeout 和 total-timeout 限制
+```
+
+前端在助手消息中展示任务列表；`pending`、`running`、`completed`、`failed`、`skipped`、`cancelled` 分别对应等待、进行中、完成、未完成、跳过、停止。这里的完成表示任务执行结束，不保证检索一定找到了证据。任务标题按纯文本渲染；列表只属于当前请求，按 `requestId` / `conversationId` 隔离；完成、失败、停止后的迟到进度不再更新。任务列表是本轮实时状态，刷新/历史回放只恢复已保存的回答和来源。
+
+沿用 `agent_status`，新增 `planning` 和 `plan_updated`，后者每次发送完整快照，不改变 `chunk` / `completion` 协议：
+
+```json
+{"type":"agent_status","status":"plan_updated","message":"任务执行进度","requestId":"...","conversationId":"...","details":{"tasks":[{"id":"1","title":"阅读甲方案的成本与风险","status":"running","message":"正在执行"},{"id":"2","title":"阅读乙方案的成本与风险","status":"pending","message":"等待执行"},{"id":"3","title":"综合证据并生成回答","status":"pending","message":"等待执行"}]}}
+```
 
 ### 知识库深读与联网配置
 
@@ -85,8 +110,8 @@ ai:
     search-url: https://api.search.brave.com/res/v1/web/search
     timeout: 6s
     max-results: 5
-    max-response-bytes: 1048576
-    max-page-characters: 4000
+    max-response-bytes: 16777216
+    max-page-characters: 1048576
 ```
 
 启用后，未配置密钥仍可读取用户给出的公开网页，搜索会明确返回未配置错误。网页读取仅支持公开 HTTP(S) 标准端口、HTML 与纯文本，不执行 JavaScript，也不携带用户登录凭据。不支持 PDF 和需要登录的页面。每次连接的 DNS 结果、IP 字面量和每跳重定向目标都检查公开地址；请求有超时、响应体大小和正文长度上限，搜索提供商请求不跟随重定向。
@@ -178,7 +203,7 @@ ai:
     max-list-pages: 20
     max-tools-per-server: 200
     max-argument-characters: 16384
-    max-result-characters: 6000
+    max-result-characters: 4194304
     allow-insecure-http: false
     servers:
       ops:

@@ -196,6 +196,8 @@ Memory 只保存两类长期记忆：
 
 管理员聊天记录接口 `GET /api/v1/admin/conversation` 按 `userid`、`start_date`、`end_date` 查询此表；两端日期均包含在内，按服务端时区解释。仅管理员可跨会话查看所选用户已完成、未过期且正文完整的问答，最多返回最近 200 个回合，并按时间正序展开为用户和助手消息。普通用户仍通过 `/api/v1/memory/sessions/{id}/messages` 查看自己的会话；不读取已停用的 `conversations` 表。此查询不需要数据库结构迁移。
 
+模型输入按配置模型对应的 tokenizer 和上下文容量控制，字节限制仅作为资源上限：用户问题默认 8 MiB、整轮输入 32 MiB，均可配置。`question` / `answer` 现有 `MEDIUMTEXT` 足以容纳这些问题和默认 8,192-token 回答；滚动摘要上限 60,000 字节，保持低于 `context_summary TEXT` 的 65,535 字节上限，无需数据库迁移。`max-recent-turns=0` 表示按模型 token 预算保留完整回合，在接近容量时才摘要；可设置正数恢复显式轮数限制。摘要覆盖范围、幂等键、所有权、租约、过期和迟到完成规则继续生效。
+
 ### 6.3 `memory_extraction_task`
 
 | 字段 | 类型 | 可空/默认 | 约束与说明 |

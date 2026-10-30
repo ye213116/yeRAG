@@ -35,7 +35,7 @@ public class AiProperties {
         /** 采样温度 */
         private Double temperature = 0.3;
         /** 最大输出 tokens */
-        private Integer maxTokens = 2000;
+        private Integer maxTokens = 8192;
         /** nucleus top-p */
         private Double topP = 0.9;
     }
@@ -50,9 +50,19 @@ public class AiProperties {
         private int maxQueryLength = 500;
         private int defaultTopK = 5;
         private int maxTopK = 10;
-        private int maxToolResultCharacters = 6000;
+        /** Resource ceiling; model context is governed by ai.rag token settings. */
+        private int maxToolResultCharacters = 4 * 1024 * 1024;
         private Duration llmTimeout = Duration.ofSeconds(30);
         private Duration toolTimeout = Duration.ofSeconds(10);
         private Duration totalTimeout = Duration.ofSeconds(60);
+        private Planning planning = new Planning();
+    }
+
+    @Data
+    public static class Planning {
+        private boolean enabled = true;
+        /** Includes the final synthesis task; bounded to 3–6 at runtime. */
+        private int maxSteps = 4;
+        private Duration timeout = Duration.ofSeconds(5);
     }
 }

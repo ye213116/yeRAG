@@ -1,6 +1,6 @@
 # 前端回归
 
-`pnpm test` 验证请求取消；`pnpm test:browser` 使用 Chromium 验证真实 Vue 页面与状态管理。浏览器测试启动独立 Vite（19527）和本机 HTTP/WebSocket fixture，不使用线上模型或修改现有业务数据；覆盖历史记录、401/403、流式消息、断线重连、切换会话、迟到完成、停止和跨账号隔离。
+`pnpm test` 验证请求取消、计划快照校验与任务终态；`pnpm test:browser` 使用 Chromium 验证真实 Vue 页面与状态管理。浏览器测试启动独立 Vite（19527）和本机 HTTP/WebSocket fixture，不使用线上模型或修改现有业务数据；覆盖任务列表展示与进度更新、标题纯文本渲染、计划停止/失败、历史记录、401/403、流式消息、断线重连、切换会话、迟到完成、停止和跨账号隔离。
 
 要求 Node 22、已安装的 Chromium。通过 `BROWSER_EXECUTABLE_PATH=/path/to/chrome pnpm test:browser` 指定浏览器；也可自动发现系统 Chromium 或 Playwright 缓存。不要同时执行会重写前端文件的 lint/build，以免 HMR 干扰测试导航。
 

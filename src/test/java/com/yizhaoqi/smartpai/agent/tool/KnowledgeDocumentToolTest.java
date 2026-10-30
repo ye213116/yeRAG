@@ -38,9 +38,11 @@ class KnowledgeDocumentToolTest {
     }
 
     @Test void boundsEscapedOutputAndProvidesAContinuationWithinAnOversizedChunk() throws Exception {
+        var limits = new AiProperties(); limits.getAgent().setMaxToolResultCharacters(6000);
+        var boundedTool = new KnowledgeDocumentTool(search, mapper, limits);
         String text = "\"\\\n".repeat(5000);
         when(search.readDocumentWithPermission(MD5, 8, 3, "42")).thenReturn(List.of(new SearchResult(MD5, 8, text, 0d, "制度.md")));
-        var result = tool.execute(args(""), new ToolExecutionContext("42"));
+        var result = boundedTool.execute(args(""), new ToolExecutionContext("42"));
         assertTrue(result.success());
         assertTrue(result.content().length() <= 6000);
         var root = mapper.readTree(result.content());
@@ -48,7 +50,7 @@ class KnowledgeDocumentToolTest {
         int next = root.path("next_offset").asInt();
         assertTrue(next > 0 && next < text.length());
         assertEquals(8, root.path("next_start_chunk").asInt());
-        var continued = mapper.readTree(tool.execute(args(",\"offset\":" + next), new ToolExecutionContext("42")).content());
+        var continued = mapper.readTree(boundedTool.execute(args(",\"offset\":" + next), new ToolExecutionContext("42")).content());
         assertTrue(text.substring(next).startsWith(continued.path("results").get(0).path("untrusted_content").asText()));
     }
 
@@ -59,6 +61,14 @@ class KnowledgeDocumentToolTest {
         var result = tool.execute(args(""), new ToolExecutionContext("42"));
         assertFalse(result.success());
         assertFalse(result.content().contains("private diagnostic"));
+    }
+    @Test void defaultBudgetKeepsLongDocumentContentBeyondTheOldCharacterCeiling() throws Exception {
+        String text="完整正文与重要例外条件。".repeat(2000);
+        when(search.readDocumentWithPermission(MD5,8,3,"42")).thenReturn(List.of(new SearchResult(MD5,8,text,0d,"制度.md")));
+        var result=mapper.readTree(tool.execute(args(""),new ToolExecutionContext("42")).content());
+        assertEquals(text,result.path("results").get(0).path("untrusted_content").asText());
+        assertFalse(result.path("results").get(0).path("truncated").asBoolean());
+        assertTrue(result.path("range_complete").asBoolean());
     }
 
     private String args(String extra) { return "{\"fileMd5\":\"" + MD5 + "\",\"startChunk\":8" + extra + "}"; }

@@ -18,7 +18,7 @@ class AiPropertiesTest {
         assertEquals(500, agent.getMaxQueryLength());
         assertEquals(5, agent.getDefaultTopK());
         assertEquals(10, agent.getMaxTopK());
-        assertEquals(6000, agent.getMaxToolResultCharacters());
+        assertEquals(4 * 1024 * 1024, agent.getMaxToolResultCharacters());
         assertEquals(Duration.ofSeconds(30), agent.getLlmTimeout());
         assertEquals(Duration.ofSeconds(10), agent.getToolTimeout());
         assertEquals(Duration.ofSeconds(60), agent.getTotalTimeout());

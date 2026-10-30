@@ -67,6 +67,16 @@ class McpAgentToolTest {
     }
 
     @Test
+    void defaultResultBudgetRetainsTextBeyondTheOldSmallCeiling() throws Exception {
+        String text="完整的远程工具资料与最后的例外条件。".repeat(1000);
+        client.result=new McpToolCallResult(List.of(text),null,false,false);
+        var result=tool().execute("{\"query\":\"x\"}",new ToolExecutionContext("alice"));
+        assertTrue(result.success());
+        assertEquals(text,mapper.readTree(result.content()).path("text").get(0).asText());
+        assertFalse(mapper.readTree(result.content()).path("truncated").asBoolean());
+    }
+
+    @Test
     void rejectsAmbiguousJsonAndOversizedUtf8BeforeCallingServer() {
         McpAgentTool tool = tool();
         var context = new ToolExecutionContext("alice");

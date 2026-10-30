@@ -189,6 +189,16 @@ declare namespace Api {
       status?: 'pending' | 'loading' | 'finished' | 'error';
       timestamp?: string;
       agentStatus?: string;
+      planTasks?: PlanTask[];
+    }
+
+    type PlanTaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped' | 'cancelled';
+
+    interface PlanTask {
+      id: string;
+      title: string;
+      status: PlanTaskStatus;
+      message: string;
     }
 
     interface Token {

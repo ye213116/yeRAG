@@ -23,18 +23,19 @@ public class MemoryProperties {
     private Duration taskLease = Duration.ofMinutes(2);
     private Duration runTimeout = Duration.ofMinutes(3);
     private int maxAttempts = 5;
-    private int maxRecentTurns = 10;
-    private int maxInputBytes = 48000;
-    private int summaryBytes = 4000;
-    private int memoryBytes = 3200;
-    private int maxQuestionBytes = 12000;
+    /** 0 retains complete turns until the model context budget requires summarization. */
+    private int maxRecentTurns = 0;
+    private int maxInputBytes = 32 * 1024 * 1024;
+    private int summaryBytes = 60_000;
+    private int memoryBytes = 256 * 1024;
+    private int maxQuestionBytes = 8 * 1024 * 1024;
     private int workerConcurrency = 2;
     private int maxHeadingCodePoints = 80;
     private int maxSectionBytes = 8192;
     private int maxDocumentBytes = 32768;
     private int maxPatches = 8;
-    private int maxExtractionInputBytes = 48000;
-    private int maxExtractionOutputBytes = 16384;
+    private int maxExtractionInputBytes = 32 * 1024 * 1024;
+    private int maxExtractionOutputBytes = 65536;
     private int indexDescriptionCodePoints = 120;
 
     @jakarta.annotation.PostConstruct
@@ -47,7 +48,7 @@ public class MemoryProperties {
         for (Duration duration : List.of(idleTimeout, contextTtl, contentRetention, llmTimeout, taskLease, runTimeout))
             if (duration.isZero() || duration.isNegative())
                 throw new IllegalArgumentException("Memory durations must be positive");
-        if (taskLease.compareTo(llmTimeout.plusSeconds(5)) <= 0 || maxAttempts < 1 || maxRecentTurns < 1
+        if (taskLease.compareTo(llmTimeout.plusSeconds(5)) <= 0 || maxAttempts < 1 || maxRecentTurns < 0
                 || maxQuestionBytes < 1 || summaryBytes < 1 || memoryBytes < 1
                 || maxInputBytes < 2 * (maxQuestionBytes + summaryBytes + memoryBytes + 1024))
             throw new IllegalArgumentException("Invalid memory limits or lease; leave space for context and tool messages");

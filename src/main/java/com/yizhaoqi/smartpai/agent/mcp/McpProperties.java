@@ -29,7 +29,7 @@ public class McpProperties {
     private int maxListPages = 20;
     private int maxToolsPerServer = 200;
     private int maxArgumentCharacters = 16_384;
-    private int maxResultCharacters = 6_000;
+    private int maxResultCharacters = 4 * 1024 * 1024;
     private boolean allowInsecureHttp = false;
     private Map<String, Server> servers = new LinkedHashMap<>();
 

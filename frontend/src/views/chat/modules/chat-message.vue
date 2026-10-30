@@ -3,6 +3,7 @@
 import { nextTick } from 'vue';
 import { VueMarkdownIt } from 'vue-markdown-shiki';
 import { formatDate } from '@/utils/common';
+import ChatPlan from './chat-plan.vue';
 defineOptions({ name: 'ChatMessage' });
 
 const props = defineProps<{
@@ -136,6 +137,7 @@ async function handleSourceFileClick(fileInfo: { fileName: string; referenceNumb
         <NText class="text-3 color-gray-500">{{ formatDate(msg.timestamp) }}</NText>
       </div>
     </div>
+    <ChatPlan v-if="msg.role === 'assistant' && msg.planTasks?.length" :tasks="msg.planTasks" />
     <NText v-if="msg.status === 'pending'">
       <icon-eos-icons:three-dots-loading class="ml-12 mt-2 text-8" />
       <span class="ml-12 text-14px">{{ msg.agentStatus || '正在思考' }}</span>

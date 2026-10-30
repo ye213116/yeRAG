@@ -50,6 +50,17 @@ class MemoryContextServiceTest {
         verify(store).synced("sid",1L);
         verify(store).syncedTurns("sid",List.of(2L));
     }
+    @Test void automaticHistoryBudgetKeepsManyTurnsWithoutPrematureSummary() {
+        config.setMaxRecentTurns(0);
+        List<Turn> turns=new ArrayList<>();
+        for(int i=1;i<=30;i++) turns.add(new Turn(i,1,"sid","r"+i,"完整问题"+i,"完整答案"+i,"COMPLETED",Instant.now()));
+        when(store.history(1,"sid")).thenReturn(turns);
+        Context result=service.build(current);
+        assertFalse(result.reduced());
+        assertTrue(result.messages().stream().anyMatch(m -> "完整问题1".equals(m.content())));
+        assertTrue(result.messages().stream().anyMatch(m -> "完整答案30".equals(m.content())));
+        verifyNoInteractions(llm);
+    }
     @Test void summaryFailureUsesOnlyCurrentQuestionAndSignalsReduction() {
         when(llm.decide(anyList(),anyList())).thenReturn(Mono.error(new IllegalStateException("offline")));
         Context c=service.build(current);

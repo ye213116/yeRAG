@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { interruptPlan, parsePlanTasks } from '@/utils/chat-plan';
+
 const chatStore = useChatStore();
 const { input, list, wsStatus, wsData, memoryReady, activeRequestId, sourceMode } = storeToRefs(chatStore);
 const sourceOptions = [
@@ -25,6 +27,24 @@ const sendable = computed(
     chatStore.historyReadOnly
 );
 
+function handleAgentStatus(
+  assistant: Api.Chat.Message,
+  event: { status?: string; requestId?: string; message?: string; details?: { tool?: string; tasks?: unknown } }
+) {
+  if (event.status === 'plan_updated' && event.requestId && event.requestId === activeRequestId.value) {
+    const tasks = parsePlanTasks(event.details?.tasks);
+    if (tasks) assistant.planTasks = tasks;
+    chatStore.scrollToBottom?.();
+  }
+  const toolLabels: Record<string, string> = {
+    search_knowledge_base: '搜索知识库',
+    read_knowledge_document: '阅读知识库原文',
+    search_web: '搜索公开网络',
+    read_web_page: '阅读网页正文'
+  };
+  assistant.agentStatus = toolLabels[event.details?.tool ?? ''] || event.message;
+}
+
 watch(wsData, val => {
   if (!val) return;
   let data;
@@ -37,24 +57,24 @@ watch(wsData, val => {
   if (data.conversationId && data.conversationId !== chatStore.conversationId) return;
   const assistant = list.value[list.value.length - 1];
   if (!assistant || assistant.role !== 'assistant') return;
+  if (assistant.status === 'finished' || assistant.status === 'error') return;
   if (data.type === 'request_rejected') {
+    interruptPlan(assistant, 'failed');
     assistant.status = 'error';
     assistant.content = data.message;
     return;
   }
   if (data.type === 'agent_status') {
-    const toolLabels: Record<string, string> = {
-      search_knowledge_base: '搜索知识库',
-      read_knowledge_document: '阅读知识库原文',
-      search_web: '搜索公开网络',
-      read_web_page: '阅读网页正文'
-    };
-    assistant.agentStatus = toolLabels[data.details?.tool] || data.message;
+    handleAgentStatus(assistant, data);
+    return;
   }
 
-  if (data.type === 'completion' && data.status === 'finished' && assistant.status !== 'error')
+  if (data.type === 'completion' && data.status === 'finished') {
+    interruptPlan(assistant, 'skipped');
     assistant.status = 'finished';
+  }
   if (data.error) {
+    interruptPlan(assistant, 'failed');
     assistant.status = 'error';
     assistant.content = data.error;
   } else if (data.chunk) {
@@ -73,8 +93,11 @@ const handleSend = async () => {
     chatStore.wsSend(JSON.stringify({ type: 'stop', _internal_cmd_token: data.cmdToken }));
     activeRequestId.value = '';
 
-    list.value[list.value.length - 1].status = 'finished';
-    if (!latestMessage.value.content) list.value.pop();
+    const assistant = list.value[list.value.length - 1];
+    interruptPlan(assistant, 'cancelled');
+    assistant.status = 'finished';
+    if (!assistant.content && assistant.planTasks?.length) assistant.content = '已停止生成';
+    if (!assistant.content) list.value.pop();
     return;
   }
 

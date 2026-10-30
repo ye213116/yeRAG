@@ -40,6 +40,13 @@ class MemoryShortTermStoreTest {
         assertEquals(1L,((Number)store.session(1,turn.sessionId()).get("summary_revision")).longValue());
         assertThrows(ResponseStatusException.class,()->store.session(2,turn.sessionId()));
     }
+    @Test void longQuestionBeyondTheOldByteCeilingIsStoredIntact() {
+        String question="完整长问题资料".repeat(5000);
+        var turn=store.begin(1,null,"long-question",question).turn();
+        assertEquals(question,turn.question());
+        assertTrue(store.complete(turn,"完整答案"));
+        assertEquals(question,store.history(1,turn.sessionId()).get(0).question());
+    }
     @Test void legacySummaryImportRequiresOwnershipAndCannotOverwriteNewSummary() {
         var turn=store.begin(1,null,"r1","question").turn(); store.complete(turn,"answer");
         assertFalse(store.importSummary(2,turn.sessionId(),"foreign",turn.id()));

@@ -6,7 +6,7 @@
 
 ```mermaid
 flowchart TD
-    H[ChatHandler：Memory turn、来源模式、完整回答持久化] --> A[KnowledgeAgentService：现有工具循环]
+    H[ChatHandler：Memory turn、来源模式、完整回答持久化] --> A[KnowledgeAgentService：按需计划与工具循环]
     A --> T[search_knowledge_base]
     T --> R[RETRIEVE_ONLY]
     H -->|仅知识库模式允许的 fallback| Q[FIXED_QA]
@@ -50,9 +50,12 @@ ai:
     legacy-clipping: false     # true 用于对比旧 300 UTF-16 字符裁剪
     candidate-k: 0             # 0 复用 topK × recall-multiplier，上限 10000
     rerank-threshold: 0.0
-    context-tokens: 32000      # 应按实际模型上下文上限配置
-    evidence-tokens: 4000
-    safety-tokens: 512
+    model-profile: deepseek-v4.1-flash
+    tokenizer-resource: classpath:tokenizers/deepseek-v4/tokenizer.json.gz
+    context-tokens: 1048576    # 已核实的当前模型容量，换模型时同步配置
+    evidence-tokens: 0         # 不设置独立的小正文上限，使用剩余上下文
+    safety-tokens: 4096
+    compression-trigger-ratio: 0.95
     stage-timeout: 10s
     evidence-backend: local    # local | minio
     evidence-directory: /tmp/yerag-evidence
@@ -64,7 +67,15 @@ ai:
     corpus-version: unknown    # 评测时填写固定语料/索引版本
 ```
 
-没有目标 tokenizer 时，当前使用 `ESTIMATED_UTF8_BYTES_V1`，把 UTF-8 字节数作为保守估计，不能解读为精确 Token 数。组装预留输出和安全空间；真正发送 DeepSeek 请求前再次检查完整 JSON，包括历史、系统提示和工具定义。供应商 usage 另存，缺失为 null。
+当前使用与实际返回的 `deepseek-flash`（DeepSeek-V4.1-Flash）匹配的官方 BPE tokenizer，模型容量为 1,048,576 tokens。来源、固定版本、SHA-256 和 MIT 许可证见 [tokenizer 说明](../src/main/resources/tokenizers/deepseek-v4/README.md)。词表压缩打包，DJL 的原生 tokenizer 库随 Maven 依赖提供，运行时不下载词表、不调用 Python。`ai.rag.tokenizer-resource` 可指向其他经过核实的本地 HF tokenizer；加载失败直接报错，不回退到按字节冒充 token。
+
+模型输入计数覆盖解码后的消息正文、工具定义、工具参数和调用标识，并逐条预留协议开销；HTTP JSON 的二次转义和 `max_tokens` 等生成参数不计入正文 token。供应商未公开完整的 API 侧 prompt 组装，因此本地计量标为 `HF_BPE_CHAT_WITH_PROTOCOL_RESERVE:<tokenizer SHA-256>`，不宣称等同计费量；供应商返回的 `usage` 另存，缺失为 null。历史 `ESTIMATED_UTF8_BYTES_V1` 工件属于旧预算协议，不能直接作为新 token 预算的对比结果。
+
+默认回答上限为 8,192 tokens，另留 4,096 tokens 安全空间。默认压缩阈值为 `floor((context-tokens - max-tokens - safety-tokens) × 0.95)`，即当前配置下 984,473 个本地计量输入 tokens；低于此阈值不裁剪工具正文。接近上限时显式裁剪工具正文，保留来源元数据、工具调用 ID 与配对响应，设置 `context_truncated` / `truncated` 并加入固定提示，要求答案说明证据缺口。元数据也无法容纳时显式省略旧结果，不删除协议消息。不裁剪系统规则、用户问题和工具定义；受保护内容超出模型真实可用容量时仍拒绝发送。原始工具证据保存在 tool-call 运行，model-call 的 `request` 冻结实际发送内容；`contextCompaction` 同时记录字节数、token 数、token 输入上限和受影响的工具结果数量。
+
+当前工作区的公开覆盖配置位于 [config/application.properties](../config/application.properties)，由 Spring Boot 从项目根目录自动加载；部署环境仍可通过环境变量或命令行覆盖。现有 `.env` / `application.yml` 的跨仓库链接保持原样。换模型必须一起核实 profile、tokenizer、上下文和输出上限，不能把当前容量直接套到未知模型。
+
+资源上限和模型 token 预算分别检查：用户问题 8 MiB，Memory / 模型请求 32 MiB，单工具结果 4,194,304 字符；网页抓取 16 MiB、正文 1,048,576 字符，MCP 响应 32 MiB。WebSocket 接收缓冲同步采用 Memory 请求资源上限，避免旧的默认小缓冲拒绝长问题。Memory 默认 `max-recent-turns=0`，按模型预算保留完整历史回合；摘要上限 60,000 字节，长期记忆召回上限 256 KiB。`evidence-tokens=0` 让检索组装使用剩余上下文；显式正数仍可配置独立正文预算。工具参数、权限、topK、调用次数和请求超时继续独立校验。
 
 重排未配置记为 SKIPPED；调用失败/超时使用原 RRF 顺序并记 DEGRADED；成功但阈值筛空不恢复候选。仅对 `ai.retrieval.rerank.top-n` 内候选评分，尾部明确记 `OUTSIDE_RERANK_WINDOW`。正文送重排前的截取范围另有快照。
 
@@ -110,5 +121,11 @@ Judge 通过现有模型客户端的独立请求评估完整答案、遗漏、�
 当前合成题集为待人工确认的草稿；程序会显示观测覆盖，但不把待审核或争议题填成正式零分。真实服务、身份和语料未就绪时，正式 50 题验收必须保持待验证。旧 A/B/C 与 ID 相关度并行评分入口已收敛，旧数据只做一次性模板转换。
 
 ## 验证记录
+
+2026-10-29，当前未提交工作区的模型 BPE 预算：本次执行 `mvn test`，294 项、0 失败、0 错误、10 项按条件跳过。覆盖官方 tokenizer 指纹、禁用 tokenizer 默认 512-token 截断、转义不重复计数、工具定义/参数开销、接近 token 上限的裁剪、长问题完整落库、30 轮历史不提前摘要，以及知识库/MCP 长正文完整保留。
+
+真实服务使用临时账号和合成会议纪要验证：244,152 字节问题通过真实 WebSocket 接收并完整保存，末尾项目编号正确返回；下一轮从完整历史正确回忆编号，没有触发上下文压缩。首轮模型请求 252,459 字节，本地计量 41,229 tokens，供应商报告 41,186 prompt tokens；后续回忆请求本地 41,318、供应商 41,212。实际返回模型为 `deepseek-flash`，请求回答预留 8,192 tokens、上下文配置 1,048,576 tokens。新会话的比较问题三个计划任务全部完成。测试账号、会话、Memory 和缓存已清理；本次样本不代表完整 1M 窗口或并发压力验收，未启用的 MySQL 并发套件不在通过范围。
+
+2026-10-29 早期字节预算修复记录（下述 29,488 字节上限已被模型 BPE 预算替代）：当时执行 `mvn test`，285 项、0 失败、0 错误、10 项按条件跳过。`DeepSeekTransportTest` 覆盖累积工具正文、规划跨任务上下文、Memory 字节上限、完整工具定义与 JSON 转义计数、调用配对和受保护问题超限拒绝发送。真实模型使用合成资料验证 36,574 字节请求裁剪到 29,488 字节后正常完成流式回答；真实本地 HTTP/WebSocket 验证简单问题无计划、复杂比较的三个任务全部完成及完整回答保存。测试账号、会话和缓存已清理；未启用的 MySQL 并发测试不在当时通过范围。
 
 当前实现与验收结果见 [评测说明](../evaluation/README.md#5-验证范围)。2026-10-23 的 Pipeline 初版测试记录不代表本次评测版本已通过真实服务验收。真实 MySQL / ES 测试仍由对应环境变量启用；模拟 ES、H2 或本地 HTTP 提供的测试证据不能替代真实 ES / MySQL / MinIO / 模型联调。
