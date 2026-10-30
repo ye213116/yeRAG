@@ -121,6 +121,8 @@ CREATE TABLE chat_session (
 
 -- Administrator date-range history reads only completed, unexpired turns for one user.
 -- The API returns at most the latest 200 turns in chronological order.
+-- Model context reads preceding ID pages until its token/byte budget or explicit turn limit is reached.
+-- Only the omitted unsummarized prefix enters the next bounded summary batch.
 CREATE TABLE chat_turn (
     -- Application input ceiling: 8 MiB; MEDIUMTEXT holds up to 16,777,215 bytes.
     id BIGINT NOT NULL AUTO_INCREMENT COMMENT 'Turn primary key',

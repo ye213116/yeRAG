@@ -160,9 +160,12 @@ public class MemoryStore {
         });
     }
     public List<Turn> history(long user, String session) {
+        return historyBefore(user,session,Long.MAX_VALUE);
+    }
+    /** Loads the preceding 200 eligible turns by ID and returns them chronologically. */
+    public List<Turn> historyBefore(long user, String session, long before) {
         session(user, session);
-        // Bounded DB reads; older completed turns can be requested separately for history display.
-        var rows = db.queryForList("SELECT * FROM chat_turn WHERE user_id=? AND session_id=? AND status='COMPLETED' AND content_expires_at>? ORDER BY id DESC LIMIT 200", user, session, time(Instant.now()));
+        var rows = db.queryForList("SELECT * FROM chat_turn WHERE user_id=? AND session_id=? AND status='COMPLETED' AND content_expires_at>? AND id<? ORDER BY id DESC LIMIT 200", user, session, time(Instant.now()), before);
         List<Turn> turns = new ArrayList<>(); rows.forEach(r -> turns.add(turn(r))); Collections.reverse(turns); return turns;
     }
     /** Cross-session history for the administrator-only endpoint; retention still applies. */

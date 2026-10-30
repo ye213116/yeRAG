@@ -99,16 +99,18 @@ public class MemoryContextService {
             meta = store.session(user,session);
         Snapshot cacheHit = cached(user,session,meta);
         if (cacheHit != null && !cacheHit.reduced()) return cacheHit;
-        List<Turn> all = store.history(user, session);
         String summary = Objects.toString(meta.get("context_summary"), "");
         long covered = ((Number) meta.getOrDefault("summary_covered_turn_seq", 0L)).longValue();
         long revision = ((Number) meta.getOrDefault("summary_revision", 0L)).longValue();
-        List<Turn> recent = new ArrayList<>(store.uncoveredHistory(user,session,covered));
+        List<Turn> cached = retainedHistory(user,session,config.isShortTermEnabled() ? covered : 0,
+                config.isShortTermEnabled() ? summary : "");
+        List<Turn> recent = store.uncoveredHistory(user,session,covered);
         boolean reduced = false;
         boolean summaryFailed = false;
-        int keep = retainedTurns(recent, summary);
-        if (config.isShortTermEnabled() && recent.size() > keep) {
-            int prefix = recent.size() - keep;
+        long firstRetained = cached.isEmpty() ? Long.MAX_VALUE : cached.get(0).id();
+        int prefix = 0;
+        while (prefix < recent.size() && recent.get(prefix).id() < firstRetained) prefix++;
+        if (config.isShortTermEnabled() && prefix > 0) {
             try {
                 String source = json.writeValueAsString(Map.of("previous_summary", summary, "completed_turns", recent.subList(0, prefix)));
                 // Process bounded batches. Never mark truncated raw input as summarized.
@@ -123,13 +125,11 @@ public class MemoryContextService {
                 long nextCovered = recent.get(prefix - 1).id();
                 if (!store.saveSummary(user,session,revision,decision.content(),nextCovered)) throw new SummaryConflict();
                 summary = decision.content(); covered = nextCovered; revision++;
-                recent = new ArrayList<>(recent.subList(prefix, recent.size()));
             } catch (SummaryConflict conflict) { throw conflict; }
             catch (Exception failure) { reduced = true; summaryFailed = true; }
         }
-        long latest = all.isEmpty() ? covered : all.get(all.size() - 1).id();
+        long latest = cached.isEmpty() ? covered : cached.get(cached.size() - 1).id();
         // MySQL is authoritative. Cache failures cannot discard a committed summary.
-        List<Turn> cached = all.subList(Math.max(0, all.size() - keep), all.size());
         if (!cached.isEmpty() && store.hasContextGap(user,session,covered,cached.get(0).id())) reduced = true;
         long ttl = Math.min(config.getContextTtl().toMillis(), MemoryStore.instant(meta.get("context_expires_at")).toEpochMilli() - System.currentTimeMillis());
         if (ttl > 0) {
@@ -145,13 +145,12 @@ public class MemoryContextService {
                 values.put("last_completed_turn_seq",Long.toString(latest));
                 values.put("recent_limit",Integer.toString(config.getMaxRecentTurns()));
                 values.put("short_term_enabled",Boolean.toString(config.isShortTermEnabled()));
-                values.put("reduced",Boolean.toString(reduced || recent.size()>keep || summaryFailed));
+                values.put("reduced",Boolean.toString(reduced || summaryFailed));
                 values.put("recent_turns_json",json.writeValueAsString(cached));
                 redis.opsForHash().putAll(key(session),values);
                 redis.expire(key(session), java.time.Duration.ofMillis(ttl));
             } catch (Exception failure) { LOG.warn("Memory cache unavailable for session={}",session); }
         }
-        if (recent.size() > keep) reduced = true;
         if (summaryFailed) return new Snapshot("",List.of(),true,true);
         return new Snapshot(config.isShortTermEnabled() ? summary : "", List.copyOf(cached), reduced,false);
     }
@@ -166,19 +165,28 @@ public class MemoryContextService {
         return modelBudget.inputTokenLimit(output);
     }
 
-    private int retainedTurns(List<Turn> recent, String summary) {
-        if (config.getMaxRecentTurns() > 0) return config.getMaxRecentTurns();
-        int used = tokens.count(RULES + summary) + 512;
-        int rawBytes = bytes(summary);
-        int keep = 0;
-        for (int i = recent.size() - 1; i >= 0; i--) {
-            Turn turn = recent.get(i);
-            int size = tokens.count(turn.question()) + tokens.count(turn.answer()) + 32;
-            int byteSize = bytes(turn.question()) + bytes(turn.answer());
-            if (used + size > inputTokenLimit() || (long) rawBytes + byteSize > config.getMaxInputBytes()) break;
-            used += size; rawBytes += byteSize; keep++;
+    private List<Turn> retainedHistory(long user, String session, long covered, String summary) {
+        long used = tokens.count(RULES + summary) + 512L;
+        long rawBytes = bytes(summary);
+        Deque<Turn> retained = new ArrayDeque<>();
+        List<Turn> page = store.history(user,session);
+        while (!page.isEmpty()) {
+            for (int i = page.size() - 1; i >= 0; i--) {
+                Turn turn = page.get(i);
+                if (turn.id() <= covered) return List.copyOf(retained);
+                int size = tokens.count(turn.question()) + tokens.count(turn.answer()) + 32;
+                long byteSize = (long) bytes(turn.question()) + bytes(turn.answer());
+                if (!retained.isEmpty() && (used + size > inputTokenLimit()
+                        || rawBytes + byteSize > config.getMaxInputBytes()
+                        || config.getMaxRecentTurns() > 0 && retained.size() >= config.getMaxRecentTurns()))
+                    return List.copyOf(retained);
+                retained.addFirst(turn);
+                used += size; rawBytes += byteSize;
+            }
+            // A DB page is a transport bound, not a conversation-history limit.
+            page = store.historyBefore(user,session,page.get(0).id());
         }
-        return Math.max(1, keep);
+        return List.copyOf(retained);
     }
     public Context build(Turn turn) {
         Snapshot snapshot;
