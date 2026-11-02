@@ -41,6 +41,7 @@ def cleanup(folder):
             raise RuntimeError('Fixture documents still exist; retain fixtures.json for recovery')
         sql(f'''START TRANSACTION;
 DELETE t FROM memory_extraction_task t JOIN chat_turn c ON c.id=t.turn_id WHERE c.user_id IN ({selected});
+DELETE v FROM memory_document_version v JOIN memory_document d ON d.id=v.document_id WHERE d.user_id IN ({selected});
 DELETE s FROM memory_document_section s JOIN memory_document d ON d.id=s.document_id WHERE d.user_id IN ({selected});
 DELETE FROM memory_document WHERE user_id IN ({selected});
 DELETE FROM chat_turn WHERE user_id IN ({selected});

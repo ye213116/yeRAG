@@ -33,6 +33,14 @@ final class ToolArguments {
         return value;
     }
 
+    static long longInteger(JsonNode root, String key, long fallback, long min) {
+        if (!root.has(key)) return fallback;
+        JsonNode node=root.get(key);
+        if (!node.isIntegralNumber() || !node.canConvertToLong() || node.longValue()<min)
+            throw new IllegalArgumentException(key+" is out of range");
+        return node.longValue();
+    }
+
     static int integer(JsonNode root, String key, int fallback, int min, int max) {
         if (!root.has(key)) return fallback;
         JsonNode node = root.get(key);

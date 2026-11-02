@@ -1,0 +1,9 @@
+**
+!Dockerfile
+!target/
+target/*
+!target/SmartPAI-0.0.1-SNAPSHOT.jar
+!config/
+!config/application.properties
+!deploy/
+!deploy/application-docker.properties

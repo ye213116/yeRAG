@@ -227,16 +227,21 @@ ai:
 
 ### 短期会话上下文
 
-- MySQL 保存业务会话、完整问答回合、滚动摘要、请求幂等信息和异步任务状态。成功回答后，短期上下文续期 7 天。
-- Redis 只缓存短期上下文；缓存丢失时从 MySQL 恢复。记忆读取失败时用当前问题继续回答，并通过 `context_reduced` 通知前端。
-- 业务 `conversationId` 与 WebSocket `sessionId` 分离；新建会话、空闲超时切换、重连和迟到事件都有边界处理。
-- 前端支持新建会话、历史会话只读查看和 `requestId` 事件隔离。
+- MySQL 长期保存原始问答和滚动摘要，默认不自动过期；用户删除会话时清理原文、摘要、关联任务和缓存。
+- 调用 Agent 前检查历史：超过 16,384 tokens 时同步压缩，摘要最多 2,048 tokens，近期原文最多 6,144 tokens，压缩后约 8k，再逐轮增长。当前问题及其他内容另计，发送前统一校验模型总预算。
+- Redis 只缓存近期上下文，TTL 默认 7 天；缓存丢失或版本落后时从 MySQL 恢复。下一轮不等待 Worker 即可读取上一轮完整答案。
+- `search_conversation_history` 和 `read_conversation_turns` 在当前认证会话内搜索、分段读取旧原文。摘要失败时保留旧摘要和预算内近期原文，并通过 `context_reduced` 通知前端。
+- 业务 `conversationId` 与 WebSocket `sessionId` 分离；空闲不切换会话。前端支持新建、恢复旧会话继续交流、分页加载历史、删除确认和 `requestId` 事件隔离。
+
+已有数据库部署前执行 [持久会话迁移](docs/databases/migrations/20261102_persistent_conversation_history.sql)，先停止旧服务及 Worker，避免旧清理逻辑继续删数据。迁移不能恢复此前已被清空的原文。
 
 ### Markdown 长期记忆
 
-yeRAG 只保留 Markdown document memory：每个用户维护 `profile.md` 和 `preferences.md` 两类受控文档。`MemoryWorker` 根据用户原始问题生成 section patch，服务端校验 section 所有权和证据后事务更新文档；召回时动态生成不落库的 `MEMORY.md` 索引。
+yeRAG 维护 `profile.md`、`preferences.md` 两类受控文档。每轮默认只注入最多 1,024 tokens 的 `MEMORY.md` 元数据索引；Agent 通过 `read_memory` 批量读取相关正文，索引超大时用 `list_memory_sections` 发现条目。正文工具每次最多返回 2,048 tokens，个人记忆工具每轮最多两次，与检索调用分别计数，共享总超时。
 
-长期记忆使用持久化提取任务、租约、重试和幂等处理，不使用 Elasticsearch 向量召回。
+`MemoryWorker` 使用两阶段模型：先从当前用户原话、必要近期上下文及索引中提取候选；再读取目标旧正文和版本，整合为完整 section Patch。服务器验证来源、归属、版本、租约与轮次屏障，事务更新正文、描述、版本快照及任务状态；重复或无长期价值可不写。模型负责语义判断，不再按“最近”、引用或代码直接拒绝整批提取。
+
+历史版本保留语义决定、修改理由和原话来源，可通过自己的版本接口查询及显式回滚；回滚新增版本。个人记忆作为用户数据，不能改变系统规则、ACL、工具权限或替代知识库证据。项目记忆尚未启用，需要服务器绑定稳定项目标识。
 
 配置示例：
 
@@ -249,9 +254,18 @@ ai:
     short-term-enabled: true
     extraction-enabled: true
     recall-enabled: true
+    context-ttl: 7d
+    history-trigger-tokens: 16384
+    history-target-tokens: 8192
+    summary-max-tokens: 2048
+    recent-tokens: 6144
+    history-tool-tokens: 2048
+    index-tokens: 1024
+    read-tokens: 2048
+    max-memory-tool-calls: 2
 ```
 
-这些子功能默认开启，可使用对应的 `AI_MEMORY_*` 环境变量配置。
+这些子功能默认开启，可使用对应的 `AI_MEMORY_*` 环境变量配置。旧 `idle-timeout`、`content-retention` 和 `max-recent-turns` 仅保留配置绑定兼容，不再改变会话或原文生命周期。
 
 记忆接口包括：
 
@@ -259,8 +273,13 @@ ai:
 GET  /api/v1/memory/sessions/current
 POST /api/v1/memory/sessions
 GET  /api/v1/memory/sessions
-GET  /api/v1/memory/sessions/{id}/messages
+POST /api/v1/memory/sessions/{id}/resume
+DELETE /api/v1/memory/sessions/{id}
+GET  /api/v1/memory/sessions/{id}/messages?before=<turnId>
 GET  /api/v1/memory/documents
+GET  /api/v1/memory/documents/{type}/versions
+GET  /api/v1/memory/documents/{type}/versions/{version}
+POST /api/v1/memory/documents/{type}/rollback
 ```
 
 数据库初始化和设计说明：
@@ -324,7 +343,7 @@ frontend/src/
 - pnpm 8.7+
 - MySQL 8、Redis 7、Elasticsearch 8.10、Kafka 3.2、MinIO 8.5
 
-Docker 可用于运行这些基础设施，但当前仓库没有提交 `docker-compose.yml`；请按部署环境自行启动并在 Spring 配置中填写连接信息。
+Docker 可用于运行这些基础设施。仓库新增 [compose.yaml](compose.yaml) 部署后端与前端，复用已有中间件网络和数据卷；配置、构建、迁移与启动步骤见 [Docker 部署说明](deploy/README.md)。
 
 ### 后端
 

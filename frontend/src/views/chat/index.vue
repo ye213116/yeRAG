@@ -8,6 +8,14 @@ const chatStore = useChatStore();
   <div class="mx-auto max-w-1080px w-full flex-col gap-4">
     <div class="flex items-center gap-4">
       <NButton :disabled="!chatStore.memoryReady" @click="chatStore.newConversation">新建对话</NButton>
+      <NPopconfirm @positive-click="chatStore.deleteConversation">
+        <template #trigger>
+          <NButton :disabled="!chatStore.memoryReady || !chatStore.conversationId" type="error" quaternary>
+            删除对话
+          </NButton>
+        </template>
+        删除此会话及全部原始问答？此操作无法撤销。
+      </NPopconfirm>
       <NSelect
         class="w-72"
         :value="chatStore.conversationId"
@@ -19,7 +27,9 @@ const chatStore = useChatStore();
       <NText depth="3">本轮上下文按会话隔离，个人记忆可跨会话使用</NText>
     </div>
     <NAlert v-if="chatStore.memoryNotice" type="info">{{ chatStore.memoryNotice }}</NAlert>
-    <NAlert v-if="chatStore.historyReadOnly" type="info">历史会话仅供查看，可新建对话继续提问。</NAlert>
+    <NButton v-if="chatStore.hasOlderMessages" :loading="chatStore.historyLoading" @click="chatStore.loadOlderMessages">
+      加载更早消息
+    </NButton>
     <ChatList />
     <InputBox />
   </div>

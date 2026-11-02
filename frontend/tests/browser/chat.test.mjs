@@ -128,7 +128,17 @@ before(async () => {
     }
     const owned = sessions(owner);
     if (path === '/api/v1/memory/sessions/current') {
-      send({ conversationId: owned.find(s => s.status === 'OPEN').id });
+      let current = owned.find(s => s.status === 'OPEN');
+      if (!current) {
+        current = {
+          id: `${owner}-${Date.now()}`,
+          status: 'OPEN',
+          last_activity_at: '2026-11-02T00:00:00',
+          messages: []
+        };
+        owned.unshift(current);
+      }
+      send({ conversationId: current.id });
       return;
     }
     if (path === '/api/v1/memory/sessions' && req.method === 'POST') {
@@ -149,10 +159,36 @@ before(async () => {
       send(owned);
       return;
     }
+    const resume = path.match(/^\/api\/v1\/memory\/sessions\/([^/]+)\/resume$/);
+    if (resume && req.method === 'POST') {
+      const session = owned.find(s => s.id === resume[1]);
+      if (!session) send(null, 404);
+      else {
+        owned.forEach(s => {
+          s.status = s === session ? 'OPEN' : 'CLOSED';
+        });
+        send({ conversationId: session.id });
+      }
+      return;
+    }
+    const deletion = path.match(/^\/api\/v1\/memory\/sessions\/([^/]+)$/);
+    if (deletion && req.method === 'DELETE') {
+      const index = owned.findIndex(s => s.id === deletion[1]);
+      if (index < 0) send(null, 404);
+      else {
+        owned.splice(index, 1);
+        send({ deleted: true });
+      }
+      return;
+    }
     const match = path.match(/^\/api\/v1\/memory\/sessions\/([^/]+)\/messages$/);
     if (match) {
       const session = owned.find(s => s.id === match[1]);
-      send(session?.messages, session ? 200 : 404);
+      const beforeTurn = Number(
+        new URL(req.url, 'http://localhost').searchParams.get('before') || Number.MAX_SAFE_INTEGER
+      );
+      const messages = session?.messages.filter(message => !message.turnId || message.turnId < beforeTurn).slice(-400);
+      send(messages, session ? 200 : 404);
       return;
     }
     send(null, 404);
@@ -453,6 +489,44 @@ test('signing out and into another account replaces socket and clears prior mess
     await sendMessage(page, 'alice message');
     await page.waitForFunction(() => document.body.textContent.includes('alice answer: alice message'));
     assert.equal(state.sockets.get('admin')?.readyState, 3);
+  } finally {
+    await page.browserContext().close();
+  }
+});
+
+test('resumes an old conversation, pages through history, continues chatting and deletes it', async () => {
+  const page = await newPage();
+  try {
+    await login(page);
+    const old = { id: 'admin-months-old', status: 'CLOSED', last_activity_at: '2026-02-01T00:00:00', messages: [] };
+    for (let i = 1; i <= 205; i += 1) {
+      old.messages.push({ role: 'user', content: `original-question-${i}`, turnId: i });
+      old.messages.push({ role: 'assistant', content: `original-answer-${i}`, turnId: i, status: 'finished' });
+    }
+    sessions('admin').push(old);
+    await page.evaluate(async id => {
+      const { useChatStore } = await import('/src/store/modules/chat/index.ts');
+      await useChatStore().viewConversation(id);
+    }, old.id);
+    await page.waitForFunction(() => document.body.textContent.includes('original-answer-205'));
+    assert.doesNotMatch(await page.$eval('body', element => element.textContent), /original-question-1\b/);
+    await clickText(page, '加载更早消息');
+    await page.waitForFunction(() => document.body.textContent.includes('original-question-1'));
+    await sendMessage(page, 'continue old session');
+    await page.waitForFunction(() => document.body.textContent.includes('admin answer: continue old session'));
+    assert.equal(state.requests.get('admin').conversationId, old.id);
+    await page.evaluate(async () => {
+      const { useChatStore } = await import('/src/store/modules/chat/index.ts');
+      await useChatStore().deleteConversation();
+    });
+    await page.waitForFunction(() => !document.body.textContent.includes('original-answer-205'));
+    assert.equal(
+      sessions('admin').some(session => session.id === old.id),
+      false
+    );
+    await sendMessage(page, 'after deletion');
+    await page.waitForFunction(() => document.body.textContent.includes('admin answer: after deletion'));
+    assert.notEqual(state.requests.get('admin').conversationId, old.id);
   } finally {
     await page.browserContext().close();
   }

@@ -39,6 +39,33 @@ class MemoryDocumentMySqlTest extends MemoryDocumentStoreTest {
     @AfterEach void cleanupSchema() {
         if(admin!=null && schema!=null) admin.execute("DROP DATABASE "+schema);
     }
+    @Test void deletionWinsAgainstExtractionThatAlreadyReadItsSourceSnapshot() throws Exception {
+        var turn=completed("我是工程师");
+        var task=store.claim().orElseThrow();
+        var readSource=new CountDownLatch(1);
+        var intercepted=org.mockito.Mockito.spy(db);
+        org.mockito.Mockito.doAnswer(call -> {
+            var rows=db.queryForList("SELECT * FROM chat_turn WHERE id=?",task.turnId());
+            readSource.countDown();
+            return rows;
+        }).when(intercepted).queryForList(org.mockito.ArgumentMatchers.eq("SELECT * FROM chat_turn WHERE id=?"),org.mockito.ArgumentMatchers.eq(task.turnId()));
+        var delayed=new MemoryStore(intercepted,new DataSourceTransactionManager(db.getDataSource()),config);
+        var executor=Executors.newSingleThreadExecutor();
+        var pending=new java.util.concurrent.atomic.AtomicReference<Future<?>>();
+        try {
+            new org.springframework.transaction.support.TransactionTemplate(new DataSourceTransactionManager(db.getDataSource()))
+                    .executeWithoutResult(status -> {
+                        db.queryForObject("SELECT id FROM users WHERE id=1 FOR UPDATE",Long.class);
+                        pending.set(executor.submit(() -> delayed.applyPatches(task,java.util.List.of(patch(null,"职业","用户是工程师。")))));
+                        try { assertTrue(readSource.await(5,TimeUnit.SECONDS)); }
+                        catch (InterruptedException interrupted) { throw new IllegalStateException(interrupted); }
+                        store.deleteSession(1,turn.sessionId());
+                    });
+            pending.get().get(10,TimeUnit.SECONDS);
+            assertTrue(store.documents(1).isEmpty());
+        } finally { executor.shutdownNow(); }
+    }
+
     @Test void twoConnectionsClaimDifferentUsersWhileSameUserWaits() throws Exception {
         completed("我是工程师"); completed("我是工程师");
         var other=store.begin(123,null,"other","我是工程师").turn(); store.complete(other,"answer");

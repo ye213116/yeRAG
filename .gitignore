@@ -93,6 +93,7 @@ docs/docker-compose.yaml
 docs/nginx.conf
 nginx.conf
 *.conf
+!deploy/nginx.conf
 
 # Backups
 *~

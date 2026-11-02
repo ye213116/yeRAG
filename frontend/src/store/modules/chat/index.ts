@@ -10,11 +10,41 @@ export const useChatStore = defineStore(SetupStoreId.Chat, () => {
   const activeRequestId = ref('');
   const memoryNotice = ref('');
   const historyReadOnly = ref(false);
+  const hasOlderMessages = ref(false);
+  const historyLoading = ref(false);
+  let historyBefore: number | undefined;
   const sessionOptions = ref<Array<{ label: string; value: string; closed: boolean }>>([]);
   let historyRevision = 0;
   const input = ref<Api.Chat.Input>({ message: '' });
   const sourceMode = ref<Api.Chat.SourceMode>('auto');
   const list = ref<Api.Chat.Message[]>([]);
+
+  function setHistory(messages: Array<Api.Chat.Message & { turnId?: number }>) {
+    list.value = messages;
+    historyBefore = messages[0]?.turnId;
+    hasOlderMessages.value = messages.length >= 400 && historyBefore !== undefined;
+  }
+
+  async function loadOlderMessages() {
+    if (historyLoading.value || !hasOlderMessages.value || historyBefore === undefined) return;
+    const revision = historyRevision;
+    historyLoading.value = true;
+    try {
+      const history = await request<Array<Api.Chat.Message & { turnId?: number }>>({
+        url: `memory/sessions/${conversationId.value}/messages`,
+        params: { before: historyBefore }
+      });
+      if (revision !== historyRevision) return;
+      if (history.error) memoryNotice.value = '无法加载更早消息';
+      else {
+        historyBefore = history.data[0]?.turnId;
+        hasOlderMessages.value = history.data.length >= 400 && historyBefore !== undefined;
+        list.value = [...history.data, ...list.value];
+      }
+    } finally {
+      historyLoading.value = false;
+    }
+  }
 
   async function loadCurrentConversation(fresh = false) {
     historyRevision += 1;
@@ -34,9 +64,10 @@ export const useChatStore = defineStore(SetupStoreId.Chat, () => {
     activeRequestId.value = '';
     const history = await request<Api.Chat.Message[]>({ url: `memory/sessions/${data.conversationId}/messages` });
     if (revision !== historyRevision) return;
-    if (!history.error) list.value = history.data;
+    if (!history.error) setHistory(history.data);
     else {
       list.value = [];
+      hasOlderMessages.value = false;
       memoryNotice.value = '暂时无法加载历史消息';
     }
     memoryReady.value = true;
@@ -56,14 +87,44 @@ export const useChatStore = defineStore(SetupStoreId.Chat, () => {
     const revision = historyRevision;
     activeRequestId.value = '';
     memoryReady.value = false;
+    const resumed = await request<{ conversationId: string }>({ url: `memory/sessions/${id}/resume`, method: 'post' });
+    if (revision !== historyRevision) return;
+    if (resumed.error) {
+      memoryNotice.value = '无法恢复该会话';
+      memoryReady.value = true;
+      return;
+    }
+    conversationId.value = id;
+    list.value = [];
+    hasOlderMessages.value = false;
     const history = await request<Api.Chat.Message[]>({ url: `memory/sessions/${id}/messages` });
     if (revision !== historyRevision) return;
     if (!history.error) {
       conversationId.value = id;
-      list.value = history.data;
-      historyReadOnly.value = sessionOptions.value.find(item => item.value === id)?.closed ?? true;
+      setHistory(history.data);
+      historyReadOnly.value = false;
+      sessionOptions.value = sessionOptions.value.map(item => ({ ...item, closed: item.value !== id }));
     } else memoryNotice.value = '无法加载该会话';
     memoryReady.value = true;
+  }
+
+  async function deleteConversation() {
+    const id = conversationId.value;
+    if (!id || !memoryReady.value) return;
+    historyRevision += 1;
+    const revision = historyRevision;
+    activeRequestId.value = '';
+    memoryReady.value = false;
+    const result = await request({ url: `memory/sessions/${id}`, method: 'delete' });
+    if (revision !== historyRevision) return;
+    if (result.error) {
+      memoryNotice.value = '删除失败，请稍后重试';
+      memoryReady.value = true;
+      return;
+    }
+    list.value = [];
+    memoryNotice.value = '';
+    await loadCurrentConversation();
   }
 
   async function newConversation() {
@@ -98,6 +159,8 @@ export const useChatStore = defineStore(SetupStoreId.Chat, () => {
       activeRequestId.value = '';
       memoryNotice.value = '';
       historyReadOnly.value = false;
+      hasOlderMessages.value = false;
+      historyBefore = undefined;
       sessionOptions.value = [];
       sessionId.value = '';
       list.value = [];
@@ -121,7 +184,7 @@ export const useChatStore = defineStore(SetupStoreId.Chat, () => {
           conversationId.value = data.conversationId;
           if (data.switched) {
             list.value = list.value.slice(-2);
-            memoryNotice.value = '由于长时间未交互，已开始新对话';
+            memoryNotice.value = '已切换对话';
             sessionOptions.value = sessionOptions.value.map(item => ({ ...item, closed: true }));
             sessionOptions.value.unshift({ value: data.conversationId, label: '当前对话', closed: false });
             historyReadOnly.value = false;
@@ -144,6 +207,10 @@ export const useChatStore = defineStore(SetupStoreId.Chat, () => {
     activeRequestId,
     memoryNotice,
     historyReadOnly,
+    hasOlderMessages,
+    historyLoading,
+    loadOlderMessages,
+    deleteConversation,
     sessionOptions,
     viewConversation,
     loadCurrentConversation,

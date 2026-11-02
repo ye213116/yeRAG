@@ -1,0 +1,40 @@
+name: yerag
+services:
+  backend:
+    image: yerag-backend:memory-20261102
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: ${YERAG_ENV_FILE:-.env}
+    environment:
+      SPRING_DATASOURCE_URL: ${DOCKER_DATASOURCE_URL:?Set the MySQL container URL}
+      SPRING_DATA_REDIS_HOST: ${DOCKER_REDIS_HOST:-redis}
+      SPRING_DATA_REDIS_PORT: ${DOCKER_REDIS_PORT:-6379}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: ${DOCKER_KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
+      ELASTICSEARCH_HOST: ${DOCKER_ELASTICSEARCH_HOST:-es}
+      ELASTICSEARCH_PORT: ${DOCKER_ELASTICSEARCH_PORT:-9200}
+      MINIO_ENDPOINT: ${DOCKER_MINIO_ENDPOINT:-http://minio:19000}
+    ports:
+      - "127.0.0.1:${YERAG_BACKEND_PORT:-8081}:8081"
+    volumes:
+      - evidence:/app/evidence
+      - logs:/app/logs
+    restart: unless-stopped
+    networks: [middleware]
+  frontend:
+    image: yerag-frontend:memory-20261102
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.frontend
+    depends_on: [backend]
+    ports:
+      - "127.0.0.1:${YERAG_FRONTEND_PORT:-9527}:80"
+    restart: unless-stopped
+    networks: [middleware]
+networks:
+  middleware:
+    external: true
+    name: ${YERAG_DOCKER_NETWORK:-pai_smart_default}
+volumes:
+  evidence:
+  logs:

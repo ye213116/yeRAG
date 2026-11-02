@@ -32,8 +32,9 @@ class ChatHandlerAgentTest {
         when(socket.getId()).thenReturn("ws-1");
         when(socket.isOpen()).thenReturn(true);
         when(store.begin(1,"sid","request","question")).thenReturn(new MemoryTypes.Begin(turn,true,false));
+        when(store.running(turn)).thenReturn(true);
         when(context.build(turn)).thenReturn(new MemoryTypes.Context(List.of(),false));
-        when(agent.run(anyString(),anyString(),anyList(),eq(SourceMode.KNOWLEDGE),any(AgentEventListener.class)))
+        when(agent.run(anyString(),anyString(),anyList(),eq(SourceMode.KNOWLEDGE),anyString(),any(AgentEventListener.class)))
                 .thenReturn(Mono.error(new IllegalStateException("unsupported tools")));
         when(fallback.answer(anyString(),anyString(),anyList(),any()))
                 .thenReturn(Mono.<com.yizhaoqi.smartpai.agent.AgentRunResult>never().doOnCancel(fallbackRun));
@@ -58,10 +59,11 @@ class ChatHandlerAgentTest {
             MemoryTypes.Turn turn = new MemoryTypes.Turn(1, 1, "sid", "request", "最新官方信息", null, "RUNNING", Instant.now());
             when(socket.getId()).thenReturn("ws"); when(socket.isOpen()).thenReturn(true);
             when(store.begin(1, "sid", "request", "最新官方信息")).thenReturn(new MemoryTypes.Begin(turn, true, false));
-            when(context.build(turn)).thenReturn(new MemoryTypes.Context(List.of(), false));
-            if (mode == SourceMode.AUTO) when(agent.run(anyString(),anyString(),anyList(),any()))
+            when(store.running(turn)).thenReturn(true);
+        when(context.build(turn)).thenReturn(new MemoryTypes.Context(List.of(), false));
+            if (mode == SourceMode.AUTO) when(agent.run(anyString(),anyString(),anyList(),any(SourceMode.class),anyString(),any()))
                     .thenReturn(Mono.error(new IllegalStateException("unavailable")));
-            else when(agent.run(anyString(),anyString(),anyList(),eq(mode),any()))
+            else when(agent.run(anyString(),anyString(),anyList(),eq(mode),anyString(),any()))
                     .thenReturn(Mono.error(new IllegalStateException("unavailable")));
             new ChatHandler(agent, fallback, new AiProperties(), new ObjectMapper(), store, context)
                     .processMessage("1", "最新官方信息", "sid", "request", mode, socket);

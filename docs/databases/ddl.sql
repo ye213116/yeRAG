@@ -102,9 +102,9 @@ CREATE TABLE document_vectors (
 CREATE TABLE chat_session (
     id CHAR(36) NOT NULL COMMENT 'Session UUID',
     user_id BIGINT NOT NULL COMMENT 'Session owner',
-    status VARCHAR(20) NOT NULL COMMENT 'OPEN or CLOSED',
+    status VARCHAR(20) NOT NULL COMMENT 'OPEN, CLOSED or DELETED tombstone',
     last_activity_at DATETIME(6) NOT NULL COMMENT 'Last accepted activity',
-    context_expires_at DATETIME(6) NOT NULL COMMENT 'Short-term context expiration',
+    context_expires_at DATETIME(6) NULL COMMENT 'Retired expiration field; no longer controls retention',
     created_at DATETIME(6) NOT NULL COMMENT 'Creation time',
     closed_at DATETIME(6) NULL COMMENT 'Close time',
     revision BIGINT NOT NULL DEFAULT 0 COMMENT 'Optimistic context revision',
@@ -116,12 +116,12 @@ CREATE TABLE chat_session (
     PRIMARY KEY (id),
     KEY ix_chat_session_user (user_id, status, last_activity_at),
     CONSTRAINT fk_chat_session_user FOREIGN KEY (user_id) REFERENCES users(id),
-    CONSTRAINT ck_chat_session_status CHECK (status IN ('OPEN', 'CLOSED'))
+    CONSTRAINT ck_chat_session_status CHECK (status IN ('OPEN', 'CLOSED', 'DELETED'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Memory-aware chat sessions';
 
--- Administrator date-range history reads only completed, unexpired turns for one user.
+-- Administrator date-range history reads only completed turns for one user.
 -- The API returns at most the latest 200 turns in chronological order.
--- Model context reads preceding ID pages until its token/byte budget or explicit turn limit is reached.
+-- Model context reads preceding ID pages until its independent history token budget is reached.
 -- Only the omitted unsummarized prefix enters the next bounded summary batch.
 CREATE TABLE chat_turn (
     -- Application input ceiling: 8 MiB; MEDIUMTEXT holds up to 16,777,215 bytes.
@@ -131,8 +131,8 @@ CREATE TABLE chat_turn (
     user_turn_seq BIGINT NULL COMMENT 'Per-user ordering barrier; set to the generated turn ID',
     request_id VARCHAR(80) NOT NULL COMMENT 'Client idempotency key',
     request_hash CHAR(64) NOT NULL COMMENT 'SHA-256 of the original question',
-    question MEDIUMTEXT NULL COMMENT 'Original user question; cleared after retention',
-    answer MEDIUMTEXT NULL COMMENT 'Assistant answer; cleared after retention',
+    question MEDIUMTEXT NULL COMMENT 'Original user question; retained until user deletion',
+    answer MEDIUMTEXT NULL COMMENT 'Assistant answer; retained until user deletion',
     status VARCHAR(20) NOT NULL COMMENT 'RUNNING, COMPLETED, CANCELLED or FAILED',
     context_sync_status VARCHAR(20) NOT NULL DEFAULT 'NONE'
         COMMENT 'NONE, PENDING, SYNCED or EXPIRED',
@@ -140,7 +140,7 @@ CREATE TABLE chat_turn (
     context_next_attempt_at DATETIME(6) NULL COMMENT 'Next context synchronization time',
     created_at DATETIME(6) NOT NULL COMMENT 'Creation time',
     completed_at DATETIME(6) NULL COMMENT 'Completion time',
-    content_expires_at DATETIME(6) NOT NULL COMMENT 'Question and answer retention deadline',
+    content_expires_at DATETIME(6) NULL COMMENT 'Retired expiration field; raw turns persist until user deletion',
     PRIMARY KEY (id),
     UNIQUE KEY uk_chat_turn_request (user_id, request_id),
     UNIQUE KEY uk_chat_turn_sequence (user_id, user_turn_seq),
@@ -167,6 +167,7 @@ CREATE TABLE memory_extraction_task (
     lease_until DATETIME(6) NULL COMMENT 'Current worker lease deadline',
     lease_token CHAR(36) NULL COMMENT 'Current worker lease token',
     last_error_code VARCHAR(80) NULL COMMENT 'Last bounded error code',
+    failure_stage VARCHAR(32) NULL COMMENT 'Candidate, integration or commit failure stage',
     created_at DATETIME(6) NOT NULL COMMENT 'Creation time',
     updated_at DATETIME(6) NOT NULL COMMENT 'Last update time',
     PRIMARY KEY (id),
@@ -183,6 +184,7 @@ CREATE TABLE memory_document (
     user_id BIGINT NOT NULL COMMENT 'Document owner',
     memory_type VARCHAR(20) NOT NULL COMMENT 'PROFILE or PREFERENCE',
     content MEDIUMTEXT NOT NULL COMMENT 'Current Markdown document body',
+    version BIGINT NOT NULL DEFAULT 0 COMMENT 'Monotonic document version',
     created_at DATETIME(6) NOT NULL COMMENT 'Creation time',
     updated_at DATETIME(6) NOT NULL COMMENT 'Last content update time',
     PRIMARY KEY (id),
@@ -195,6 +197,8 @@ CREATE TABLE memory_document_section (
     id CHAR(36) NOT NULL COMMENT 'Stable section UUID',
     document_id BIGINT NOT NULL COMMENT 'Owning memory document',
     heading VARCHAR(120) NOT NULL COMMENT 'Markdown level-two heading',
+    description VARCHAR(240) NOT NULL DEFAULT '用户记忆条目，读取正文后使用。' COMMENT 'Model-produced discovery description',
+    section_version BIGINT NOT NULL DEFAULT 1 COMMENT 'Monotonic section version',
     last_applied_turn_seq BIGINT NOT NULL DEFAULT 0 COMMENT 'Latest applied user turn barrier',
     deleted TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Logical deletion marker',
     created_at DATETIME(6) NOT NULL COMMENT 'Creation time',
@@ -206,6 +210,20 @@ CREATE TABLE memory_document_section (
         FOREIGN KEY (document_id) REFERENCES memory_document(id),
     CONSTRAINT ck_memory_section_deleted CHECK (deleted IN (0, 1))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Stable metadata for Markdown memory sections';
+
+CREATE TABLE memory_document_version (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    document_id BIGINT NOT NULL,
+    version BIGINT NOT NULL,
+    content MEDIUMTEXT NOT NULL,
+    metadata_json MEDIUMTEXT NOT NULL COMMENT 'Section identities, descriptions, versions and ordering barriers',
+    change_summary TEXT NOT NULL,
+    patches_json MEDIUMTEXT NOT NULL COMMENT 'Decisions, reasons and verifiable source references',
+    trigger_turn_id BIGINT NULL COMMENT 'No FK: audit survives deletion of a source conversation',
+    created_at DATETIME(6) NOT NULL,
+    UNIQUE KEY uk_memory_document_version (document_id,version),
+    CONSTRAINT fk_memory_version_document FOREIGN KEY (document_id) REFERENCES memory_document(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Append-only Markdown memory versions and provenance';
 
 -- Optional RAG evidence index (ai.rag.evidence-backend=minio).
 -- Epoch milliseconds avoid timestamp/timezone drift. No evidence body or API credentials in SQL.

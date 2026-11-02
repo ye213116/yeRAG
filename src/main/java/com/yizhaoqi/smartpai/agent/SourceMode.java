@@ -18,7 +18,7 @@ public enum SourceMode {
     }
 
     public boolean allows(AgentTool tool) {
-        return this == AUTO || (this == KNOWLEDGE && tool.source() == AgentTool.Source.KNOWLEDGE)
+        return tool.source()==AgentTool.Source.MEMORY || tool instanceof com.yizhaoqi.smartpai.agent.tool.ConversationHistoryTool || this == AUTO || (this == KNOWLEDGE && tool.source() == AgentTool.Source.KNOWLEDGE)
                 || (this == WEB && tool.source() == AgentTool.Source.WEB);
     }
 }

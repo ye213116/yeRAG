@@ -16,6 +16,19 @@ import java.util.Map;
  */
 public final class MemoryEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
     private static final Map<String, String> ALIASES = Map.ofEntries(
+            Map.entry("ai.memory.index-tokens", "AI_MEMORY_INDEX_TOKENS"),
+            Map.entry("ai.memory.read-tokens", "AI_MEMORY_READ_TOKENS"),
+            Map.entry("ai.memory.max-memory-tool-calls", "AI_MEMORY_MAX_MEMORY_TOOL_CALLS"),
+            Map.entry("ai.memory.max-sections-per-document", "AI_MEMORY_MAX_SECTIONS_PER_DOCUMENT"),
+            Map.entry("ai.memory.max-catalog-tokens", "AI_MEMORY_MAX_CATALOG_TOKENS"),
+            Map.entry("ai.memory.extraction-recent-turns", "AI_MEMORY_EXTRACTION_RECENT_TURNS"),
+            Map.entry("ai.memory.extraction-context-tokens", "AI_MEMORY_EXTRACTION_CONTEXT_TOKENS"),
+            Map.entry("ai.memory.max-integration-retries", "AI_MEMORY_MAX_INTEGRATION_RETRIES"),
+            Map.entry("ai.memory.history-trigger-tokens", "AI_MEMORY_HISTORY_TRIGGER_TOKENS"),
+            Map.entry("ai.memory.history-target-tokens", "AI_MEMORY_HISTORY_TARGET_TOKENS"),
+            Map.entry("ai.memory.summary-max-tokens", "AI_MEMORY_SUMMARY_MAX_TOKENS"),
+            Map.entry("ai.memory.recent-tokens", "AI_MEMORY_RECENT_TOKENS"),
+            Map.entry("ai.memory.history-tool-tokens", "AI_MEMORY_HISTORY_TOOL_TOKENS"),
             Map.entry("ai.memory.worker-concurrency", "AI_MEMORY_WORKER_CONCURRENCY"),
             Map.entry("ai.memory.max-heading-code-points", "AI_MEMORY_MAX_HEADING_CODE_POINTS"),
             Map.entry("ai.memory.max-section-bytes", "AI_MEMORY_MAX_SECTION_BYTES"),

@@ -16,15 +16,22 @@ public class MemoryProperties {
     private boolean shortTermEnabled = true;
     private boolean extractionEnabled = true;
     private boolean recallEnabled = true;
+    /** Compatibility binding only; idle time no longer rotates conversations. */
     private Duration idleTimeout = Duration.ofMinutes(30);
     private Duration contextTtl = Duration.ofDays(7);
+    /** Compatibility binding only; raw turns have no automatic expiration. */
     private Duration contentRetention = Duration.ofDays(7);
     private Duration llmTimeout = Duration.ofSeconds(30);
     private Duration taskLease = Duration.ofMinutes(2);
     private Duration runTimeout = Duration.ofMinutes(3);
     private int maxAttempts = 5;
-    /** 0 retains complete turns until the model context budget requires summarization. */
+    /** Retired compatibility setting; history is governed by token budgets. */
     private int maxRecentTurns = 0;
+    private int historyTriggerTokens = 16_384;
+    private int historyTargetTokens = 8_192;
+    private int summaryMaxTokens = 2_048;
+    private int recentTokens = 6_144;
+    private int historyToolTokens = 2_048;
     private int maxInputBytes = 32 * 1024 * 1024;
     private int summaryBytes = 60_000;
     private int memoryBytes = 256 * 1024;
@@ -37,9 +44,25 @@ public class MemoryProperties {
     private int maxExtractionInputBytes = 32 * 1024 * 1024;
     private int maxExtractionOutputBytes = 65536;
     private int indexDescriptionCodePoints = 120;
+    private int indexTokens = 1024;
+    private int readTokens = 2048;
+    private int maxMemoryToolCalls = 2;
+    private int maxSectionsPerDocument = 64;
+    private int maxCatalogTokens = 8192;
+    private int extractionRecentTurns = 3;
+    private int extractionContextTokens = 4096;
+    private int maxIntegrationRetries = 3;
 
     @jakarta.annotation.PostConstruct
     public void validate() {
+        if (indexTokens < 256 || readTokens < 512 || maxMemoryToolCalls < 1 || maxMemoryToolCalls > 8
+                || maxSectionsPerDocument < 1 || maxSectionsPerDocument > 256 || maxCatalogTokens < indexTokens
+                || extractionRecentTurns < 0 || extractionRecentTurns > 10 || extractionContextTokens < 256
+                || maxIntegrationRetries < 1 || maxIntegrationRetries > 5)
+            throw new IllegalArgumentException("Invalid on-demand memory limits");
+        if (summaryMaxTokens < 1 || recentTokens < 128 || historyToolTokens < 128
+                || historyTargetTokens < summaryMaxTokens + recentTokens || historyTriggerTokens <= historyTargetTokens)
+            throw new IllegalArgumentException("Invalid history token budgets");
         if (workerConcurrency < 1 || workerConcurrency > 32 || maxHeadingCodePoints < 1
                 || maxHeadingCodePoints > 120 || maxSectionBytes < 1 || maxDocumentBytes < maxSectionBytes
                 || maxPatches < 1 || maxExtractionInputBytes < 1 || maxExtractionOutputBytes < 1

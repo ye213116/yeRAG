@@ -21,16 +21,16 @@ import static org.mockito.ArgumentMatchers.*;
 class MemoryChatIntegrationTest {
     @Test void completedAgentPersistsExactlyOneFullAnswer() {
         var fixture=new Fixture();
-        when(fixture.agent.run(anyString(),anyString(),anyList(),any())).thenReturn(Mono.just(new AgentRunResult("完整答案",Map.of())));
+        when(fixture.agent.run(anyString(),anyString(),anyList(),any(SourceMode.class),anyString(),any())).thenReturn(Mono.just(new AgentRunResult("完整答案",Map.of())));
         fixture.handler.processMessage("1","问题","sid","request",fixture.socket);
         verify(fixture.store,timeout(3000)).complete(fixture.turn,"完整答案");
         verify(fixture.fallback,never()).answer(anyString(),anyString(),anyList(),any());
     }
     @Test void cancellationMarksTurnAndDoesNotSavePartialAnswer() {
         var fixture=new Fixture();
-        when(fixture.agent.run(anyString(),anyString(),anyList(),any())).thenReturn(Mono.never());
+        when(fixture.agent.run(anyString(),anyString(),anyList(),any(SourceMode.class),anyString(),any())).thenReturn(Mono.never());
         fixture.handler.processMessage("1","问题","sid","request",fixture.socket);
-        verify(fixture.agent,timeout(3000)).run(anyString(),anyString(),anyList(),any());
+        verify(fixture.agent,timeout(3000)).run(anyString(),anyString(),anyList(),any(SourceMode.class),anyString(),any());
         fixture.handler.cancelSession("socket");
         verify(fixture.store,timeout(3000)).cancel(fixture.turn,"CANCELLED");
         verify(fixture.store,never()).complete(any(),anyString());
@@ -46,14 +46,14 @@ class MemoryChatIntegrationTest {
     @Test void contextFailureAnswersWithoutHistoryAndStillPersists() {
         var fixture=new Fixture();
         when(fixture.context.build(fixture.turn)).thenThrow(new IllegalStateException("memory unavailable"));
-        when(fixture.agent.run(anyString(),anyString(),anyList(),any())).thenReturn(Mono.just(new AgentRunResult("answer",Map.of())));
+        when(fixture.agent.run(anyString(),anyString(),anyList(),any(SourceMode.class),anyString(),any())).thenReturn(Mono.just(new AgentRunResult("answer",Map.of())));
         fixture.handler.processMessage("1","问题","sid","request",fixture.socket);
-        verify(fixture.agent,timeout(3000)).run(eq("1"),eq("问题"),eq(List.of()),any());
+        verify(fixture.agent,timeout(3000)).run(eq("1"),eq("问题"),eq(List.of()),eq(SourceMode.AUTO),eq("sid"),any());
         verify(fixture.store,timeout(3000)).complete(fixture.turn,"answer");
     }
     @Test void failedDatabaseCompletionDoesNotSendSuccess() throws Exception {
         var fixture=new Fixture();
-        when(fixture.agent.run(anyString(),anyString(),anyList(),any())).thenReturn(Mono.just(new AgentRunResult("answer",Map.of())));
+        when(fixture.agent.run(anyString(),anyString(),anyList(),any(SourceMode.class),anyString(),any())).thenReturn(Mono.just(new AgentRunResult("answer",Map.of())));
         when(fixture.store.complete(fixture.turn,"answer")).thenThrow(new IllegalStateException("database down"));
         fixture.handler.processMessage("1","问题","sid","request",fixture.socket);
         verify(fixture.store,timeout(3000)).complete(fixture.turn,"answer");
@@ -62,6 +62,17 @@ class MemoryChatIntegrationTest {
         ArgumentCaptor<org.springframework.web.socket.WebSocketMessage> messages=ArgumentCaptor.forClass(org.springframework.web.socket.WebSocketMessage.class);
         verify(fixture.socket,atLeastOnce()).sendMessage(messages.capture());
         assertFalse(messages.getAllValues().stream().anyMatch(message -> message.getPayload().toString().contains("\"type\":\"completion\"")));
+    }
+    @Test void deletionDuringContextBuildDoesNotCallTheAgent() {
+        var fixture=new Fixture();
+        when(fixture.context.build(fixture.turn)).thenAnswer(call -> {
+            when(fixture.store.running(fixture.turn)).thenReturn(false);
+            return new Context(List.of(),false);
+        });
+        fixture.handler.processMessage("1","问题","sid","request",fixture.socket);
+        verify(fixture.store,timeout(3000)).running(fixture.turn);
+        verifyNoInteractions(fixture.agent);
+        verify(fixture.store,never()).complete(any(),anyString());
     }
     @SuppressWarnings("unchecked")
     static class Fixture {
@@ -78,6 +89,7 @@ class MemoryChatIntegrationTest {
             when(store.begin(1,"sid","request","问题")).thenReturn(new Begin(turn,true,false));
             when(context.build(turn)).thenReturn(new Context(List.of(),false));
             when(store.complete(any(),anyString())).thenReturn(true);
+            when(store.running(turn)).thenReturn(true);
         }
     }
 }

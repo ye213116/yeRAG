@@ -108,6 +108,7 @@ public class ChatHandler {
                     logger.warn("Memory context unavailable for turn={}",t.id());
                     context = new MemoryTypes.Context(List.of(),true);
                 }
+                if (group.isDisposed() || !memoryStore.running(t)) return Mono.empty();
                 if (context.reduced()) sendMemory(session,t,Map.of("type","context_reduced","message","上下文已缩减，较早约束可能未完整保留"));
                 final MemoryTypes.Context answerContext = context;
                 AgentEventListener listener = new AgentEventListener() {
@@ -122,9 +123,7 @@ public class ChatHandler {
                 return observe(userId,userMessage,t.sessionId(),t.requestId(), () -> {
                 Mono<AgentRunResult> answer;
                 if (agentConfig.isEnabled()) {
-                    answer = sourceMode == SourceMode.AUTO
-                            ? Mono.defer(() -> agentService.run(userId,userMessage,answerContext.messages(),listener))
-                            : Mono.defer(() -> agentService.run(userId,userMessage,answerContext.messages(),sourceMode,listener));
+                    answer = Mono.defer(() -> agentService.run(userId,userMessage,answerContext.messages(),sourceMode,t.sessionId(),listener));
                 } else if (sourceMode == SourceMode.KNOWLEDGE) {
                     answer = memoryFallback(userId,userMessage,answerContext.messages(),listener);
                 } else {

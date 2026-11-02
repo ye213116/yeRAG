@@ -66,6 +66,33 @@ class KnowledgeAgentServiceTest {
         assertEquals(1, client.decisions.get());
     }
 
+    @Test void serverConversationIsCarriedIntoEveryToolExecution() {
+        ToolCall call=new ToolCall("history-call","search_knowledge_base","{}");
+        StubClient client=new StubClient(List.of(new AgentDecision(null,List.of(call)),new AgentDecision("done",List.of())),Flux.empty());
+        CountingTool tool=new CountingTool();
+        service(client,tool,3).run("1","old detail",List.of(),SourceMode.AUTO,"original-session",listener(new ArrayList<>())).block();
+        assertEquals("original-session",tool.lastConversation);
+    }
+
+    @Test void personalMemoryCallsHaveSeparateQuotaAfterRetrievalBudgetIsSpent() {
+        var retrieval=new CountingTool();
+        var memoryCalls=new AtomicInteger();
+        AgentTool memory=new AgentTool() {
+            public String name() {return "read_memory";}
+            public Source source() {return Source.MEMORY;}
+            public Map<String,Object> definition() {return Map.of("type","function");}
+            public ToolExecutionResult execute(String args,ToolExecutionContext context) {
+                memoryCalls.incrementAndGet();return new ToolExecutionResult(true,"{\"untrusted_content\":\"Java examples\"}",0,Map.of());
+            }
+        };
+        var client=new StubClient(List.of(new AgentDecision(null,List.of(new ToolCall("k","search_knowledge_base","{}"))),
+                new AgentDecision(null,List.of(new ToolCall("m1","read_memory","{}"))),new AgentDecision(null,List.of(new ToolCall("m2","read_memory","{}")))),Flux.just("final with preferences"));
+        var properties=new AiProperties();properties.getAgent().setMaxToolCalls(1);
+        var agent=new KnowledgeAgentService(client,new AgentToolRegistry(List.of(retrieval,memory)),properties);
+        var result=agent.run("1","question",List.of(),SourceMode.KNOWLEDGE,"session",listener(new ArrayList<>())).block();
+        assertEquals(1,retrieval.calls.get());assertEquals(2,memoryCalls.get());assertEquals("final with preferences",result.answer());
+    }
+
     private KnowledgeAgentService service(AgentLlmClient client, AgentTool tool, int maxCalls) {
         AiProperties properties = new AiProperties();
         properties.getAgent().setMaxToolCalls(maxCalls);
@@ -79,10 +106,12 @@ class KnowledgeAgentServiceTest {
     static class CountingTool implements AgentTool {
         AtomicInteger calls = new AtomicInteger();
         String lastUser;
+        String lastConversation;
+        public Source source() { return Source.KNOWLEDGE; }
         public String name() { return "search_knowledge_base"; }
         public Map<String, Object> definition() { return Map.of("type", "function"); }
         public ToolExecutionResult execute(String args, ToolExecutionContext context) {
-            calls.incrementAndGet(); lastUser = context.userId();
+            calls.incrementAndGet(); lastUser = context.userId(); lastConversation=context.conversationId();
             return new ToolExecutionResult(true, "{\"result_count\":1}", 1, Map.of(1, "md5"));
         }
     }
