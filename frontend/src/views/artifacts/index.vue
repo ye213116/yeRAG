@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router';
 import type { ArtifactSource, ArtifactSummary, ArtifactVersion } from '@/service/api/artifacts';
-import { fetchArtifact, fetchArtifactVersions, fetchArtifacts, saveArtifactVersion } from '@/service/api/artifacts';
+import {
+  createArtifact,
+  fetchArtifact,
+  fetchArtifactVersions,
+  fetchArtifacts,
+  saveArtifactVersion
+} from '@/service/api/artifacts';
 import { useChatStore } from '@/store/modules/chat';
 import FilePreview from '@/components/custom/file-preview.vue';
 
@@ -20,15 +26,19 @@ const hasOlder = ref(false);
 const loadingVersions = ref(false);
 const latestVersion = ref(0);
 const editing = ref(false);
+const creating = ref(false);
 const title = ref('');
 const content = ref('');
 const errorNotice = ref('');
+const listError = ref(false);
 const pendingRequestId = ref('');
 const preview = ref<{ fileName: string; fileMd5: string } | null>(null);
 let selection = 0;
 
 const hasChanges = computed(() =>
-  Boolean(report.value && (title.value !== report.value.title || content.value !== report.value.content))
+  creating.value
+    ? Boolean(title.value.trim() || content.value.trim())
+    : Boolean(report.value && (title.value !== report.value.title || content.value !== report.value.content))
 );
 const versionOptions = computed(() =>
   versions.value.map(v => ({ label: `v${v.version} · ${v.title}`, value: v.version }))
@@ -46,6 +56,7 @@ async function loadList(more = false) {
   loadingList.value = true;
   try {
     const { data, error } = await fetchArtifacts(more ? nextOffset.value! : 0);
+    listError.value = Boolean(error || !data);
     if (!error && data) {
       items.value = more ? [...items.value, ...data.items] : data.items;
       nextOffset.value = data.nextOffset;
@@ -61,6 +72,7 @@ async function open(id: string, version?: number) {
   loading.value = true;
   errorNotice.value = '';
   editing.value = false;
+  creating.value = false;
   // Clear old body immediately; a denied or failed read must not display a previous report.
   report.value = null;
   try {
@@ -103,12 +115,31 @@ async function olderVersions() {
 }
 
 async function select(id: string) {
+  if (saving.value) return;
   if (editing.value && hasChanges.value) {
     window.$message?.warning('请先保存或取消当前修改，再切换报告。');
     return;
   }
   if (route.query.id === id) await open(id);
   else await router.replace({ query: { id } });
+}
+
+function beginCreate() {
+  if (editing.value && hasChanges.value) {
+    window.$message?.warning('请先保存或取消当前修改，再新建报告。');
+    return;
+  }
+  selection += 1;
+  loading.value = false;
+  report.value = null;
+  versions.value = [];
+  hasOlder.value = false;
+  title.value = '';
+  content.value = '';
+  errorNotice.value = '';
+  creating.value = true;
+  editing.value = true;
+  pendingRequestId.value = crypto.randomUUID();
 }
 
 function beginEdit() {
@@ -118,6 +149,12 @@ function beginEdit() {
 }
 
 function cancelEdit() {
+  if (creating.value) {
+    creating.value = false;
+    editing.value = false;
+    if (typeof route.query.id === 'string') open(route.query.id);
+    return;
+  }
   if (!report.value) return;
   title.value = report.value.title;
   content.value = report.value.content;
@@ -126,37 +163,73 @@ function cancelEdit() {
 }
 
 async function save() {
-  if (!report.value || saving.value || !title.value.trim() || !content.value.trim()) return;
+  if ((!report.value && !creating.value) || saving.value || !title.value.trim() || !content.value.trim()) return;
   saving.value = true;
   const current = selection;
   try {
-    const result = await saveArtifactVersion(report.value.id, {
+    const input = {
       title: title.value,
       content: content.value,
-      expectedVersion: report.value.version,
+      expectedVersion: creating.value ? 0 : report.value!.version,
       requestId: pendingRequestId.value
-    });
+    };
+    const result = creating.value ? await createArtifact(input) : await saveArtifactVersion(report.value!.id, input);
     if (current !== selection) return;
     if (result.error || !result.data) {
-      errorNotice.value = '未确认保存成功，编辑内容已保留。可重试；若版本冲突，请复制修改内容后重新读取最新版本。';
+      const reason = result.error?.response?.data?.message;
+      errorNotice.value = `${reason || '未确认保存成功'}。编辑内容已保留。可重试；若版本冲突，请复制修改内容后重新读取最新版本。`;
       return;
     }
     const saved = result.data;
     editing.value = false;
+    creating.value = false;
     window.$message?.success(`已保存为 v${saved.version}，旧版本保留`);
-    await Promise.all([open(saved.id), loadList()]);
+    if (route.query.id === saved.id) await open(saved.id);
+    else await router.replace({ query: { id: saved.id } });
+    await loadList();
   } finally {
     saving.value = false;
   }
 }
 
+// Identical retries retain their key; a changed payload starts a distinct save request.
+watch([title, content], () => {
+  if (editing.value) pendingRequestId.value = crypto.randomUUID();
+});
+
+function confirmLeave() {
+  if (saving.value && editing.value) return false;
+  if (!editing.value || !hasChanges.value) return true;
+  return new Promise<boolean>(resolve => {
+    if (!window.$dialog) {
+      resolve(false);
+      return;
+    }
+    window.$dialog.warning({
+      title: '尚有未保存的报告',
+      content: '离开会丢失当前修改，是否放弃修改？',
+      positiveText: '放弃修改',
+      negativeText: '继续编辑',
+      onPositiveClick: () => resolve(true),
+      onNegativeClick: () => resolve(false),
+      onClose: () => resolve(false),
+      onMaskClick: () => resolve(false),
+      onAfterLeave: () => resolve(false)
+    });
+  });
+}
+
+onBeforeRouteLeave(confirmLeave);
+onBeforeRouteUpdate(to => (to.query.id !== route.query.id ? confirmLeave() : true));
+
 async function generate(existing = false) {
   if (!canGenerate.value) return;
-  chat.input.message =
+  const message =
     existing && report.value
       ? `请读取成果 ${report.value.id} 的最新完整正文，按以下要求修改并保存为新版本：【请填写修改要求】。保留来源和证据缺口。`
       : '请根据相关资料，围绕【请填写报告主题】生成一份报告并保存到成果库，注明来源和证据缺口。';
-  await router.push('/chat');
+  const failure = await router.push('/chat');
+  if (!failure) chat.input.message = message;
 }
 
 function publicUrl(source: ArtifactSource) {
@@ -193,6 +266,7 @@ watch(
     else {
       report.value = null;
       editing.value = false;
+      creating.value = false;
     }
   },
   { immediate: true }
@@ -205,6 +279,7 @@ loadList();
     <NCard title="成果库" :bordered="false">
       <NText depth="3">个人报告独立保存，修改产生新版本；来源访问权限会在读取时重新校验。</NText>
       <div class="mt-3 flex flex-wrap gap-2">
+        <NButton :disabled="saving || loading" @click="beginCreate">新建报告</NButton>
         <NButton :disabled="!canGenerate" type="primary" @click="generate()">去对话生成报告</NButton>
         <NButton :loading="loadingList" @click="loadList()">刷新列表</NButton>
       </div>
@@ -212,7 +287,11 @@ loadList();
     <div class="artifact-layout">
       <NCard title="已保存的报告" :bordered="false">
         <NSpin :show="loadingList">
-          <NEmpty v-if="!items.length && !loadingList" description="尚无可访问成果，可先在对话中生成并保存报告" />
+          <NAlert v-if="listError" type="warning" class="mb-3">成果列表加载失败，请点击“刷新列表”重试。</NAlert>
+          <NEmpty
+            v-if="!items.length && !loadingList && !listError"
+            description="尚无可访问成果，可新建报告或在对话中生成并保存"
+          />
           <div v-for="item in items" :key="item.id" class="artifact-item">
             <NButton
               text
@@ -233,15 +312,15 @@ loadList();
           </NButton>
         </NSpin>
       </NCard>
-      <NCard :title="report ? report.title : '报告详情'" :bordered="false" class="min-w-0">
+      <NCard :title="creating ? '新建报告' : report ? report.title : '报告详情'" :bordered="false" class="min-w-0">
         <NSpin :show="loading">
           <NAlert v-if="errorNotice" type="warning" class="mb-4">{{ errorNotice }}</NAlert>
-          <div v-if="!report">
+          <div v-if="!report && !creating">
             <NEmpty v-if="!loading" description="选择左侧报告，或从对话中的成果链接进入" />
             <NButton v-if="route.query.id" class="mt-4" @click="open(String(route.query.id))">重新读取</NButton>
           </div>
           <template v-else>
-            <div class="mb-4 flex flex-wrap items-center gap-2">
+            <div v-if="report" class="mb-4 flex flex-wrap items-center gap-2">
               <NTag :type="report.version === latestVersion ? 'success' : 'default'">
                 v{{ report.version }}{{ report.version === latestVersion ? ' · 最新读取版本' : ' · 历史只读版本' }}
               </NTag>
@@ -264,6 +343,7 @@ loadList();
               <NButton v-else @click="open(report.id)">读取最新版本</NButton>
             </div>
             <div v-if="editing" class="flex-col gap-3">
+              <NText v-if="creating" depth="3">手写报告不绑定来源；需要基于资料生成时，请使用“去对话生成报告”。</NText>
               <NInput
                 v-model:value="title"
                 :disabled="saving"
@@ -287,12 +367,12 @@ loadList();
                   :disabled="!hasChanges || !title.trim() || !content.trim()"
                   @click="save"
                 >
-                  保存为新版本
+                  {{ creating ? '保存报告' : '保存为新版本' }}
                 </NButton>
                 <NButton :disabled="saving" @click="cancelEdit">取消修改</NButton>
               </div>
             </div>
-            <template v-else>
+            <template v-else-if="report">
               <div class="report-body">{{ report.content }}</div>
               <div class="my-4 flex flex-wrap gap-2">
                 <NButton type="primary" :disabled="report.version !== latestVersion" @click="beginEdit">
@@ -302,42 +382,44 @@ loadList();
                 <NButton @click="download">下载 HTML</NButton>
               </div>
             </template>
-            <NDivider />
-            <h3 class="mb-2 font-bold">来源记录</h3>
-            <NText depth="3">报告是工作成果，来源记录不表示正文已核实。事实结论应回到原文验证。</NText>
-            <div v-for="source in report.sources" :key="source.number" class="mt-3 flex-col gap-1">
-              <span class="break-all">[来源#{{ source.number }}] {{ source.title }}</span>
-              <div class="flex flex-wrap items-center gap-2 text-12px">
-                <NTag size="small">
-                  {{
-                    source.kind === 'knowledge'
-                      ? '内部资料'
-                      : source.evidence === 'search_snippet'
-                        ? '公开资料 · 仅搜索摘要'
-                        : '公开资料 · 网页正文'
-                  }}
-                </NTag>
-                <NButton
-                  v-if="source.kind === 'knowledge' && source.fileMd5"
-                  text
-                  type="primary"
-                  @click="preview = { fileName: source.title, fileMd5: source.fileMd5 }"
-                >
-                  查看原文件 · 片段 {{ source.chunkId ?? 0 }}
-                </NButton>
-                <a
-                  v-else-if="publicUrl(source)"
-                  :href="publicUrl(source)"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="break-all"
-                >
-                  查看公开来源
-                </a>
-                <span v-if="source.fetchedAt">获取于 {{ date(source.fetchedAt) }}</span>
+            <template v-if="report">
+              <NDivider />
+              <h3 class="mb-2 font-bold">来源记录</h3>
+              <NText depth="3">报告是工作成果，来源记录不表示正文已核实。事实结论应回到原文验证。</NText>
+              <div v-for="source in report.sources" :key="source.number" class="mt-3 flex-col gap-1">
+                <span class="break-all">[来源#{{ source.number }}] {{ source.title }}</span>
+                <div class="flex flex-wrap items-center gap-2 text-12px">
+                  <NTag size="small">
+                    {{
+                      source.kind === 'knowledge'
+                        ? '内部资料'
+                        : source.evidence === 'search_snippet'
+                          ? '公开资料 · 仅搜索摘要'
+                          : '公开资料 · 网页正文'
+                    }}
+                  </NTag>
+                  <NButton
+                    v-if="source.kind === 'knowledge' && source.fileMd5"
+                    text
+                    type="primary"
+                    @click="preview = { fileName: source.title, fileMd5: source.fileMd5 }"
+                  >
+                    查看原文件 · 片段 {{ source.chunkId ?? 0 }}
+                  </NButton>
+                  <a
+                    v-else-if="publicUrl(source)"
+                    :href="publicUrl(source)"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="break-all"
+                  >
+                    查看公开来源
+                  </a>
+                  <span v-if="source.fetchedAt">获取于 {{ date(source.fetchedAt) }}</span>
+                </div>
               </div>
-            </div>
-            <NText v-if="!report.sources.length" depth="3">此成果未绑定原始资料，请自行核对正文依据。</NText>
+              <NText v-if="!report.sources.length" depth="3">此成果未绑定原始资料，请自行核对正文依据。</NText>
+            </template>
           </template>
         </NSpin>
       </NCard>

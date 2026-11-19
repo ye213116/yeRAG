@@ -1,5 +1,6 @@
 /* eslint-disable no-await-in-loop -- Browser fixtures and user actions run in order. */
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import process from 'node:process';
 import { spawn } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
@@ -23,6 +24,10 @@ const initial = {
   createdAt: '2026-11-19T01:00:00Z'
 };
 const history = [initial];
+const reports = new Map([[id, history]]);
+const createRequests = [];
+let failCreate = false;
+let listFailure = false;
 let conflict = false;
 let denied = false;
 let server;
@@ -99,39 +104,65 @@ before(async () => {
       return;
     }
     if (path === '/api/v1/artifacts') {
+      if (req.method === 'POST') {
+        const input = JSON.parse(body);
+        createRequests.push(input);
+        if (failCreate) {
+          send(null, 400);
+          return;
+        }
+        assert.equal(input.expectedVersion, 0);
+        assert.match(input.requestId, /^[a-f\d-]{36}$/);
+        const saved = { ...initial, id: randomUUID(), title: input.title, content: input.content };
+        reports.set(saved.id, [saved]);
+        send(saved);
+        return;
+      }
+      if (listFailure) {
+        send(null, 503);
+        return;
+      }
       send({
         items:
           owner === 'alice' && !denied
-            ? history.slice(-1).map(v => ({ ...v, sourceCount: 0, updatedAt: v.createdAt }))
+            ? [...reports.values()]
+                .map(versions => versions.at(-1))
+                .map(v => ({ ...v, sourceCount: 0, updatedAt: v.createdAt }))
             : [],
         nextOffset: null
       });
       return;
     }
     if (path.startsWith('/api/v1/artifacts/')) {
-      if (owner !== 'alice' || denied) {
+      const reportHistory = reports.get(path.split('/')[4]);
+      if (owner !== 'alice' || denied || !reportHistory) {
         send(null, 404);
         return;
       }
       if (path.endsWith('/versions') && req.method === 'POST') {
         const input = JSON.parse(body);
-        if (conflict || input.expectedVersion !== history.at(-1).version) {
+        if (conflict || input.expectedVersion !== reportHistory.at(-1).version) {
           send(null, 409);
           return;
         }
-        const v = { ...history.at(-1), title: input.title, content: input.content, version: history.length + 1 };
-        history.push(v);
+        const v = {
+          ...reportHistory.at(-1),
+          title: input.title,
+          content: input.content,
+          version: reportHistory.length + 1
+        };
+        reportHistory.push(v);
         send(v);
         return;
       }
       if (path.endsWith('/versions')) {
-        send(history.toReversed());
+        send(reportHistory.toReversed());
         return;
       }
       send(
         url.searchParams.has('version')
-          ? history.find(v => v.version === Number(url.searchParams.get('version')))
-          : history.at(-1)
+          ? reportHistory.find(v => v.version === Number(url.searchParams.get('version')))
+          : reportHistory.at(-1)
       );
       return;
     }
@@ -232,6 +263,7 @@ test('report editing, history, safe export, conflict preservation and revoked re
     await clickText(page, '保存为新版本');
     await page.waitForFunction(() => document.querySelector('.report-body')?.textContent === '第二版正文');
     assert.equal(history.length, 2);
+    await page.waitForSelector('[aria-label="报告版本"]');
     await page.click('[aria-label="报告版本"]');
     await page.waitForSelector('.n-base-select-option');
     await page.evaluate(() =>
@@ -308,6 +340,92 @@ test('another user cannot see the report or its body', async () => {
     await page.waitForFunction(() => document.body.textContent.includes('报告读取失败'));
     assert.equal(await page.$('.report-body'), null);
     assert.equal(await page.$$eval('.artifact-item', els => els.length), 0);
+  } finally {
+    await page.browserContext().close();
+  }
+});
+
+test('new report uses the create API, preserves drafts and rotates keys only for changed payloads', async () => {
+  const page = await login('alice');
+  try {
+    await page.waitForSelector('.report-body');
+    await clickText(page, '新建报告');
+    await page.waitForSelector('input[aria-label="报告标题"]');
+    await page.type('input[aria-label="报告标题"]', '手写验收报告');
+    await page.type('textarea[aria-label="报告正文"]', '新建的工作报告正文');
+    await page.evaluate(async () => {
+      const { router } = await import('/src/router/index.ts');
+      router.push('/chat');
+    });
+    await page.waitForFunction(() => document.body.textContent.includes('尚有未保存的报告'));
+    await clickText(page, '继续编辑');
+    assert.equal(new URL(page.url()).pathname, '/artifacts');
+    assert.equal(await page.$eval('textarea[aria-label="报告正文"]', el => el.value), '新建的工作报告正文');
+    failCreate = true;
+    await clickText(page, '保存报告');
+    await page.waitForFunction(() => document.body.textContent.includes('编辑内容已保留'));
+    const firstRequest = createRequests.at(-1);
+    await clickText(page, '保存报告');
+    await waitFor(() => createRequests.length >= 2, 'identical retry');
+    assert.equal(createRequests.at(-1).requestId, firstRequest.requestId);
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll('button')].some(b => b.textContent.trim() === '保存报告' && !b.disabled)
+    );
+    await page.type('textarea[aria-label="报告正文"]', '，修改后的正文');
+    failCreate = false;
+    await clickText(page, '保存报告');
+    await page.waitForFunction(() => document.querySelector('.report-body')?.textContent.includes('修改后的正文'));
+    const savedId = new URL(page.url()).searchParams.get('id');
+    assert.notEqual(savedId, id);
+    assert.equal(reports.get(savedId)[0].title, '手写验收报告');
+    assert.notEqual(createRequests.at(-1).requestId, firstRequest.requestId);
+    await page.reload();
+    await page.waitForFunction(() => document.querySelector('.report-body')?.textContent.includes('修改后的正文'));
+    listFailure = true;
+    await clickText(page, '刷新列表');
+    await page.waitForFunction(() => document.body.textContent.includes('成果列表加载失败'));
+    assert.equal(await page.$$eval('.artifact-item', els => els.length), reports.size);
+    listFailure = false;
+    await clickText(page, '刷新列表');
+    await page.waitForFunction(() => !document.body.textContent.includes('成果列表加载失败'));
+  } finally {
+    failCreate = false;
+    listFailure = false;
+    await page.browserContext().close();
+  }
+});
+
+test('chat report links and plain-path actions navigate without reloading the app', async () => {
+  const page = await login('alice');
+  async function message(text) {
+    await page.evaluate(async () => {
+      const { router } = await import('/src/router/index.ts');
+      await router.push('/chat');
+    });
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll('button')].some(b => b.textContent.trim() === '新建对话' && !b.disabled)
+    );
+    await page.evaluate(async content => {
+      const { useChatStore } = await import('/src/store/modules/chat/index.ts');
+      useChatStore().list.push({ role: 'assistant', status: 'finished', content, timestamp: Date.now() });
+      window.reportNavigationMarker = true;
+    }, text);
+  }
+  try {
+    await page.waitForSelector('.report-body');
+    await message(`已保存，请查看 [验收报告](/artifacts?id=${id})。`);
+    await page.waitForSelector(`.assistant-content a[href="/artifacts?id=${id}"]`);
+    await page.click(`.assistant-content a[href="/artifacts?id=${id}"]`);
+    await page.waitForSelector('.report-body');
+    assert.equal(new URL(page.url()).searchParams.get('id'), id);
+    assert.equal(await page.evaluate(() => window.reportNavigationMarker), true);
+    await message(`报告地址： /artifacts?id=${id}`);
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll('button')].some(b => b.textContent.trim() === '打开报告')
+    );
+    await clickText(page, '打开报告');
+    await page.waitForSelector('.report-body');
+    assert.equal(await page.evaluate(() => window.reportNavigationMarker), true);
   } finally {
     await page.browserContext().close();
   }

@@ -28,6 +28,13 @@ export interface ArtifactVersion {
   createdAt: string;
 }
 
+export interface ArtifactSaveRequest {
+  title: string;
+  content: string;
+  expectedVersion: number;
+  requestId: string;
+}
+
 export function fetchArtifacts(offset = 0) {
   return request<{ items: ArtifactSummary[]; nextOffset: number | null }>({ url: '/artifacts', params: { offset } });
 }
@@ -40,14 +47,10 @@ export function fetchArtifactVersions(id: string, before?: number) {
   return request<ArtifactSummary[]>({ url: `/artifacts/${encodeURIComponent(id)}/versions`, params: { before } });
 }
 
-export function saveArtifactVersion(
-  id: string,
-  data: {
-    title: string;
-    content: string;
-    expectedVersion: number;
-    requestId: string;
-  }
-) {
+export function createArtifact(data: ArtifactSaveRequest) {
+  return request<ArtifactVersion>({ url: '/artifacts', method: 'post', data });
+}
+
+export function saveArtifactVersion(id: string, data: ArtifactSaveRequest) {
   return request<ArtifactVersion>({ url: `/artifacts/${encodeURIComponent(id)}/versions`, method: 'post', data });
 }

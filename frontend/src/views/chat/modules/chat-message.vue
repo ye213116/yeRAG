@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { nextTick } from 'vue';
+import { useRouter } from 'vue-router';
 import { VueMarkdownIt } from 'vue-markdown-shiki';
 import { formatDate } from '@/utils/common';
 import ChatPlan from './chat-plan.vue';
@@ -19,6 +20,15 @@ function handleCopy(content: string) {
 }
 
 const chatStore = useChatStore();
+const router = useRouter();
+
+const artifactIds = computed(() => {
+  if (props.msg.role !== 'assistant') return [];
+  const links = (props.msg.content || '').matchAll(
+    /(?:^|[\s([（:：])\/artifacts\?id=([a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12})(?=$|[^a-f\d-])/gi
+  );
+  return [...new Set(Array.from(links, match => match[1]))];
+});
 
 // 存储文件名和对应的事件处理
 const sourceFiles = ref<Array<{ fileName: string; id: string; referenceNumber: number; fileMd5?: string }>>([]);
@@ -60,7 +70,28 @@ const content = computed(() => {
 
 // 处理内容点击事件（事件委托）
 function handleContentClick(event: MouseEvent) {
-  const target = event.target as HTMLElement;
+  if (!(event.target instanceof Element)) return;
+  const target = event.target;
+  const anchor = target.closest('a[href]');
+  if (anchor && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey && event.button === 0) {
+    let url: URL;
+    try {
+      url = new URL(anchor.getAttribute('href')!, window.location.href);
+    } catch {
+      return;
+    }
+    const id = url.searchParams.get('id');
+    if (
+      url.origin === window.location.origin &&
+      url.pathname === '/artifacts' &&
+      id &&
+      /^[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12}$/i.test(id)
+    ) {
+      event.preventDefault();
+      router.push({ name: 'artifacts', query: { id } });
+      return;
+    }
+  }
 
   // 检查点击的是否是文件链接
   if (target.classList.contains('source-file-link')) {
@@ -150,6 +181,11 @@ async function handleSourceFileClick(fileInfo: { fileName: string; referenceNumb
     </div>
     <div v-else-if="msg.role === 'user'" class="ml-12 mt-2">
       <div class="user-bubble text-4">{{ content }}</div>
+    </div>
+    <div v-if="msg.role === 'assistant' && artifactIds.length" class="ml-12 flex flex-wrap gap-2">
+      <NButton v-for="id in artifactIds" :key="id" @click="router.push({ name: 'artifacts', query: { id } })">
+        {{ artifactIds.length === 1 ? '打开报告' : `打开报告 ${artifactIds.indexOf(id) + 1}` }}
+      </NButton>
     </div>
     <NDivider class="ml-12 w-[calc(100%-3rem)] opacity-40 mb-0! mt-2!" />
     <div class="ml-12 flex gap-4">
