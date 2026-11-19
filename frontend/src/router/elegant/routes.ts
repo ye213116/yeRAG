@@ -40,6 +40,17 @@ export const generatedRoutes: GeneratedRoute[] = [
     }
   },
   {
+    name: 'artifacts',
+    path: '/artifacts',
+    component: 'layout.base$view.artifacts',
+    meta: {
+      title: 'artifacts',
+      i18nKey: 'route.artifacts',
+      icon: 'solar:document-text-linear',
+      order: 2
+    }
+  },
+  {
     name: 'chat',
     path: '/chat',
     component: 'layout.base$view.chat',

@@ -3,7 +3,7 @@ package com.yizhaoqi.smartpai.agent.tool;
 import java.util.Map;
 
 public interface AgentTool {
-    enum Source { KNOWLEDGE, WEB, MEMORY, OTHER }
+    enum Source { KNOWLEDGE, WEB, MEMORY, ARTIFACT, OTHER }
     default Source source() { return Source.OTHER; }
     String name();
     Map<String, Object> definition();

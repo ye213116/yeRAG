@@ -12,7 +12,11 @@ final class ToolArguments {
     private ToolArguments() { }
 
     static JsonNode parse(ObjectMapper mapper, String json, Set<String> fields) {
-        if (json == null || json.length() > 8192) throw new IllegalArgumentException("invalid argument size");
+        return parse(mapper, json, fields, 8192);
+    }
+
+    static JsonNode parse(ObjectMapper mapper, String json, Set<String> fields, int maxCharacters) {
+        if (json == null || json.length() > maxCharacters) throw new IllegalArgumentException("invalid argument size");
         try {
             JsonNode root = mapper.reader().with(JsonParser.Feature.STRICT_DUPLICATE_DETECTION)
                     .with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).readTree(json);

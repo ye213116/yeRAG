@@ -157,6 +157,7 @@ const local: App.I18n.Schema = {
     }
   },
   route: {
+    artifacts: 'Deliverables',
     login: 'Login',
     403: 'No Permission',
     404: 'Page Not Found',

@@ -40,7 +40,10 @@ function handleAgentStatus(
     search_knowledge_base: '搜索知识库',
     read_knowledge_document: '阅读知识库原文',
     search_web: '搜索公开网络',
-    read_web_page: '阅读网页正文'
+    read_web_page: '阅读网页正文',
+    list_artifacts: '查找已保存的报告',
+    read_artifact: '读取报告正文',
+    save_artifact: '保存报告与版本'
   };
   assistant.agentStatus = toolLabels[event.details?.tool ?? ''] || event.message;
 }

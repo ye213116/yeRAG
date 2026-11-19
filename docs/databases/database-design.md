@@ -1,12 +1,12 @@
 # yeRAG 数据库表设计
 
-本文档描述 yeRAG 当前完整的 MySQL 8.0 关系模型。空数据库初始化脚本是 [ddl.sql](ddl.sql)，包含用户、组织、文件、文档和统一记忆链路的 10 张表。
+本文档描述 yeRAG 当前完整的 MySQL 8.0 关系模型。空数据库初始化脚本是 [ddl.sql](ddl.sql)，覆盖用户、组织、知识文件、记忆、RAG 追踪及个人工作成果。
 
 ## 1. 存储边界
 
 | 存储 | 职责 |
 | --- | --- |
-| MySQL | 用户、组织、文件元数据、解析文本、会话回合、提取任务和长期记忆文档的权威数据源 |
+| MySQL | 用户、组织、文件元数据、解析文本、会话回合、提取任务、长期记忆及报告成果版本的权威数据源 |
 | Redis | 登录令牌、限流、上传状态以及 memory 短期上下文缓存，不是长期记忆权威来源 |
 | Elasticsearch | RAG 文档检索索引，不保存个人长期记忆 |
 | MinIO | 原始文件和上传分片对象 |
@@ -28,6 +28,8 @@
 | Memory | `memory_extraction_task` | 长期记忆异步提取队列 |
 | Memory | `memory_document` | 用户当前 Markdown 长期记忆正文 |
 | Memory | `memory_document_section` | Markdown section 的稳定身份和顺序屏障 |
+| 工作成果 | `work_artifact` | 用户私有报告的稳定标识、所有者及当前版本指针 |
+| 工作成果 | `work_artifact_version` | 不覆盖的报告正文版本、来源依赖和保存请求幂等记录 |
 
 ## 3. 关系总览
 
@@ -41,6 +43,8 @@ erDiagram
     chat_turn ||--o| memory_extraction_task : produces
     users ||--o{ memory_document : owns
     memory_document ||--o{ memory_document_section : contains
+    users ||--o{ work_artifact : owns
+    work_artifact ||--o{ work_artifact_version : versions
 
     file_upload ||..o{ chunk_info : file_md5
     file_upload ||..o{ document_vectors : file_md5
@@ -332,3 +336,16 @@ mysql -u root -p yerag < docs/databases/ddl.sql
 ### 2026-11-02 按需 Markdown 记忆迁移
 
 在持久会话迁移之后执行 [20261102_on_demand_markdown_memory.sql](migrations/20261102_on_demand_markdown_memory.sql)。为旧文档创建 version=1 初始快照，为既有 section 添加泛化发现描述及 section_version=1，保持所有原 UUID、正文、删除标记和轮次屏障。迁移期间停止旧 Worker，先备份；空库直接使用完整 DDL。
+
+## 个人报告与成果版本
+
+`work_artifact` 与 `rag_artifact` 的职责不同：前者保存可编辑、可再次使用的用户工作成果，后者仍是 RAG 运行证据索引。
+
+- `work_artifact`：UUID `id`、数据库用户 `owner_id`、`current_version` 和 `updated_at`。组合唯一键 `(id,owner_id)` 作为版本表外键目标；`(owner_id,updated_at,id)` 支持用户内分页。
+- `work_artifact_version`：组合主键 `(artifact_id,version)`；保存 `title`、完整 `content`、服务端绑定的 `sources_json`、`request_id`、请求内容 SHA-256 和创建时间。`(owner_id,request_id)` 唯一，版本行仅追加。
+- 新建报告以版本 1 开始。更新须携带 `expectedVersion`，通过条件更新当前版本指针与插入版本行的同一事务提交；版本不匹配返回 409，不覆盖新内容。重复相同请求返回已保存的版本；同一请求 ID 配不同内容返回 409。
+- 所有权只来自认证数据库用户，管理员也不能通过成果接口读取其他人的私有报告。报告不依赖当前会话，不会随会话删除而自动删除。
+- 引用元数据由执行器实际取得的 `SourceReference` 绑定，不接受模型传入用户、组织、任意来源或 URL。每份报告最多 20 项来源，标题最多 160 字符，正文最多 30,000 字符。
+- 人工编辑保留该版本的来源依赖。读取、列出、修改和版本列表均重新检查内部来源的片段访问权限；缺少权限时隐藏成果，依赖不可用时不返回正文。Agent 的来源模式也应用于成果：含内部来源的报告不能在仅联网模式读取，反之亦然。
+- 来源记录只是可追溯依赖，不证明模型或人工编写的正文正确。报告内容始终按不可信数据处理。
+- 现有 MySQL 环境先执行 [20261119_work_artifacts.sql](migrations/20261119_work_artifacts.sql)，再部署应用；空库直接使用完整 DDL。该迁移仅增加两张表，不改写会话或知识库数据。

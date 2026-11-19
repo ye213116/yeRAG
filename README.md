@@ -14,6 +14,7 @@ yeRAG 是一个面向企业知识库的 Agentic RAG 应用。它把文档处理�
 - 原生 OpenAI-compatible `tools/tool_calls` 知识库 Agent
 - 可选的 MCP Streamable HTTP 只读工具接入
 - 会话上下文、长期用户记忆和 Markdown 记忆文档
+- 私有报告成果库：Agent 生成保存、人工编辑、追加版本、来源追溯与 HTML 下载
 - JWT 认证、Spring Security、组织标签隔离和管理能力
 
 ## 架构概览
@@ -57,6 +58,11 @@ Agent 入口是 `KnowledgeAgentService`，模型客户端通过 `AgentLlmClient`
 | `read_knowledge_document` | 重新校验权限后，深入阅读原文与相邻片段 | 必填 `fileMd5`、`startChunk`，可选 `chunkCount`（1～5）、`offset` |
 | `search_web` | 搜索公开资料，返回带链接的摘要 | 必填 `query`，可选 `count`；需启用联网并配置搜索密钥 |
 | `read_web_page` | 读取公开 HTML / 纯文本网页正文 | 必填 `url`，可选 `offset`；需启用联网 |
+| `list_artifacts` | 查找自己的已保存报告 | 可选 `offset` |
+| `read_artifact` | 读取指定成果及版本，支持分段续读 | 必填 `artifactId`，可选 `version`、`offset`、`length` |
+| `save_artifact` | 新建完整报告或保存为新版本，绑定实际取得的来源 | 必填 `title`、`content`；更新还需 `artifactId`、`expectedVersion` |
+
+报告使用方法、API 和部署迁移见 [报告与成果管理](docs/work-artifacts.md)。成果工具单独受 `ai.agent.max-artifact-tool-calls`（默认 4）约束，避免检索用完预算后无法保存。复杂任务的证据收集阶段不能保存报告；最终综合阶段可以调用成果工具，普通问答不自动保存。
 
 运行规则：
 

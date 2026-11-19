@@ -157,6 +157,7 @@ const local: App.I18n.Schema = {
     }
   },
   route: {
+    artifacts: '成果库',
     login: '登录',
     403: '无权限',
     404: '页面不存在',

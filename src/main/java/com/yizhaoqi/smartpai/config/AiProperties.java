@@ -45,6 +45,8 @@ public class AiProperties {
         private boolean enabled = true;
         private boolean fallbackEnabled = true;
         private int maxToolCalls = 8;
+        /** Separate budget so evidence collection cannot consume report persistence calls. */
+        private int maxArtifactToolCalls = 4;
         private boolean queryRewriteEnabled = true;
         private Duration queryRewriteTimeout = Duration.ofSeconds(2);
         private int maxQueryLength = 500;

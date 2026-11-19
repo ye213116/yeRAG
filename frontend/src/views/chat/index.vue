@@ -7,6 +7,7 @@ const chatStore = useChatStore();
 <template>
   <div class="mx-auto max-w-1080px w-full flex-col gap-4">
     <div class="flex items-center gap-4">
+      <NButton @click="$router.push('/artifacts')">成果库</NButton>
       <NButton :disabled="!chatStore.memoryReady" @click="chatStore.newConversation">新建对话</NButton>
       <NPopconfirm @positive-click="chatStore.deleteConversation">
         <template #trigger>
