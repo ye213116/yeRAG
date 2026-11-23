@@ -11,7 +11,7 @@ services:
     mem_limit: 128m
     cpus: 0.5
     tmpfs: [/tmp:rw,nosuid,nodev,size=16777216]
-    volumes: [./proxy/clone.conf:/etc/squid/yerag.conf:ro]
+    volumes: [./proxy/clone.conf.example:/etc/squid/yerag.conf:ro]
     networks:
       clone:
         aliases: [egress]
@@ -27,7 +27,7 @@ services:
     mem_limit: 128m
     cpus: 0.5
     tmpfs: [/tmp:rw,nosuid,nodev,size=16777216]
-    volumes: [./proxy/build.conf:/etc/squid/yerag.conf:ro]
+    volumes: [./proxy/build.conf.example:/etc/squid/yerag.conf:ro]
     networks:
       build:
         aliases: [egress]
