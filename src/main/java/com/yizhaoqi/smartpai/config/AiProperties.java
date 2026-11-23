@@ -58,6 +58,41 @@ public class AiProperties {
         private Duration toolTimeout = Duration.ofSeconds(10);
         private Duration totalTimeout = Duration.ofSeconds(60);
         private Planning planning = new Planning();
+        private Profiles profiles = new Profiles();
+    }
+
+    @Data
+    public static class Profiles {
+        private Profile work = new Profile();
+        private Profile coding = codingDefaults();
+        private static Profile codingDefaults() {
+            Profile profile = new Profile();
+            profile.setEnabled(false);
+            profile.setAllowedTools(new java.util.LinkedHashSet<>(java.util.List.of(
+                    "search_knowledge_base", "read_knowledge_document", "search_web", "read_web_page",
+                    "read_memory", "list_memory_sections", "search_conversation_history", "read_conversation_turns",
+                    "list_files", "search_code", "read_file", "apply_patch", "execute_command", "git_diff")));
+            profile.setMaxToolCalls(40);
+            profile.setMaxDecisions(50);
+            profile.setLlmTimeout(Duration.ofSeconds(90));
+            profile.setToolTimeout(Duration.ofSeconds(135));
+            profile.setTotalTimeout(Duration.ofMinutes(15));
+            return profile;
+        }
+    }
+
+    @Data
+    public static class Profile {
+        private boolean enabled = true;
+        private java.util.Set<String> allowedTools = new java.util.LinkedHashSet<>(java.util.List.of(
+                "search_knowledge_base", "read_knowledge_document", "search_web", "read_web_page",
+                "read_memory", "list_memory_sections", "search_conversation_history", "read_conversation_turns",
+                "list_artifacts", "read_artifact", "save_artifact"));
+        private Integer maxToolCalls;
+        private Integer maxDecisions;
+        private Duration llmTimeout;
+        private Duration toolTimeout;
+        private Duration totalTimeout;
     }
 
     @Data

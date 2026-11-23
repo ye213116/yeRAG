@@ -87,6 +87,19 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 sendErrorMessage(session, "聊天消息需要 type、message、conversationId 和 requestId");
                 return;
             }
+            final com.yizhaoqi.smartpai.agent.profile.AgentMode agentMode;
+            try { agentMode = com.yizhaoqi.smartpai.agent.profile.AgentMode.parse(jsonMessage.get("agentMode")); }
+            catch (IllegalArgumentException invalid) {
+                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of(
+                        "type","request_rejected","requestId",requestId,"conversationId",conversationId,"message",invalid.getMessage()))));
+                return;
+            }
+            if (agentMode == com.yizhaoqi.smartpai.agent.profile.AgentMode.CODING || jsonMessage.containsKey("workspaceId")) {
+                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of(
+                        "type","request_rejected","requestId",requestId,"conversationId",conversationId,
+                        "message","Coding workspace submission is not enabled"))));
+                return;
+            }
             final SourceMode sourceMode;
             try { sourceMode = SourceMode.parse(jsonMessage.get("sourceMode")); }
             catch (IllegalArgumentException invalid) {

@@ -21,10 +21,16 @@ public class QuestionTelemetry {
     }
     public Mono<AgentRunResult> observe(String user,String question,String conversation,String requestId,Supplier<Mono<AgentRunResult>> work,
                                         java.util.function.Consumer<String> started) {
+        return observe(user,question,conversation,requestId,ai.getAgent().getTotalTimeout(),Map.of(),work,started);
+    }
+    public Mono<AgentRunResult> observe(String user,String question,String conversation,String requestId,
+            java.time.Duration timeout,Map<String,Object> metadata,Supplier<Mono<AgentRunResult>> work,
+            java.util.function.Consumer<String> started) {
         return Mono.defer(() -> {
             var run=recorder.start(user,null,"question",Map.of("question",question,"conversationId",Objects.toString(conversation,""),"requestId",Objects.toString(requestId,"")));
+            run.event("execution",metadata);
             started.accept(run.id());
-            var context=new RunContext(user,run.id(),run.id(),System.nanoTime()+ai.getAgent().getTotalTimeout().toNanos(),run);
+            var context=new RunContext(user,run.id(),run.id(),System.nanoTime()+timeout.toNanos(),run);
             return Mono.defer(work).timeout(context.remaining()).publishOn(reactor.core.scheduler.Schedulers.boundedElastic())
                 .map(result -> {
                     run.event("answer",Map.of("answer",result.answer(),"references",result.references(),"sources",result.sources()));
