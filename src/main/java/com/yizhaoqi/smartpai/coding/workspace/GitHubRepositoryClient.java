@@ -38,14 +38,10 @@ public class GitHubRepositoryClient {
             if(!token.isBlank()) builder.header("Authorization","Bearer "+token);
             builder.method(method,body==null?HttpRequest.BodyPublishers.noBody():HttpRequest.BodyPublishers.ofByteArray(json.writeValueAsBytes(body)));
             if(body!=null) builder.header("Content-Type","application/json");
-            var response=client.send(builder.build(),HttpResponse.BodyHandlers.ofInputStream());
-            try(var input=response.body()) {
-                if(response.statusCode()==404 && missingAllowed) return null;
-                if(response.statusCode()<200 || response.statusCode()>=300) throw new IllegalStateException("GitHub request failed (HTTP "+response.statusCode()+")");
-                byte[] encoded=input.readNBytes(4*1024*1024+1);
-                if(encoded.length>4*1024*1024) throw new IllegalStateException("GitHub response exceeded limit");
-                return json.readTree(encoded);
-            }
+            var response=com.yizhaoqi.smartpai.coding.http.BoundedHttp.send(client,builder.build(),4*1024*1024,Duration.ofSeconds(30));
+            if(response.statusCode()==404 && missingAllowed) return null;
+            if(response.statusCode()<200 || response.statusCode()>=300) throw new IllegalStateException("GitHub request failed (HTTP "+response.statusCode()+")");
+            return json.readTree(response.body());
         } catch(InterruptedException interrupted) { Thread.currentThread().interrupt(); throw new IllegalStateException("GitHub request interrupted"); }
         catch(java.io.IOException failure) { throw new IllegalStateException("GitHub transport unavailable"); }
     }

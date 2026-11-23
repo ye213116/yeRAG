@@ -55,3 +55,6 @@ export const publishCodingTask = (
   id: string,
   data: { baseSha: string; changeSetHash: string; verificationId: string }
 ) => request<{ url: string }>({ url: `/coding/tasks/${encodeURIComponent(id)}/pull-request`, method: 'post', data });
+
+export const fetchCodingEvent = (id: string, eventId: number) =>
+  request<{ data_json: string }>({ url: `/coding/tasks/${encodeURIComponent(id)}/events/${eventId}` });

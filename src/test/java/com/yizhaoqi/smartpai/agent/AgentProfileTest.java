@@ -61,4 +61,17 @@ class AgentProfileTest {
         config.getProfiles().getWork().getAllowedTools().add("new_tool");
         assertFalse(profile.allowedTools().contains("new_tool"));
     }
+    @Test void planningAlsoUsesTheSelectedProfileLlmTimeout() {
+        AgentLlmClient client=new AgentLlmClient() {
+            public reactor.core.publisher.Mono<com.yizhaoqi.smartpai.agent.model.AgentDecision> decide(
+                    List<com.yizhaoqi.smartpai.agent.model.AgentMessage> messages,List<Map<String,Object>> tools) {
+                return reactor.core.publisher.Mono.never();
+            }
+            public reactor.core.publisher.Flux<String> streamFinal(List<com.yizhaoqi.smartpai.agent.model.AgentMessage> messages) {
+                return reactor.core.publisher.Flux.empty();
+            }
+        };
+        var steps=new AgentPlanner(client,new AiProperties().getAgent()).plan(List.of(),List.of("search_knowledge_base"),Duration.ofMillis(10)).block(Duration.ofSeconds(2));
+        assertTrue(steps.isEmpty());
+    }
 }

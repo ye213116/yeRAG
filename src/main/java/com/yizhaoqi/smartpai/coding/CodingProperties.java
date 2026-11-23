@@ -30,6 +30,8 @@ public class CodingProperties {
     public static class Repository {
         private String fullName;
         private Set<Long> allowedUsers = new HashSet<>();
+        private Set<com.yizhaoqi.smartpai.agent.profile.WorkspacePermission> allowedPermissions =
+                java.util.EnumSet.allOf(com.yizhaoqi.smartpai.agent.profile.WorkspacePermission.class);
         private Set<String> allowedBranches = new HashSet<>(Set.of("main"));
         private String readTokenEnv;
         private String publishTokenEnv;
@@ -42,7 +44,8 @@ public class CodingProperties {
 
     public Repository repository(String id, long user) {
         Repository repository = repositories.get(id);
-        if (!enabled || repository == null || !repository.getAllowedUsers().contains(user))
+        if (!enabled || repository == null || !repository.getAllowedUsers().contains(user)
+                || !repository.getAllowedPermissions().contains(com.yizhaoqi.smartpai.agent.profile.WorkspacePermission.READ))
             throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND,"仓库不存在或未授权");
         repository.validate();
         return repository;

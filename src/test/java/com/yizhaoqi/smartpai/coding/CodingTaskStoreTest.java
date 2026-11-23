@@ -95,4 +95,13 @@ class CodingTaskStoreTest {
         store.finish(submitted.taskId(),Status.INTERRUPTED,"restart",null);
         assertEquals(Status.INTERRUPTED,store.task(1,submitted.taskId()).status());
     }
+    @Test void serverPermissionCeilingRejectsSelfGrantedWriteAndCleanupBlocksPublication() {
+        config.getRepositories().get("demo").setAllowedPermissions(Set.of(WorkspacePermission.READ));
+        assertThrows(SecurityException.class,() -> submit("denied"));
+        config.getRepositories().get("demo").setAllowedPermissions(workspace.permissions());
+        var accepted=submit("r1");store.claim();
+        store.finish(accepted.taskId(),Status.REVIEW_READY,"done",new ObjectMapper().createObjectNode().put("cleanupPending",true));
+        assertEquals(1,store.cleanupPending().size());store.cleanupCompleted(accepted.taskId());
+        assertTrue(store.cleanupPending().isEmpty());
+    }
 }

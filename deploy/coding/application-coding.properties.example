@@ -1,0 +1,21 @@
+# Load explicitly with spring.config.additional-location on the business backend.
+# Apply docs/databases/migrations/20261123_coding_tasks.sql first.
+ai.coding.enabled=${AI_CODING_ENABLED:false}
+ai.agent.profiles.coding.enabled=${AI_CODING_ENABLED:false}
+ai.coding.docker-url=${CODING_DOCKER_URL}
+ai.coding.docker-trust-store=${CODING_DOCKER_TRUST_STORE}
+ai.coding.docker-key-store=${CODING_DOCKER_KEY_STORE}
+ai.coding.docker-store-password-env=CODING_DOCKER_STORE_PASSWORD
+ai.coding.image=yerag-coding:java17
+ai.coding.clone-network=yerag-coding-clone
+ai.coding.build-network=yerag-coding-build
+ai.coding.proxy-url=http://egress:3128
+ai.coding.concurrency=1
+ai.coding.command-timeout=120s
+ai.coding.max-workspace-bytes=268435456
+ai.coding.repositories.demo.full-name=${CODING_GITHUB_REPOSITORY}
+ai.coding.repositories.demo.allowed-users=${CODING_ALLOWED_USER_IDS}
+ai.coding.repositories.demo.allowed-branches=${CODING_ALLOWED_BRANCHES:main}
+ai.coding.repositories.demo.allowed-permissions=READ,WRITE,EXECUTE
+ai.coding.repositories.demo.read-token-env=CODING_GITHUB_READ_TOKEN
+ai.coding.repositories.demo.publish-token-env=CODING_GITHUB_PUBLISH_TOKEN

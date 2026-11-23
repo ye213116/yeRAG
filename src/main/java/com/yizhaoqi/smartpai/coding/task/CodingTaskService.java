@@ -36,13 +36,15 @@ public class CodingTaskService {
         enabled();
         var repository=properties.repository(repositoryId,owner);
         var granted=CodingTypes.permissions(permissions);
+        if(!repository.getAllowedPermissions().containsAll(granted)) throw new SecurityException("Repository permission ceiling exceeded");
         sandbox.preflight();
         return store.createWorkspace(owner,repositoryId,branch,github.branch(repository,branch),granted);
     }
     public Submission submit(long owner,String workspaceId,String session,String requestId,String question,SourceMode sourceMode) {
         enabled();
         Workspace workspace=store.workspace(owner,workspaceId);
-        properties.repository(workspace.repositoryId(),owner);
+        if(!properties.repository(workspace.repositoryId(),owner).getAllowedPermissions().containsAll(workspace.permissions()))
+            throw new SecurityException("Repository permission ceiling exceeded");
         String fingerprint=MemoryStore.hash(store.encode(List.of("coding",workspaceId,session,question,sourceMode.name(),workspace.permissions().stream().map(Enum::name).sorted().toList())));
         Task replay=store.replay(owner,requestId,fingerprint);
         if(replay!=null) return acknowledgement(replay.id());
@@ -69,7 +71,8 @@ public class CodingTaskService {
         return new CodingExecutionContext(task.id(),task.workspaceId(),task.permissions(),() -> {
             enabled();
             Workspace w=store.workspace(task.ownerId(),task.workspaceId());
-            properties.repository(w.repositoryId(),task.ownerId());
+            var repository=properties.repository(w.repositoryId(),task.ownerId());
+            if(!repository.getAllowedPermissions().containsAll(task.permissions())) throw new SecurityException("Repository permissions were revoked");
             if(!w.permissions().containsAll(task.permissions())) throw new SecurityException("Workspace permissions were revoked");
             if(!task.id().equals(w.activeTaskId()) || !store.running(task.id()) || store.cancelled(task.id()))
                 throw new TaskCancelled();
@@ -86,11 +89,13 @@ public class CodingTaskService {
         return view;
     }
     public void permissions(long owner,String id,Set<WorkspacePermission> permissions) {
-        Workspace workspace=store.workspace(owner,id);properties.repository(workspace.repositoryId(),owner);
+        Workspace workspace=store.workspace(owner,id);
+        if(!properties.repository(workspace.repositoryId(),owner).getAllowedPermissions().containsAll(CodingTypes.permissions(permissions)))
+            throw new SecurityException("Repository permission ceiling exceeded");
         store.permissions(owner,id,CodingTypes.permissions(permissions));
         if(workspace.activeTaskId()!=null) {
             Task task=store.task(owner,workspace.activeTaskId());
-            if(!permissions.containsAll(task.permissions())) { store.cancel(owner,task.id()); sandbox.stop(id); }
+            if(!permissions.containsAll(task.permissions())) cancel(owner,task.id());
         }
     }
     public void cancel(long owner,String id) {

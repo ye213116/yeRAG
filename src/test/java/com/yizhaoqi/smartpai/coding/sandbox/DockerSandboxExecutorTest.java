@@ -69,4 +69,12 @@ class DockerSandboxExecutorTest {
         assertThrows(java.io.IOException.class,() -> DockerSandboxExecutor.demultiplex(new byte[7],100));
         assertThrows(java.io.IOException.class,() -> DockerSandboxExecutor.demultiplex(ByteBuffer.allocate(8).putInt(0x01000000).putInt(500).array(),100));
     }
+    @Test void interruptedControllerStillDeletesTheDeterministicallyNamedContainer() {
+        Thread.currentThread().interrupt();
+        try {
+            executor.stop(workspace.id());
+            assertTrue(Thread.currentThread().isInterrupted());
+            assertTrue(requests.contains("DELETE /containers/yerag-coding-"+workspace.id()+"-operation"));
+        } finally { Thread.interrupted(); }
+    }
 }

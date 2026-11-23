@@ -54,6 +54,9 @@ public class CodingController {
         Object snapshot=tasks.view(user(p),id).get("result");
         return result(snapshot==null?Map.of():snapshot);
     }
+    @GetMapping("/tasks/{id}/events/{eventId}") public Map<String,Object> event(Principal p,@PathVariable String id,@PathVariable long eventId) {
+        tasks.view(user(p),id);return result(store.eventDetails(id,eventId));
+    }
     @PostMapping("/tasks/{id}/cancel") public Map<String,Object> cancel(Principal p,@PathVariable String id) {
         tasks.cancel(user(p),id);return result(Map.of("requested",true));
     }

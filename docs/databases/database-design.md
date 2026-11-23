@@ -379,3 +379,13 @@ GitHub branch and query existing PRs before creating another. Results and task m
 are private application data, separate from expiring RAG evidence and report versions.
 Existing databases must apply `migrations/20261123_coding_tasks.sql` before enabling
 `ai.coding.enabled`. Full DDL includes the same tables for new databases.
+
+
+Coding completion persists the result with `cleanupPending=true` before deleting
+workspace volumes; cleanup success clears that flag. SQL failure preserves the keeper
+and files for stale-task recovery. Pending cleanup blocks publication. Cancellation and
+completion lock the task row to serialize against claiming; queued cancellation cannot
+release a workspace owned by a newly claimed task. Publishing uses the existing heartbeat
+as its retry timeout and never resumes external mutations without another confirmation.
+Repository configuration can narrow the owner-selected permission snapshot at runtime;
+revocation is rechecked during tool execution and before GitHub writes.

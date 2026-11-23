@@ -40,7 +40,9 @@ public class ChatHandler {
     public void configureTelemetry(com.yizhaoqi.smartpai.rag.trace.QuestionTelemetry telemetry) { this.telemetry=telemetry; }
     private Mono<AgentRunResult> observe(String user,String question,String conversation,String request,
             java.util.function.Supplier<Mono<AgentRunResult>> work) {
-        return telemetry==null?Mono.defer(work).timeout(agentConfig.getTotalTimeout()):telemetry.observe("id:"+user,question,conversation,request,work);
+        var override=agentConfig.getProfiles().getWork().getTotalTimeout();
+        var timeout=override==null?agentConfig.getTotalTimeout():override;
+        return telemetry==null?Mono.defer(work).timeout(timeout):telemetry.observe("id:"+user,question,conversation,request,timeout,Map.of("agentMode","work"),work,id -> {});
     }
     private void persisted(AgentRunResult result,String user,boolean saved) {
         if(telemetry!=null) telemetry.persisted(result.runId(),"id:"+user,saved);

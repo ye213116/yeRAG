@@ -21,7 +21,8 @@ public class QuestionTelemetry {
     }
     public Mono<AgentRunResult> observe(String user,String question,String conversation,String requestId,Supplier<Mono<AgentRunResult>> work,
                                         java.util.function.Consumer<String> started) {
-        return observe(user,question,conversation,requestId,ai.getAgent().getTotalTimeout(),Map.of(),work,started);
+        var override=ai.getAgent().getProfiles().getWork().getTotalTimeout();
+        return observe(user,question,conversation,requestId,override==null?ai.getAgent().getTotalTimeout():override,Map.of("agentMode","work"),work,started);
     }
     public Mono<AgentRunResult> observe(String user,String question,String conversation,String requestId,
             java.time.Duration timeout,Map<String,Object> metadata,Supplier<Mono<AgentRunResult>> work,

@@ -42,4 +42,16 @@ class QuestionTelemetryTest {
         var trace=store.read(answer.runId(),"id:1");
         assertEquals("SUCCEEDED",trace.path("status").asText()); assertFalse(trace.path("answerPersisted").asBoolean());
     }
+    @Test void workProfileDeadlineOverridesTheLegacyGlobalQuestionTimeout() {
+        var json=new ObjectMapper();var rag=new RagProperties();rag.setEvidenceDirectory(directory.toString());
+        var store=new LocalEvidenceStore(json,rag);var ai=new AiProperties();
+        ai.getAgent().setTotalTimeout(Duration.ofSeconds(1));
+        ai.getAgent().getProfiles().getWork().setTotalTimeout(Duration.ofSeconds(10));
+        var telemetry=new QuestionTelemetry(new EvidenceRecorder(store,json,rag),store,ai);
+        var result=telemetry.observe("id:1","question","session","request",() -> Mono.deferContextual(view -> {
+            assertTrue(view.get(RunContext.KEY).remaining().compareTo(Duration.ofSeconds(5))>0);
+            return Mono.just(new AgentRunResult("answer",Map.of()));
+        })).block();
+        assertEquals("answer",result.answer());
+    }
 }

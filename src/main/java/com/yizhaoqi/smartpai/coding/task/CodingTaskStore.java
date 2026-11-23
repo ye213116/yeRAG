@@ -119,8 +119,25 @@ public class CodingTaskStore {
     public List<Map<String,Object>> events(String id) {
         return db.queryForList("SELECT id,kind,LEFT(data_json,1000) AS preview,created_at FROM coding_task_event WHERE task_id=? ORDER BY id DESC LIMIT 100",id);
     }
+    public Map<String,Object> eventDetails(String taskId,long eventId) {
+        var rows=db.queryForList("SELECT id,kind,data_json,created_at FROM coding_task_event WHERE task_id=? AND id=?",taskId,eventId);
+        if(rows.isEmpty()) throw missing();return rows.get(0);
+    }
+    public void recoverPublishing() {
+        db.update("UPDATE coding_task SET publish_state='FAILED' WHERE publish_state='PUBLISHING' AND heartbeat_at<?",java.sql.Timestamp.from(java.time.Instant.now().minusSeconds(300)));
+    }
+    public List<Task> cleanupPending() {
+        return db.queryForList("SELECT * FROM coding_task WHERE result_json LIKE ?","%\"cleanupPending\":true%").stream().map(this::map).toList();
+    }
+    public void cleanupCompleted(String id) {
+        Task task=internal(id);
+        if(task.result() instanceof com.fasterxml.jackson.databind.node.ObjectNode result) {
+            result.put("cleanupPending",false);db.update("UPDATE coding_task SET result_json=? WHERE id=?",encode(result),id);
+        }
+    }
     public void finish(String id,Status status,String summary,JsonNode result) {
         transaction(() -> {
+            db.queryForList("SELECT id FROM coding_task WHERE id=? FOR UPDATE",id);
             Task task=internal(id);
             if(task.status()!=Status.PREPARING && task.status()!=Status.RUNNING) return null;
             db.update("UPDATE coding_task SET status=?,summary=?,result_json=?,heartbeat_at=CURRENT_TIMESTAMP WHERE id=?",status.name(),summary,result==null?null:encode(result),id);
@@ -130,6 +147,7 @@ public class CodingTaskStore {
     }
     public void cancel(long user,String id) {
         transaction(() -> {
+            db.queryForList("SELECT id FROM coding_task WHERE id=? AND owner_id=? FOR UPDATE",id,user);
             Task task=task(user,id);
             if(task.status()==Status.QUEUED) {
                 db.update("UPDATE coding_task SET status='CANCELLED' WHERE id=? AND status='QUEUED'",id);
@@ -149,7 +167,7 @@ public class CodingTaskStore {
         db.update("UPDATE coding_task SET result_json=? WHERE id=? AND result_json IS NULL",encode(result),id);
     }
     public boolean beginPublish(long owner,String id) {
-        return db.update("UPDATE coding_task SET publish_state='PUBLISHING' WHERE id=? AND owner_id=? AND status='REVIEW_READY' AND publish_state IN ('NONE','FAILED')",id,owner)==1;
+        return db.update("UPDATE coding_task SET publish_state='PUBLISHING',heartbeat_at=CURRENT_TIMESTAMP WHERE id=? AND owner_id=? AND status='REVIEW_READY' AND publish_state IN ('NONE','FAILED')",id,owner)==1;
     }
     public void publication(String id,String state,String url) {
         db.update("UPDATE coding_task SET publish_state=?,pr_url=? WHERE id=?",state,url,id);

@@ -91,7 +91,11 @@ public class DockerSandboxExecutor implements SandboxExecutor {
         payload.put("maxLogBytes",config.getMaxLogBytes());payload.put("maxResultBytes",config.getMaxResultBytes());
         payload.put("maxWorkspaceBytes",config.getMaxWorkspaceBytes());payload.put("timeoutSeconds",Math.max(1,timeout.toSeconds()-2));
         List<String> env=new ArrayList<>();
-        try { env.add("YERAG_REQUEST="+Base64.getEncoder().encodeToString(json.writeValueAsBytes(payload))); }
+        try {
+            byte[] encoded=json.writeValueAsBytes(payload);
+            if(encoded.length>65536) throw new IllegalArgumentException("Sandbox request exceeds container argument limit");
+            env.add("YERAG_REQUEST="+Base64.getEncoder().encodeToString(encoded));
+        }
         catch(Exception invalid) { throw new IllegalArgumentException("Invalid sandbox request"); }
         boolean network=op==Operation.TEST || op==Operation.SETUP;
         if(network) {
@@ -99,7 +103,7 @@ public class DockerSandboxExecutor implements SandboxExecutor {
             if(!token.isEmpty()) env.add("YERAG_CLONE_TOKEN="+token);
         }
         boolean writable=op==Operation.PATCH || op==Operation.COMMAND || op==Operation.TEST || op==Operation.SETUP;
-        String id=api("POST","/containers/create",spec(w.id(),List.of("python3","/opt/yerag/helper.py"),env,network,writable,op==Operation.SETUP),false).path("Id").asText();
+        String id=api("POST","/containers/create?name="+prefix(w.id())+"-operation",spec(w.id(),List.of("python3","/opt/yerag/helper.py"),env,network,writable,op==Operation.SETUP),false).path("Id").asText();
         if(id.isBlank()) throw new IllegalStateException("Docker did not return a container");
         if(active.putIfAbsent(w.id(),id)!=null) { remove(id);throw new IllegalStateException("Concurrent workspace operation rejected"); }
         long deadline=System.nanoTime()+timeout.toNanos();
@@ -135,8 +139,17 @@ public class DockerSandboxExecutor implements SandboxExecutor {
         return Map.of("Image",config.getImage(),"User","10001:10001","WorkingDir","/workspace","Cmd",command,"Env",env,
                 "Labels",Map.of("yerag.workspace",workspace),"HostConfig",host);
     }
-    @Override public void stop(String workspace) { String id=active.get(workspace);if(id!=null) { remove(id);active.remove(workspace,id); } }
-    private void remove(String id) { api("DELETE","/containers/"+id+"?force=true&v=true",null,true); }
+    @Override public void stop(String workspace) {
+        String id=active.get(workspace);
+        if(id!=null) { remove(id);active.remove(workspace,id); }
+        // Deterministic name also recovers a lost response, interrupted cleanup or process restart.
+        remove(prefix(workspace)+"-operation");
+    }
+    private void remove(String id) {
+        boolean interrupted=Thread.interrupted();
+        try { api("DELETE","/containers/"+id+"?force=true&v=true",null,true); }
+        finally { if(interrupted) Thread.currentThread().interrupt(); }
+    }
     @Override public void destroy(String workspace) {
         stop(workspace);String prefix=prefix(workspace);remove(prefix+"-keeper");
         api("DELETE","/volumes/"+prefix+"-work",null,true);api("DELETE","/volumes/"+prefix+"-base",null,true);
@@ -151,12 +164,10 @@ public class DockerSandboxExecutor implements SandboxExecutor {
             var builder=HttpRequest.newBuilder(root.resolve(path)).timeout(Duration.ofSeconds(10));
             builder.method(method,body==null?HttpRequest.BodyPublishers.noBody():HttpRequest.BodyPublishers.ofByteArray(json.writeValueAsBytes(body)));
             if(body!=null) builder.header("Content-Type","application/json");
-            var response=client.send(builder.build(),HttpResponse.BodyHandlers.ofInputStream());
-            try(var input=response.body()) {
-                if(missing && response.statusCode()==404) return new byte[0];
-                if(response.statusCode()<200 || response.statusCode()>=300) throw new IllegalStateException("Docker operation failed (HTTP "+response.statusCode()+")");
-                byte[] bytes=input.readNBytes(limit+1);if(bytes.length>limit) throw new IllegalStateException("Docker output exceeded limit");return bytes;
-            }
+            var response=com.yizhaoqi.smartpai.coding.http.BoundedHttp.send(client,builder.build(),limit,Duration.ofSeconds(10));
+            if(missing && response.statusCode()==404) return new byte[0];
+            if(response.statusCode()<200 || response.statusCode()>=300) throw new IllegalStateException("Docker operation failed (HTTP "+response.statusCode()+")");
+            return response.body();
         } catch(InterruptedException cancelled) { Thread.currentThread().interrupt();throw new java.util.concurrent.CancellationException("Docker request interrupted"); }
         catch(java.io.IOException failed) { throw new IllegalStateException("Docker endpoint unavailable"); }
     }

@@ -1,0 +1,43 @@
+# Run on the dedicated Linux execution node, not the business middleware host.
+name: yerag-coding-runner
+services:
+  clone-egress:
+    build: ./proxy
+    user: proxy
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    mem_limit: 128m
+    cpus: 0.5
+    tmpfs: [/tmp:rw,nosuid,nodev,size=16777216]
+    volumes: [./proxy/clone.conf:/etc/squid/yerag.conf:ro]
+    networks:
+      clone:
+        aliases: [egress]
+      outbound: {}
+    restart: unless-stopped
+  build-egress:
+    build: ./proxy
+    user: proxy
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    mem_limit: 128m
+    cpus: 0.5
+    tmpfs: [/tmp:rw,nosuid,nodev,size=16777216]
+    volumes: [./proxy/build.conf:/etc/squid/yerag.conf:ro]
+    networks:
+      build:
+        aliases: [egress]
+      outbound: {}
+    restart: unless-stopped
+networks:
+  clone:
+    name: yerag-coding-clone
+    internal: true
+  build:
+    name: yerag-coding-build
+    internal: true
+  outbound: {}

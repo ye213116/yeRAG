@@ -17,3 +17,9 @@ python3 scripts/local-e2e.py
 如清理失败，保留该目录，通过 `python3 scripts/local-e2e.py --cleanup /tmp/yerag-live-e2e-...` 重试。清理器仅接受本脚本格式的精确账号名；仍存在文档时拒绝删除账号。真实测试会产生模型调用，耗时结果只代表本地样本，不是容量或生产 SLO。
 
 `python3 scripts/local-e2e.py --load`运行固定四用户并发协议，独立记录检索、首字和完成时延，门槛及结果说明见 `evaluation/README.md`。
+
+
+Coding 委托任务另有 `tests/browser/coding.test.mjs`（Vite 19529），使用独立的
+HTTP/WebSocket fixture，验证权限配置、任务提交、关闭页面后重新查看、Diff 纯文本显示、
+确认前不发布、确认指纹及跨账号隔离。该测试不会执行真实容器、调用真实模型或创建真实 PR；
+真实执行节点验收见 `docs/work-coding.md` 和 `CodingDockerIntegrationTest`。

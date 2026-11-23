@@ -80,6 +80,14 @@ def files():
     return result
 
 
+def file_digest(path):
+    digest = hashlib.sha256()
+    with path.open('rb') as stream:
+        for chunk in iter(lambda: stream.read(65536), b''):
+            digest.update(chunk)
+    return digest.digest()
+
+
 def snapshot():
     tracked = set(git('ls-files', '-z').decode('utf-8').split('\0')) - {''}
     current = files()
@@ -99,12 +107,12 @@ def snapshot():
             continue
         path = relative(name)
         oldpath = BASE / name
-        old = bounded_file(oldpath) if name in tracked else None
-        new = bounded_file(path) if path.exists() else None
         oldmode = '100755' if oldpath.exists() and oldpath.stat().st_mode & 0o111 else '100644'
         mode = '100755' if path.exists() and path.stat().st_mode & 0o111 else '100644'
-        if old == new and oldmode == mode:
+        if oldpath.is_file() and path.is_file() and oldmode == mode and oldpath.stat().st_size == path.stat().st_size and file_digest(oldpath) == file_digest(path):
             continue
+        old = bounded_file(oldpath) if name in tracked else None
+        new = bounded_file(path) if path.exists() else None
         if (old and b'\0' in old) or (new and b'\0' in new):
             raise ValueError('binary_changes_not_supported')
         oldtext = old.decode('utf-8') if old is not None else ''
@@ -113,9 +121,10 @@ def snapshot():
         diff.append('diff --git a/' + name + ' b/' + name + '\n')
         if oldmode != mode:
             diff.append('old mode ' + oldmode + '\nnew mode ' + mode + '\n')
-        diff.extend(difflib.unified_diff(oldtext.splitlines(keepends=True), (text or '').splitlines(keepends=True),
+        for line in difflib.unified_diff(oldtext.splitlines(keepends=True), (text or '').splitlines(keepends=True),
                                          fromfile='a/' + name if old is not None else '/dev/null',
-                                         tofile='b/' + name if new is not None else '/dev/null'))
+                                         tofile='b/' + name if new is not None else '/dev/null'):
+            diff.append(line if line.endswith('\n') else line + '\n\\ No newline at end of file\n')
     canonical = json.dumps(changes, ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode()
     return {'ok': True, 'changes': changes, 'diff': ''.join(diff), 'changeSetHash': hashlib.sha256(canonical).hexdigest()}
 

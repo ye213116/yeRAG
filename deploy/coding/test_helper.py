@@ -79,6 +79,15 @@ class HelperTest(unittest.TestCase):
         self.assertNotIn('build.log', paths)
         self.assertEqual(snapshot['changeSetHash'], self.request('SNAPSHOT')['changeSetHash'])
 
+    def test_unchanged_large_binary_assets_do_not_block_text_edits(self):
+        payload = b'\0' * (2 * 1024 * 1024)
+        (helper.BASE / 'asset.bin').write_bytes(payload)
+        subprocess.run(['git', '-C', str(helper.BASE), 'add', 'asset.bin'], check=True)
+        (helper.ROOT / 'asset.bin').write_bytes(payload)
+        (helper.ROOT / 'Example.java').write_text('class Example { int value = 2; }')
+        snapshot = self.request('SNAPSHOT')
+        self.assertEqual(['Example.java'], [change['path'] for change in snapshot['changes']])
+
     def test_read_continuation_handles_long_lines_and_no_final_newline(self):
         content = 'x' * 40000 + '\nlast line'
         (helper.ROOT / 'Long.java').write_text(content)

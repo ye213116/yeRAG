@@ -53,10 +53,14 @@ final class AgentPlanner {
     }
 
     Mono<List<String>> plan(List<AgentMessage> context, List<String> tools) {
+        return plan(context,tools,config.getLlmTimeout());
+    }
+
+    Mono<List<String>> plan(List<AgentMessage> context, List<String> tools, java.time.Duration llmTimeout) {
         return Mono.<List<String>>defer(() -> {
             var timeout = config.getPlanning().getTimeout();
             if (timeout == null || timeout.isNegative() || timeout.isZero() || tools.isEmpty()) return Mono.just(List.of());
-            if (timeout.compareTo(config.getLlmTimeout()) > 0) timeout = config.getLlmTimeout();
+            if (timeout.compareTo(llmTimeout) > 0) timeout = llmTimeout;
             var messages = new ArrayList<>(context);
             messages.add(AgentMessage.system(PROMPT + "\n证据任务数量：2～" + (maxSteps() - 1)
                     + "，每项最多 120 字。可用工具名称：" + String.join(", ", tools)));

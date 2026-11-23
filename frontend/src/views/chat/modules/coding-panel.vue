@@ -2,6 +2,7 @@
 import {
   cancelCodingTask,
   createCodingWorkspace,
+  fetchCodingEvent,
   fetchCodingRepositories,
   fetchCodingTask,
   fetchCodingTasks,
@@ -24,7 +25,27 @@ const tasks = ref<CodingTaskSummary[]>([]);
 const repositoryId = ref('');
 const branch = ref('');
 const preset = ref<'read' | 'edit'>('edit');
-const selectedTask = ref('');
+const selectedTask = ref<string | null>(null);
+const eventOutput = ref('');
+const reviewOpen = ref(false);
+const reviewedSnapshot = ref<{
+  taskId: string;
+  baseSha: string;
+  changeSetHash: string;
+  verificationId: string;
+  status: string;
+} | null>(null);
+const statusLabels: Record<string, string> = {
+  QUEUED: '排队中',
+  PREPARING: '准备环境',
+  RUNNING: '执行中',
+  REVIEW_READY: '待审核',
+  FAILED: '失败',
+  CANCELLED: '已取消',
+  TIMED_OUT: '已超时',
+  INTERRUPTED: '已中断'
+};
+const verificationLabels: Record<string, string> = { PASSED: '通过', FAILED: '失败', NOT_VERIFIED: '未验证' };
 const task = ref<CodingTask | null>(null);
 const notice = ref('');
 const busy = ref(false);
@@ -47,12 +68,16 @@ const workspaceOptions = computed(() =>
     value: w.id
   }))
 );
-const taskOptions = computed(() => tasks.value.map(t => ({ label: `${t.status} · ${t.id.slice(0, 8)}`, value: t.id })));
+const taskOptions = computed(() =>
+  tasks.value.map(t => ({ label: `${statusLabels[t.status] || t.status} · ${t.id.slice(0, 8)}`, value: t.id }))
+);
 const terminal = (status: string) => !['QUEUED', 'PREPARING', 'RUNNING'].includes(status);
 const canPublish = computed(
   () =>
     task.value?.status === 'REVIEW_READY' &&
     task.value.result?.changeSetHash &&
+    task.value.result.diff &&
+    !task.value.result.cleanupPending &&
     task.value.result.verification?.id &&
     task.value.publishState !== 'PUBLISHING' &&
     task.value.publishState !== 'CREATED'
@@ -69,6 +94,9 @@ watch(
   }
 );
 watch(selectedTask, async id => {
+  reviewOpen.value = false;
+  reviewedSnapshot.value = null;
+  eventOutput.value = '';
   revision += 1;
   const current = revision;
   task.value = null;
@@ -144,15 +172,42 @@ async function cancel() {
   notice.value = result.error ? '取消请求失败' : '已请求停止，正在清理运行环境';
   await refresh();
 }
+function prepareReview() {
+  const current = task.value;
+  if (!current?.result?.changeSetHash || !current.result.verification?.id) return;
+  reviewedSnapshot.value = {
+    taskId: current.id,
+    baseSha: current.baseSha,
+    changeSetHash: current.result.changeSetHash,
+    verificationId: current.result.verification.id,
+    status: current.result.verification.status
+  };
+}
+async function readEvent(eventId: number) {
+  const taskId = task.value?.id;
+  if (!taskId) return;
+  const response = await fetchCodingEvent(taskId, eventId);
+  if (!alive || task.value?.id !== taskId) return;
+  if (response.error) {
+    notice.value = '无法读取执行输出';
+    return;
+  }
+  try {
+    const data = JSON.parse(response.data.data_json);
+    eventOutput.value = data.result?.text || data.text || JSON.stringify(data, null, 2);
+  } catch {
+    eventOutput.value = response.data.data_json;
+  }
+}
 async function publish() {
-  const reviewed = task.value;
-  if (!reviewed?.result?.changeSetHash || !reviewed.result.verification?.id) return;
+  const reviewed = reviewedSnapshot.value;
+  if (!reviewed) return;
   busy.value = true;
   try {
-    const result = await publishCodingTask(reviewed.id, {
+    const result = await publishCodingTask(reviewed.taskId, {
       baseSha: reviewed.baseSha,
-      changeSetHash: reviewed.result.changeSetHash,
-      verificationId: reviewed.result.verification.id
+      changeSetHash: reviewed.changeSetHash,
+      verificationId: reviewed.verificationId
     });
     if (!alive) return;
     notice.value = result.error ? 'PR 发布失败；请检查授权或基准变化，已保存的改动仍可审核' : 'PR 已创建';
@@ -190,15 +245,17 @@ onUnmounted(() => {
     </div>
     <div class="mt-3 flex flex-wrap gap-2">
       <NSelect
-        v-model:value="chat.codingWorkspaceId"
+        :value="chat.codingWorkspaceId || null"
         class="min-w-72 flex-1"
         :options="workspaceOptions"
         placeholder="选择 Workspace"
+        @update:value="chat.codingWorkspaceId = $event"
       />
       <NButton :disabled="!chat.codingWorkspaceId" @click="savePermissions">保存权限</NButton>
       <NButton @click="refresh">刷新任务</NButton>
     </div>
     <NAlert v-if="notice" class="mt-3" type="info">{{ notice }}</NAlert>
+    <NText class="mt-3 block" depth="3">后台任务（{{ tasks.length }}）</NText>
     <NSelect
       v-model:value="selectedTask"
       class="mt-3"
@@ -208,8 +265,10 @@ onUnmounted(() => {
     />
     <template v-if="task">
       <div class="mt-3 flex gap-3">
-        <NTag>{{ task.status }}</NTag>
-        <NTag v-if="task.result?.verification">测试：{{ task.result.verification.status }}</NTag>
+        <NTag>{{ statusLabels[task.status] || task.status }}</NTag>
+        <NTag v-if="task.result?.verification">
+          测试：{{ verificationLabels[task.result.verification.status] || task.result.verification.status }}
+        </NTag>
         <NButton v-if="!terminal(task.status)" size="small" @click="cancel">停止任务</NButton>
       </div>
       <pre class="mt-3 max-h-48 overflow-auto whitespace-pre-wrap text-12px">{{
@@ -217,9 +276,11 @@ onUnmounted(() => {
       }}</pre>
       <NCollapse class="mt-3">
         <NCollapseItem title="执行记录" name="events">
-          <pre v-for="event in task.events" :key="event.id" class="overflow-auto whitespace-pre-wrap text-12px"
-            >{{ event.kind }} {{ event.preview }}</pre
-          >
+          <div v-for="event in task.events" :key="event.id">
+            <pre class="overflow-auto whitespace-pre-wrap text-12px">{{ event.kind }} {{ event.preview }}</pre>
+            <NButton size="tiny" @click="readEvent(event.id)">查看详细输出</NButton>
+          </div>
+          <pre v-if="eventOutput" class="max-h-72 overflow-auto whitespace-pre-wrap text-12px">{{ eventOutput }}</pre>
         </NCollapseItem>
         <NCollapseItem title="审核 Diff" name="diff">
           <pre class="max-h-120 overflow-auto whitespace-pre text-12px">{{
@@ -227,9 +288,13 @@ onUnmounted(() => {
           }}</pre>
         </NCollapseItem>
       </NCollapse>
-      <NPopconfirm v-if="canPublish" @positive-click="publish">
-        <template #trigger><NButton class="mt-3" type="primary" :loading="busy">确认 Diff 并创建 PR</NButton></template>
-        将此 Diff 发布到独立任务分支并创建 GitHub PR？当前测试状态：{{ task.result?.verification?.status }}。
+      <NPopconfirm v-if="canPublish" v-model:show="reviewOpen" @positive-click="publish">
+        <template #trigger>
+          <NButton class="mt-3" type="primary" :loading="busy" @click="prepareReview">确认 Diff 并创建 PR</NButton>
+        </template>
+        将此 Diff 发布到独立任务分支并创建 GitHub PR？当前测试状态：{{
+          verificationLabels[reviewedSnapshot?.status || ''] || reviewedSnapshot?.status
+        }}。
       </NPopconfirm>
       <a
         v-if="task.prUrl && /^https:\/\/github\.com\//.test(task.prUrl)"
