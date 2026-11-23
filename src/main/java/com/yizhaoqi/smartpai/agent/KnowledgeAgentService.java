@@ -52,6 +52,9 @@ public class KnowledgeAgentService {
     private com.yizhaoqi.smartpai.rag.trace.ToolTelemetry telemetry;
     @org.springframework.beans.factory.annotation.Autowired
     public void configureTelemetry(com.yizhaoqi.smartpai.rag.trace.ToolTelemetry telemetry) { this.telemetry=telemetry; }
+    private com.yizhaoqi.smartpai.coding.task.CodingCompletionGate codingGate;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void configureCodingGate(com.yizhaoqi.smartpai.coding.task.CodingCompletionGate gate) { this.codingGate=gate; }
     private final AgentLlmClient llmClient;
     private final AgentToolRegistry registry;
     private final AiProperties.Agent config;
@@ -135,7 +138,7 @@ public class KnowledgeAgentService {
         return llmClient.decide(List.copyOf(state.messages), availableDefinitions(state)).timeout(state.profile.llmTimeout())
                 .flatMap(decision -> {
                     if (!decision.requestsTool()) {
-                        if (task == null) return finish(state, decision.content() == null ? "" : decision.content());
+                        if (task == null) return completeOrVerify(state, () -> finish(state, decision.content() == null ? "" : decision.content()));
                         String notes = decision.content() == null ? "" : decision.content();
                         // Working notes remain assistant data, never an instruction or a user-visible answer.
                         state.messages.add(AgentMessage.assistant(notes.substring(0, Math.min(notes.length(), config.getMaxToolResultCharacters()))));
@@ -224,7 +227,8 @@ public class KnowledgeAgentService {
                 : tool.source() == AgentTool.Source.MEMORY ? state.memoryCalls < memoryConfig.getMaxMemoryToolCalls()
                 : state.calls < state.profile.maxToolCalls();
     }
-    private Mono<ToolExecutionResult> execute(Run state, ToolCall call) {
+    private Mono<ToolExecutionResult> execute(Run state, ToolCall call) { return execute(state,call,false); }
+    private Mono<ToolExecutionResult> execute(Run state, ToolCall call, boolean reservedVerification) {
         AgentTool tool=state.tools.find(call.name()).orElse(null);
         if(tool==null) { state.calls++; return Mono.just(ToolExecutionResult.error("tool_not_allowed","tool is not available in this source mode")); }
         if ((state.artifactSynthesis && tool.source() != AgentTool.Source.ARTIFACT)
@@ -239,7 +243,7 @@ public class KnowledgeAgentService {
             if(state.memoryCalls>=memoryConfig.getMaxMemoryToolCalls()) return Mono.just(ToolExecutionResult.error("memory_tool_budget_exhausted","personal memory call budget exhausted; use already-read bodies only"));
             state.memoryCalls++;
         } else {
-            if(state.calls>=state.profile.maxToolCalls()) return Mono.just(ToolExecutionResult.error("tool_budget_exhausted","retrieval tool call budget exhausted"));
+            if(state.calls>=state.profile.maxToolCalls() && !reservedVerification) return Mono.just(ToolExecutionResult.error("tool_budget_exhausted","retrieval tool call budget exhausted"));
             state.calls++;
         }
         access.require(state.profile,state.request,tool);
@@ -264,7 +268,22 @@ public class KnowledgeAgentService {
 
     private Mono<AgentRunResult> forceFinal(Run state) {
         state.messages.add(AgentMessage.system("工具调用次数已达上限。请只根据已有证据生成答案，指出未完成的阅读和证据缺失，不要再调用工具。"));
-        return streamAnswer(state);
+        return completeOrVerify(state, () -> streamAnswer(state));
+    }
+
+    private Mono<AgentRunResult> completeOrVerify(Run state, java.util.function.Supplier<Mono<AgentRunResult>> answer) {
+        if(state.profile.mode()!=AgentMode.CODING || codingGate==null) return answer.get();
+        return Mono.fromCallable(() -> codingGate.requiresVerification(state.request))
+                .subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic()).flatMap(required -> {
+                    if(!required) return answer.get();
+                    var call=new ToolCall("verification-"+java.util.UUID.randomUUID(),"execute_command","{\"test\":true}");
+                    state.messages.add(AgentMessage.assistantToolCalls(List.of(call)));
+                    return execute(state,call,true).flatMap(result -> {
+                        state.messages.add(AgentMessage.tool(call.id(),result.content()));
+                        state.messages.add(AgentMessage.system("以上是服务端要求的最终验证结果。验证失败时如仍有预算，请修复并重新验证；不得声称失败的测试已经通过。"));
+                        return canCall(state) ? loop(state) : streamAnswer(state);
+                    });
+                });
     }
 
     private Mono<AgentRunResult> streamAnswer(Run state) {

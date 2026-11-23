@@ -145,6 +145,10 @@ public class MemoryStore {
         });
     }
     public Begin begin(long user, String requestedSession, String requestId, String question) {
+        return begin(user, requestedSession, requestId, question, hash(question == null ? "" : question));
+    }
+    /** Server-computed fingerprint includes Coding mode/workspace, preserving old Work hashes. */
+    public Begin begin(long user, String requestedSession, String requestId, String question, String fingerprint) {
         if (requestId == null || !requestId.matches("[A-Za-z0-9_-]{1,80}") || question == null || question.isBlank()
                 || question.getBytes(StandardCharsets.UTF_8).length > config.getMaxQuestionBytes())
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "消息为空、过长或请求标识无效");
@@ -153,7 +157,7 @@ public class MemoryStore {
             var previous = db.queryForList("SELECT * FROM chat_turn WHERE user_id=? AND request_id=?", user, requestId);
             if (!previous.isEmpty()) {
                 var row = previous.get(0);
-                if (!hash(question).equals(row.get("request_hash")) || (requestedSession != null && !requestedSession.equals(row.get("session_id"))))
+                if (!fingerprint.equals(row.get("request_hash")) || (requestedSession != null && !requestedSession.equals(row.get("session_id"))))
                     throw new ResponseStatusException(HttpStatus.CONFLICT, "请求标识已用于其他内容或会话");
                 if ("COMPLETED".equals(row.get("status")) && row.get("answer")==null)
                     throw new ResponseStatusException(HttpStatus.CONFLICT,"请求结果已过期");
@@ -168,7 +172,7 @@ public class MemoryStore {
             var row = session(user, id);
             if (row.get("active_turn_id") != null) throw new ResponseStatusException(HttpStatus.CONFLICT, "当前会话有正在执行的问答，请先停止");
             long turn = insert("INSERT INTO chat_turn(session_id,user_id,request_id,request_hash,question,status,created_at,content_expires_at) VALUES (?,?,?,?,?,'RUNNING',?,?)",
-                    id, user, requestId, hash(question), question, time(now), null);
+                    id, user, requestId, fingerprint, question, time(now), null);
             db.update("UPDATE chat_turn SET user_turn_seq=? WHERE id=?", turn, turn);
             db.update("UPDATE chat_session SET active_turn_id=?,last_activity_at=?,revision=revision+1 WHERE id=?",
                     turn, time(now), id);

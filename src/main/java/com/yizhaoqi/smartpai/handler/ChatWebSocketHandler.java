@@ -22,6 +22,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final ConcurrentHashMap<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final JwtUtils jwtUtils;
+    private com.yizhaoqi.smartpai.coding.task.CodingTaskService codingTasks;
+    @org.springframework.beans.factory.annotation.Autowired(required=false)
+    public void configureCoding(com.yizhaoqi.smartpai.coding.task.CodingTaskService tasks) { this.codingTasks=tasks; }
+
     private com.yizhaoqi.smartpai.memory.MemoryProperties limits = new com.yizhaoqi.smartpai.memory.MemoryProperties();
     @org.springframework.beans.factory.annotation.Autowired
     public void configureLimits(com.yizhaoqi.smartpai.memory.MemoryProperties limits) { this.limits = limits; }
@@ -94,7 +98,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                         "type","request_rejected","requestId",requestId,"conversationId",conversationId,"message",invalid.getMessage()))));
                 return;
             }
-            if (agentMode == com.yizhaoqi.smartpai.agent.profile.AgentMode.CODING || jsonMessage.containsKey("workspaceId")) {
+            if (agentMode == com.yizhaoqi.smartpai.agent.profile.AgentMode.WORK && jsonMessage.containsKey("workspaceId")) {
                 session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of(
                         "type","request_rejected","requestId",requestId,"conversationId",conversationId,
                         "message","Coding workspace submission is not enabled"))));
@@ -106,6 +110,20 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of(
                         "type", "request_rejected", "requestId", requestId, "conversationId", conversationId,
                         "message", "sourceMode 必须是 auto、knowledge 或 web"))));
+                return;
+            }
+            if (agentMode == com.yizhaoqi.smartpai.agent.profile.AgentMode.CODING) {
+                if(codingTasks==null || !(jsonMessage.get("workspaceId") instanceof String workspace)) {
+                    sendTagged(session,requestId,conversationId,Map.of("type","request_rejected","message","请选择已授权的 Coding Workspace"));
+                    return;
+                }
+                reactor.core.publisher.Mono.fromCallable(() -> codingTasks.submit(Long.parseLong(userId),workspace,conversationId,requestId,question,sourceMode))
+                    .subscribeOn(reactor.core.scheduler.Schedulers.boundedElastic())
+                    .subscribe(submission -> {
+                        sendTagged(session,requestId,conversationId,Map.of("chunk",submission.answer(),"taskId",submission.taskId()));
+                        sendTagged(session,requestId,conversationId,Map.of("type","completion","status","finished","taskId",submission.taskId()));
+                    },error -> sendTagged(session,requestId,conversationId,Map.of("type","request_rejected","message",
+                            error instanceof org.springframework.web.server.ResponseStatusException rejected && rejected.getReason()!=null?rejected.getReason():"Coding 任务提交失败，请检查权限和执行环境")));
                 return;
             }
             if (sourceMode == SourceMode.AUTO) chatHandler.processMessage(userId,question,conversationId,requestId,session);
@@ -138,6 +156,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         String id=jwtUtils.extractUserIdFromToken(jwtToken);
         if (id == null || !id.matches("[0-9]+")) throw new IllegalArgumentException("Missing user ID; sign in again");
         return id;
+    }
+
+    private void sendTagged(WebSocketSession session,String request,String conversation,Map<String,Object> payload) {
+        var value=new java.util.HashMap<String,Object>(payload);value.put("requestId",request);value.put("conversationId",conversation);
+        try { synchronized(session) { if(session.isOpen()) session.sendMessage(new TextMessage(objectMapper.writeValueAsString(value))); } }
+        catch(Exception unavailable) { logger.debug("Coding submission response delivery unavailable"); }
     }
 
     private void sendErrorMessage(WebSocketSession session, String errorMessage) {

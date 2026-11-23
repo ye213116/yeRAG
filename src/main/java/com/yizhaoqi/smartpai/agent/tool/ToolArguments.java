@@ -7,15 +7,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.Set;
 
-/** Strict JSON parsing shared by the built-in read-only tools. */
-final class ToolArguments {
+/** Strict JSON parsing shared by the built-in tools. */
+public final class ToolArguments {
     private ToolArguments() { }
 
-    static JsonNode parse(ObjectMapper mapper, String json, Set<String> fields) {
+    public static JsonNode parse(ObjectMapper mapper, String json, Set<String> fields) {
         return parse(mapper, json, fields, 8192);
     }
 
-    static JsonNode parse(ObjectMapper mapper, String json, Set<String> fields, int maxCharacters) {
+    public static JsonNode parse(ObjectMapper mapper, String json, Set<String> fields, int maxCharacters) {
         if (json == null || json.length() > maxCharacters) throw new IllegalArgumentException("invalid argument size");
         try {
             JsonNode root = mapper.reader().with(JsonParser.Feature.STRICT_DUPLICATE_DETECTION)
@@ -30,14 +30,14 @@ final class ToolArguments {
         }
     }
 
-    static String text(JsonNode root, String key, int max) {
+    public static String text(JsonNode root, String key, int max) {
         if (!root.path(key).isTextual()) throw new IllegalArgumentException(key + " must be a string");
         String value = root.path(key).textValue().trim();
         if (value.isEmpty() || value.length() > max) throw new IllegalArgumentException("invalid " + key + " length");
         return value;
     }
 
-    static long longInteger(JsonNode root, String key, long fallback, long min) {
+    public static long longInteger(JsonNode root, String key, long fallback, long min) {
         if (!root.has(key)) return fallback;
         JsonNode node=root.get(key);
         if (!node.isIntegralNumber() || !node.canConvertToLong() || node.longValue()<min)
@@ -45,7 +45,7 @@ final class ToolArguments {
         return node.longValue();
     }
 
-    static int integer(JsonNode root, String key, int fallback, int min, int max) {
+    public static int integer(JsonNode root, String key, int fallback, int min, int max) {
         if (!root.has(key)) return fallback;
         JsonNode node = root.get(key);
         if (!node.isIntegralNumber() || !node.canConvertToInt() || node.intValue() < min || node.intValue() > max)

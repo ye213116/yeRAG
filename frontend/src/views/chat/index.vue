@@ -1,12 +1,30 @@
 <script setup lang="ts">
+import { fetchCodingCapabilities } from '@/service/api/coding';
 import ChatList from './modules/chat-list.vue';
 import InputBox from './modules/input-box.vue';
+import CodingPanel from './modules/coding-panel.vue';
+const codingEnabled = ref(false);
+onMounted(async () => {
+  const result = await fetchCodingCapabilities();
+  if (!result.error) codingEnabled.value = result.data.enabled;
+});
+const modeOptions = computed(() => [
+  { label: 'Work', value: 'work' },
+  ...(codingEnabled.value ? [{ label: 'Coding', value: 'coding' }] : [])
+]);
 const chatStore = useChatStore();
 </script>
 
 <template>
   <div class="mx-auto max-w-1080px w-full flex-col gap-4">
     <div class="flex items-center gap-4">
+      <NSelect
+        v-model:value="chatStore.agentMode"
+        class="w-32"
+        :options="modeOptions"
+        :disabled="['loading', 'pending'].includes(chatStore.list.at(-1)?.status || '')"
+        aria-label="工作模式"
+      />
       <NButton @click="$router.push('/artifacts')">成果库</NButton>
       <NButton :disabled="!chatStore.memoryReady" @click="chatStore.newConversation">新建对话</NButton>
       <NPopconfirm @positive-click="chatStore.deleteConversation">
@@ -31,6 +49,7 @@ const chatStore = useChatStore();
     <NButton v-if="chatStore.hasOlderMessages" :loading="chatStore.historyLoading" @click="chatStore.loadOlderMessages">
       加载更早消息
     </NButton>
+    <CodingPanel v-if="chatStore.agentMode === 'coding'" />
     <ChatList />
     <InputBox />
   </div>

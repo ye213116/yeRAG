@@ -349,3 +349,33 @@ mysql -u root -p yerag < docs/databases/ddl.sql
 - 人工编辑保留该版本的来源依赖。读取、列出、修改和版本列表均重新检查内部来源的片段访问权限；缺少权限时隐藏成果，依赖不可用时不返回正文。Agent 的来源模式也应用于成果：含内部来源的报告不能在仅联网模式读取，反之亦然。
 - 来源记录只是可追溯依赖，不证明模型或人工编写的正文正确。报告内容始终按不可信数据处理。
 - 现有 MySQL 环境先执行 [20261119_work_artifacts.sql](migrations/20261119_work_artifacts.sql)，再部署应用；空库直接使用完整 DDL。该迁移仅增加两张表，不改写会话或知识库数据。
+
+
+## Cloud Coding tasks (2026-11-23)
+
+`coding_workspace` binds an owner, a registered repository, a branch and an immutable
+base commit. Permissions are owner-configured READ / WRITE / EXECUTE; EXECUTE also
+requires WRITE. `active_task_id` is acquired transactionally to prevent concurrent
+writers. Completed workspaces become FROZEN for review; subsequent work uses a new
+workspace, so a reviewed snapshot cannot change underneath publication.
+
+`coding_task` owns durable execution independently of WebSocket/chat lifecycle. The
+unique (owner_id, request_id) and fingerprint cover workspace, source mode, question,
+conversation and permission snapshot. Submission and the completed chat acknowledgement
+share a transaction. Context is captured before that transaction; no model or network
+call is made while holding database locks. Task results survive conversation deletion;
+conversation_id is a provenance identifier, not a cascading foreign key. Only task
+owners can read execution history or publish results.
+
+Workers claim QUEUED rows under a transaction; PREPARING / RUNNING rows have a heartbeat.
+The first version supports one backend execution instance and bounded concurrency.
+Stale work is stopped and marked INTERRUPTED, never automatically replayed. Cancellation
+requests remain separate until container termination and result collection complete.
+
+`coding_task_event` stores bounded progress/audit envelopes. The immutable result JSON
+contains bounded diff, changed text files, change fingerprint and verification record.
+Publishing state is independent of execution status; retries use the deterministic
+GitHub branch and query existing PRs before creating another. Results and task metadata
+are private application data, separate from expiring RAG evidence and report versions.
+Existing databases must apply `migrations/20261123_coding_tasks.sql` before enabling
+`ai.coding.enabled`. Full DDL includes the same tables for new databases.

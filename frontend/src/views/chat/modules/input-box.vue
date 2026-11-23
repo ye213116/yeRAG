@@ -24,6 +24,7 @@ const sendable = computed(
     (!input.value.message && !isSending.value) ||
     ['CLOSED', 'CONNECTING'].includes(wsStatus.value) ||
     !memoryReady.value ||
+    (chatStore.agentMode === 'coding' && !chatStore.codingWorkspaceReady) ||
     chatStore.historyReadOnly
 );
 
@@ -115,7 +116,9 @@ const handleSend = async () => {
       message: input.value.message,
       conversationId: chatStore.conversationId,
       requestId: activeRequestId.value,
-      sourceMode: sourceMode.value
+      sourceMode: sourceMode.value,
+      agentMode: chatStore.agentMode,
+      ...(chatStore.agentMode === 'coding' ? { workspaceId: chatStore.codingWorkspaceId } : {})
     })
   );
   list.value.push({

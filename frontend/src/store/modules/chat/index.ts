@@ -17,6 +17,10 @@ export const useChatStore = defineStore(SetupStoreId.Chat, () => {
   let historyRevision = 0;
   const input = ref<Api.Chat.Input>({ message: '' });
   const sourceMode = ref<Api.Chat.SourceMode>('auto');
+  const agentMode = ref<'work' | 'coding'>('work');
+  const codingWorkspaceId = ref('');
+  const codingWorkspaceReady = ref(false);
+  const lastCodingTaskId = ref('');
   const list = ref<Api.Chat.Message[]>([]);
 
   function setHistory(messages: Array<Api.Chat.Message & { turnId?: number }>) {
@@ -166,6 +170,10 @@ export const useChatStore = defineStore(SetupStoreId.Chat, () => {
       list.value = [];
       input.value = { message: '' };
       sourceMode.value = 'auto';
+      agentMode.value = 'work';
+      codingWorkspaceId.value = '';
+      codingWorkspaceReady.value = false;
+      lastCodingTaskId.value = '';
     },
     { flush: 'sync' }
   );
@@ -180,6 +188,7 @@ export const useChatStore = defineStore(SetupStoreId.Chat, () => {
         loadCurrentConversation();
       }
       if (data.requestId && data.requestId === activeRequestId.value) {
+        if (data.taskId) lastCodingTaskId.value = data.taskId;
         if (data.type === 'conversation') {
           conversationId.value = data.conversationId;
           if (data.switched) {
@@ -202,6 +211,10 @@ export const useChatStore = defineStore(SetupStoreId.Chat, () => {
   return {
     input,
     sourceMode,
+    agentMode,
+    codingWorkspaceId,
+    codingWorkspaceReady,
+    lastCodingTaskId,
     conversationId,
     memoryReady,
     activeRequestId,
