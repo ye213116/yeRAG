@@ -47,6 +47,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             return;
         }
         sessions.put(userId, session);
+        chatHandler.attachSession(userId,session);
         session.setTextMessageSizeLimit(limits.getMaxInputBytes());
         session.getAttributes().put("authenticatedChatUser", userId);
         logger.info("WebSocket连接已建立，用户ID: {}，会话ID: {}，URI路径: {}",
@@ -60,7 +61,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 "message", "WebSocket连接已建立"
             );
             String jsonMessage = objectMapper.writeValueAsString(connectionMessage);
-            session.sendMessage(new TextMessage(jsonMessage));
+            write(session, new TextMessage(jsonMessage));
             logger.info("已发送会话ID到前端: sessionId={}", session.getId());
         } catch (Exception e) {
             logger.error("发送会话ID失败: {}", e.getMessage(), e);
@@ -94,12 +95,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             final com.yizhaoqi.smartpai.agent.profile.AgentMode agentMode;
             try { agentMode = com.yizhaoqi.smartpai.agent.profile.AgentMode.parse(jsonMessage.get("agentMode")); }
             catch (IllegalArgumentException invalid) {
-                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of(
+                write(session, new TextMessage(objectMapper.writeValueAsString(Map.of(
                         "type","request_rejected","requestId",requestId,"conversationId",conversationId,"message",invalid.getMessage()))));
                 return;
             }
             if (agentMode == com.yizhaoqi.smartpai.agent.profile.AgentMode.WORK && jsonMessage.containsKey("workspaceId")) {
-                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of(
+                write(session, new TextMessage(objectMapper.writeValueAsString(Map.of(
                         "type","request_rejected","requestId",requestId,"conversationId",conversationId,
                         "message","Coding workspace submission is not enabled"))));
                 return;
@@ -107,7 +108,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             final SourceMode sourceMode;
             try { sourceMode = SourceMode.parse(jsonMessage.get("sourceMode")); }
             catch (IllegalArgumentException invalid) {
-                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(Map.of(
+                write(session, new TextMessage(objectMapper.writeValueAsString(Map.of(
                         "type", "request_rejected", "requestId", requestId, "conversationId", conversationId,
                         "message", "sourceMode 必须是 auto、knowledge 或 web"))));
                 return;
@@ -143,7 +144,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         logger.info("WebSocket连接已关闭，用户ID: {}，会话ID: {}，状态: {}",
                     userId, session.getId(), status);
 
-        chatHandler.cancelSession(session.getId());
+        if(userId!=null) chatHandler.detachSession(userId,session.getId());
         // 清理会话的引用映射
         chatHandler.clearSessionReferenceMapping(session.getId());
     }
@@ -158,16 +159,20 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         return id;
     }
 
+    private void write(WebSocketSession session,TextMessage message) throws java.io.IOException {
+        synchronized(session) {session.sendMessage(message);}
+    }
+
     private void sendTagged(WebSocketSession session,String request,String conversation,Map<String,Object> payload) {
         var value=new java.util.HashMap<String,Object>(payload);value.put("requestId",request);value.put("conversationId",conversation);
-        try { synchronized(session) { if(session.isOpen()) session.sendMessage(new TextMessage(objectMapper.writeValueAsString(value))); } }
+        try { synchronized(session) { if(session.isOpen()) write(session, new TextMessage(objectMapper.writeValueAsString(value))); } }
         catch(Exception unavailable) { logger.debug("Coding submission response delivery unavailable"); }
     }
 
     private void sendErrorMessage(WebSocketSession session, String errorMessage) {
         try {
             Map<String, String> error = Map.of("error", errorMessage);
-            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(error)));
+            write(session, new TextMessage(objectMapper.writeValueAsString(error)));
             logger.info("已发送错误消息到会话: {}, 错误: {}", session.getId(), errorMessage);
         } catch (Exception e) {
             logger.error("发送错误消息失败: {}", e.getMessage(), e);

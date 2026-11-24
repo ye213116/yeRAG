@@ -93,7 +93,15 @@ public class CodingTaskStore {
                 (String)r.get("run_id"),(String)r.get("publish_state"),(String)r.get("pr_url"));
     }
     public List<Map<String,Object>> list(long user) {
-        return db.queryForList("SELECT id,workspace_id,conversation_id,status,summary,publish_state,pr_url,created_at FROM coding_task WHERE owner_id=? ORDER BY created_at DESC LIMIT 100",user);
+        return list(user,null);
+    }
+    public List<Map<String,Object>> list(long user,String repository) {
+        return db.queryForList("""
+            SELECT t.id,t.workspace_id,t.conversation_id,t.request_id,t.status,t.summary,t.publish_state,t.pr_url,t.created_at,
+              w.repository_id AS repository_id,w.branch_name AS branch,LEFT(t.message,100) AS title
+            FROM coding_task t JOIN coding_workspace w ON w.id=t.workspace_id
+            WHERE t.owner_id=? AND (? IS NULL OR w.repository_id=?) ORDER BY t.created_at DESC,t.id DESC LIMIT 100
+            """,user,repository,repository);
     }
     public Optional<Task> claim() {
         return transaction(() -> {
@@ -124,7 +132,7 @@ public class CodingTaskStore {
         if(rows.isEmpty()) throw missing();return rows.get(0);
     }
     public void recoverPublishing() {
-        db.update("UPDATE coding_task SET publish_state='FAILED' WHERE publish_state='PUBLISHING' AND heartbeat_at<?",java.sql.Timestamp.from(java.time.Instant.now().minusSeconds(300)));
+        db.update("UPDATE coding_task SET publish_state='FAILED' WHERE publish_state='PUBLISHING' AND heartbeat_at<TIMESTAMPADD(SECOND,-300,CURRENT_TIMESTAMP)");
     }
     public List<Task> cleanupPending() {
         return db.queryForList("SELECT * FROM coding_task WHERE result_json LIKE ?","%\"cleanupPending\":true%").stream().map(this::map).toList();
@@ -160,7 +168,9 @@ public class CodingTaskStore {
         return Boolean.TRUE.equals(db.queryForObject("SELECT cancel_requested FROM coding_task WHERE id=?",Boolean.class,id));
     }
     public List<String> interruptStale() {
-        var rows=db.queryForList("SELECT id FROM coding_task WHERE status IN ('PREPARING','RUNNING') AND heartbeat_at<?",java.sql.Timestamp.from(java.time.Instant.now().minusSeconds(60)));
+        // Heartbeats are database-local DATETIME values written with CURRENT_TIMESTAMP.
+        // Bind no JVM Timestamp here: a differing JDBC timezone can immediately expire a fresh task.
+        var rows=db.queryForList("SELECT id FROM coding_task WHERE status IN ('PREPARING','RUNNING') AND heartbeat_at<TIMESTAMPADD(SECOND,-60,CURRENT_TIMESTAMP)");
         return rows.stream().map(r -> (String)r.get("id")).toList();
     }
     public void saveCleanupResult(String id,JsonNode result) {

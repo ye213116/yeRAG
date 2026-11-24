@@ -19,9 +19,11 @@ public class CodingTools {
             "path",string(),"depth",integer(),"offset",integer()),List.of()); }
     @Bean AgentTool searchCode(CodingToolExecutor executor) { return tool("search_code",Operation.SEARCH,executor,Map.of("query",string(),"path",string()),List.of("query")); }
     @Bean AgentTool readFile(CodingToolExecutor executor) { return tool("read_file",Operation.READ,executor,Map.of("path",string(),"startLine",integer(),"lineCount",integer(),"column",integer()),List.of("path")); }
-    @Bean AgentTool applyPatch(CodingToolExecutor executor) { return tool("apply_patch",Operation.PATCH,executor,Map.of("patch",string(),"expectedHashes",Map.of("type","object","description","Map of relative file paths to read_file sha256; null for new files")),List.of("patch","expectedHashes")); }
+    @Bean AgentTool applyPatch(CodingToolExecutor executor) { return tool("apply_patch",Operation.PATCH,executor,Map.of(
+            "patch",Map.of("type","string","description","Standard git unified diff with --- a/path, +++ b/path and @@ -oldStart,oldCount +newStart,newCount @@ headers. The server recounts hunk lengths; unchanged context lines must match the file exactly. End with a newline. Do not use *** Begin Patch / *** Update File syntax. New files use --- /dev/null. Read existing files first. Example: --- a/Example.txt\n+++ b/Example.txt\n@@ -1 +1,2 @@\n original\n+added\n"),
+            "expectedHashes",Map.of("type","object","description","Map of relative file paths to read_file sha256; null for new files")),List.of("patch","expectedHashes")); }
     @Bean AgentTool executeCommand(CodingToolExecutor executor) { return tool("execute_command",Operation.COMMAND,executor,Map.of(
-            "argv",Map.of("type","array","items",string(),"maxItems",64),"cwd",string(),"test",Map.of("type","boolean","description","true runs the fixed Maven test recipe and records verification; omit argv")),List.of()); }
+            "argv",Map.of("type","array","items",string(),"maxItems",64,"description","Command arguments run in the workspace with no network. There is no .git directory: use git_diff for changes. For Maven verification use test=true instead of argv; it enables controlled dependency downloads and records verification."),"cwd",string(),"test",Map.of("type","boolean","description","true runs the fixed Maven test recipe and records verification; omit argv")),List.of()); }
     @Bean AgentTool gitDiff(CodingToolExecutor executor) { return tool("git_diff",Operation.SNAPSHOT,executor,Map.of("offset",integer()),List.of()); }
     private static Map<String,Object> string() { return Map.of("type","string"); }
     private static Map<String,Object> integer() { return Map.of("type","integer","minimum",0); }

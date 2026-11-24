@@ -23,3 +23,40 @@ Coding 委托任务另有 `tests/browser/coding.test.mjs`（Vite 19529），使�
 HTTP/WebSocket fixture，验证权限配置、任务提交、关闭页面后重新查看、Diff 纯文本显示、
 确认前不发布、确认指纹及跨账号隔离。该测试不会执行真实容器、调用真实模型或创建真实 PR；
 真实执行节点验收见 `docs/work-coding.md` 和 `CodingDockerIntegrationTest`。
+
+Coding 现有独立侧边栏入口 `/coding`；未启用服务时仍显示入口与重试提示。
+浏览器回归还覆盖入口跳转、按任务链接直接刷新、项目内任务选择、无授权仓库、服务未启用、
+能力查询失败后重试，以及切回 Work 后的输入。
+
+真实 Coding 闭环（会调用模型并保留标记为“本地 Coding 联调”的新会话、Workspace 和任务供审核）：
+
+```bash
+node --env-file=.env frontend/tests/live/coding.mjs
+```
+
+要求已启动前后端和通过 mTLS 接入的 Docker runner，管理员密码由本地环境提供。
+为该账号注册 `demo` 仓库 `jenkins-docs/simple-java-maven-app`，使用已验证的 Java 17
+基准 `bba641c3a0ff1be4fb4262bcef008bb437480032`，授予 READ / WRITE / EXECUTE。
+该脚本仅接受此示例仓库；不要对业务仓库运行。它通过真实页面登录、在项目输入框自动创建 Workspace、
+通过 WebSocket 提交新增 `greet` 方法与测试的任务，离开页面等待执行，再刷新核对
+通过的 Maven 验证和 Diff。失败时请求取消仍在运行的任务，不创建 GitHub PR。
+使用 `CODING_E2E_REPOSITORY_ID` 选择注册项，`CODING_E2E_OUTPUT` 指定报告与截图目录；
+前后端地址沿用 `YERAG_E2E_FRONTEND` / `YERAG_E2E_BACKEND`。
+
+时区回归使用真实 MySQL：配置 `CODING_MYSQL_TEST_URL` / `CODING_MYSQL_TEST_USER` /
+`CODING_MYSQL_TEST_PASSWORD` 后运行 `mvn -Dtest=CodingTaskMySqlTest test`。
+每项测试仅创建并删除随机测试库，验证 JDBC 为 Asia/Shanghai、数据库会话为 UTC 时，
+新心跳和发布请求不会被误判过期，同时真正过期的任务仍能被识别。
+
+
+工作台布局与后台 Work 回归：聊天浏览器 fixture 将运行状态放在服务端，切换会话或断开 WebSocket 后继续生成；覆盖并行回答、关闭页面再按链接重开、序列去重、会话改名、64px 主导航、深色外观、窄屏副栏及各会话的草稿和阅读位置。成果库侧栏通过布局上下文挂载，保留未保存编辑离开确认。图标由本地 Vite 编译，不依赖浏览器访问 Iconify。布局延迟加载避免直接打开已登录页面时的 router/store 初始化循环。
+
+真实 Work 模型回归从仓库根目录运行（会保留标记为“本地工作台联调”的新会话，不修改已有线程）：
+
+```bash
+node --env-file=.env frontend/tests/live/workbench.mjs
+```
+
+脚本先验证切到 Coding 时回答仍在执行，再启动第二个 Work 回答，关闭整个 Chromium，等待两份完整答案持久化，重开浏览器按链接恢复并刷新，核对正文完全一致且没有重复回复。还生成桌面、深色和窄屏截图。失败时只停止自己的 requestId；不自动重跑失败模型请求。报告和截图默认写入忽略的 `.codex/integration/workbench/`，可用 `WORKBENCH_E2E_OUTPUT` 更改；浏览器临时登录目录在结束时删除。该检查需要真实模型，耗时及模型输出长度可能变化。
+
+真实 MySQL 会话契约：设置 `WORKBENCH_MYSQL_TEST_URL` / `WORKBENCH_MYSQL_TEST_USER` / `WORKBENCH_MYSQL_TEST_PASSWORD` 后执行 `mvn -Dtest=MemoryWorkbenchMySqlTest test`。其随机测试库检查会话切换不取消后台回合、原会话完成写入、标题与所有权、用户顺序提取、启动中断恢复；不会更改业务库中的聊天记录。

@@ -1,221 +1,137 @@
 <script setup lang="ts">
-import { interruptPlan, parsePlanTasks } from '@/utils/chat-plan';
-
-const chatStore = useChatStore();
-const { input, list, wsStatus, wsData, memoryReady, activeRequestId, sourceMode } = storeToRefs(chatStore);
+const chat = useChatStore();
+const textarea = ref<HTMLTextAreaElement>();
 const sourceOptions = [
-  { label: '自动', value: 'auto' },
+  { label: '自动选择来源', value: 'auto' },
   { label: '仅知识库', value: 'knowledge' },
   { label: '仅联网', value: 'web' }
 ];
-
-const latestMessage = computed(() => {
-  return list.value[list.value.length - 1] ?? {};
-});
-
-const isSending = computed(() => {
-  return (
-    latestMessage.value?.role === 'assistant' && ['loading', 'pending'].includes(latestMessage.value?.status || '')
-  );
-});
-
-const sendable = computed(
-  () =>
-    (!input.value.message && !isSending.value) ||
-    ['CLOSED', 'CONNECTING'].includes(wsStatus.value) ||
-    !memoryReady.value ||
-    (chatStore.agentMode === 'coding' && !chatStore.codingWorkspaceReady) ||
-    chatStore.historyReadOnly
+const disabled = computed(
+  () => chat.wsStatus !== 'OPEN' || !chat.memoryReady || (!chat.isSending && !chat.input.message.trim())
 );
-
-function handleAgentStatus(
-  assistant: Api.Chat.Message,
-  event: { status?: string; requestId?: string; message?: string; details?: { tool?: string; tasks?: unknown } }
-) {
-  if (event.status === 'plan_updated' && event.requestId && event.requestId === activeRequestId.value) {
-    const tasks = parsePlanTasks(event.details?.tasks);
-    if (tasks) assistant.planTasks = tasks;
-    chatStore.scrollToBottom?.();
-  }
-  const toolLabels: Record<string, string> = {
-    search_knowledge_base: '搜索知识库',
-    read_knowledge_document: '阅读知识库原文',
-    search_web: '搜索公开网络',
-    read_web_page: '阅读网页正文',
-    list_artifacts: '查找已保存的报告',
-    read_artifact: '读取报告正文',
-    save_artifact: '保存报告与版本'
-  };
-  assistant.agentStatus = toolLabels[event.details?.tool ?? ''] || event.message;
+function send() {
+  if (disabled.value) return;
+  if (chat.isSending) chat.stopResponse();
+  else chat.sendMessage();
 }
-
-watch(wsData, val => {
-  if (!val) return;
-  let data;
-  try {
-    data = JSON.parse(val);
-  } catch {
-    return;
+function shortcut(event: KeyboardEvent) {
+  if (event.key === 'Enter' && !event.isComposing && !event.shiftKey && !event.ctrlKey) {
+    event.preventDefault();
+    send();
   }
-  if (data.requestId && data.requestId !== activeRequestId.value) return;
-  if (data.conversationId && data.conversationId !== chatStore.conversationId) return;
-  const assistant = list.value[list.value.length - 1];
-  if (!assistant || assistant.role !== 'assistant') return;
-  if (assistant.status === 'finished' || assistant.status === 'error') return;
-  if (data.type === 'request_rejected') {
-    interruptPlan(assistant, 'failed');
-    assistant.status = 'error';
-    assistant.content = data.message;
-    return;
+}
+function resize() {
+  if (textarea.value) {
+    textarea.value.style.height = 'auto';
+    textarea.value.style.height = `${Math.min(180, textarea.value.scrollHeight)}px`;
   }
-  if (data.type === 'agent_status') {
-    handleAgentStatus(assistant, data);
-    return;
-  }
-
-  if (data.type === 'completion' && data.status === 'finished') {
-    interruptPlan(assistant, 'skipped');
-    assistant.status = 'finished';
-  }
-  if (data.error) {
-    interruptPlan(assistant, 'failed');
-    assistant.status = 'error';
-    assistant.content = data.error;
-  } else if (data.chunk) {
-    assistant.status = 'loading';
-    assistant.content += data.chunk;
-  }
-});
-
-const handleSend = async () => {
-  if (sendable.value) return;
-  //  判断是否正在发送, 如果发送中，则停止ai继续响应
-  if (isSending.value) {
-    const { error, data } = await request<Api.Chat.Token>({ url: 'chat/websocket-token' });
-    if (error) return;
-
-    chatStore.wsSend(JSON.stringify({ type: 'stop', _internal_cmd_token: data.cmdToken }));
-    activeRequestId.value = '';
-
-    const assistant = list.value[list.value.length - 1];
-    interruptPlan(assistant, 'cancelled');
-    assistant.status = 'finished';
-    if (!assistant.content && assistant.planTasks?.length) assistant.content = '已停止生成';
-    if (!assistant.content) list.value.pop();
-    return;
-  }
-
-  list.value.push({
-    content: input.value.message,
-    role: 'user'
-  });
-  activeRequestId.value = crypto.randomUUID();
-  chatStore.wsSend(
-    JSON.stringify({
-      type: 'chat',
-      message: input.value.message,
-      conversationId: chatStore.conversationId,
-      requestId: activeRequestId.value,
-      sourceMode: sourceMode.value,
-      agentMode: chatStore.agentMode,
-      ...(chatStore.agentMode === 'coding' ? { workspaceId: chatStore.codingWorkspaceId } : {})
-    })
-  );
-  list.value.push({
-    content: '',
-    role: 'assistant',
-    status: 'pending'
-  });
-  input.value.message = '';
-};
-
-const inputRef = ref();
-// 手动插入换行符（确保所有浏览器兼容）
-const insertNewline = () => {
-  const textarea = inputRef.value;
-  const start = textarea.selectionStart;
-  const end = textarea.selectionEnd;
-
-  // 在光标位置插入换行符
-  input.value.message = `${input.value.message.substring(0, start)}\n${input.value.message.substring(end)}`;
-
-  // 更新光标位置（在插入的换行符之后）
-  nextTick(() => {
-    textarea.selectionStart = start + 1;
-    textarea.selectionEnd = start + 1;
-    textarea.focus(); // 确保保持焦点
-  });
-};
-
-// ctrl + enter 换行
-// enter 发送
-const handShortcut = (e: KeyboardEvent) => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-
-    if (!e.shiftKey && !e.ctrlKey) {
-      handleSend();
-    } else insertNewline();
-  }
-};
+}
+watch(
+  () => chat.input.message,
+  () => nextTick(resize)
+);
 </script>
 
 <template>
-  <div class="input-card relative w-full b-1 b-#1c1c1c20 bg-#fff p-4 card-wrapper dark:bg-#1c1c1c">
+  <div class="work-composer">
     <textarea
-      ref="inputRef"
-      v-model.trim="input.message"
-      placeholder="给 yeRAG 发送消息"
-      class="min-h-10 w-full cursor-text resize-none b-none bg-transparent color-#333 caret-[rgb(var(--primary-color))] outline-none dark:color-#f1f1f1"
-      @keydown="handShortcut"
+      ref="textarea"
+      v-model="chat.input.message"
+      rows="1"
+      aria-label="消息内容"
+      placeholder="向 yeRAG 提问，或描述你要完成的工作"
+      @keydown="shortcut"
+      @input="resize"
     />
-    <div class="flex items-center gap-2 pb-2">
-      <NText depth="3">信息来源</NText>
+    <div class="composer-toolbar">
       <NSelect
-        v-model:value="sourceMode"
-        class="w-36"
-        size="small"
+        v-model:value="chat.sourceMode"
         :options="sourceOptions"
-        :disabled="isSending || chatStore.historyReadOnly"
+        :disabled="chat.isSending"
+        :bordered="false"
+        class="source-select"
+        size="small"
         aria-label="信息来源"
       />
-      <NText v-if="sourceMode === 'auto'" depth="3" class="text-12px">内部资料优先，需要公开或最新信息时联网</NText>
-    </div>
-    <div class="flex items-center justify-between pt-2">
-      <div class="flex items-center text-18px color-gray-500">
-        <NText class="text-14px">连接状态：</NText>
-        <icon-eos-icons:loading v-if="wsStatus === 'CONNECTING'" class="color-yellow" />
-        <icon-fluent:plug-connected-checkmark-20-filled v-else-if="wsStatus === 'OPEN'" class="color-green" />
-        <icon-tabler:plug-connected-x v-else class="color-red" />
-      </div>
-      <NButton
-        :disabled="sendable"
-        :aria-label="isSending ? '停止生成' : '发送消息'"
-        strong
-        circle
-        type="primary"
-        @click="handleSend"
+      <span class="composer-shortcut">Shift + Enter 换行</span>
+      <button
+        class="send-control"
+        :disabled="disabled"
+        :aria-label="chat.isSending ? '停止生成' : '发送消息'"
+        @click="send"
       >
-        <template #icon>
-          <icon-material-symbols:stop-rounded v-if="isSending" />
-          <icon-guidance:send v-else />
-        </template>
-      </NButton>
+        <SvgIcon :icon="chat.isSending ? 'lucide:square' : 'lucide:arrow-up'" />
+      </button>
     </div>
   </div>
 </template>
 
 <style scoped>
-.input-card {
-  border-radius: 18px;
-  box-shadow: 0 6px 24px rgb(0 0 0 / 0.05);
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
+.work-composer {
+  border: 1px solid var(--shell-border);
+  border-radius: 24px;
+  padding: 16px 16px 11px;
+  background: var(--shell-bg);
+  box-shadow: 0 3px 16px #00000005;
+  transition: border-color 0.15s;
 }
-
-.input-card:focus-within {
-  border-color: rgb(var(--primary-color) / 0.55);
-  box-shadow: 0 6px 24px rgb(var(--primary-color) / 0.12);
+.work-composer:focus-within {
+  border-color: #aaaab2;
+}
+textarea {
+  display: block;
+  width: 100%;
+  resize: none;
+  min-height: 36px;
+  max-height: 180px;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--shell-text);
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.7;
+  padding: 0 4px 6px;
+  overflow: auto;
+}
+textarea::placeholder {
+  color: var(--shell-muted);
+}
+.composer-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.source-select {
+  width: 160px;
+}
+.composer-shortcut {
+  font-size: 10px;
+  color: var(--shell-muted);
+  margin-left: auto;
+}
+.send-control {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--shell-text);
+  color: var(--shell-bg);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-size: 19px;
+  flex: none;
+}
+.send-control:disabled {
+  opacity: 0.25;
+}
+@media (max-width: 600px) {
+  .composer-shortcut {
+    display: none;
+  }
+  .send-control {
+    margin-left: auto;
+  }
 }
 </style>

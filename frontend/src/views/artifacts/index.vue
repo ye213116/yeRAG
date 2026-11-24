@@ -11,6 +11,8 @@ import {
 } from '@/service/api/artifacts';
 import { useChatStore } from '@/store/modules/chat';
 import FilePreview from '@/components/custom/file-preview.vue';
+import { useFeatureSidebar } from '@/layouts/context/feature-sidebar';
+import ArtifactSidebar from './modules/artifact-sidebar.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -272,46 +274,28 @@ watch(
   { immediate: true }
 );
 loadList();
+useFeatureSidebar(
+  ArtifactSidebar,
+  computed(() => ({
+    items: items.value,
+    nextOffset: nextOffset.value,
+    loadingList: loadingList.value,
+    saving: saving.value,
+    loading: loading.value,
+    canGenerate: canGenerate.value,
+    listError: listError.value,
+    selectedId: report.value?.id,
+    beginCreate,
+    generate,
+    loadList,
+    select
+  }))
+);
 </script>
 
 <template>
   <div class="artifact-page min-w-0 flex-col gap-4">
-    <NCard title="成果库" :bordered="false">
-      <NText depth="3">个人报告独立保存，修改产生新版本；来源访问权限会在读取时重新校验。</NText>
-      <div class="mt-3 flex flex-wrap gap-2">
-        <NButton :disabled="saving || loading" @click="beginCreate">新建报告</NButton>
-        <NButton :disabled="!canGenerate" type="primary" @click="generate()">去对话生成报告</NButton>
-        <NButton :loading="loadingList" @click="loadList()">刷新列表</NButton>
-      </div>
-    </NCard>
     <div class="artifact-layout">
-      <NCard title="已保存的报告" :bordered="false">
-        <NSpin :show="loadingList">
-          <NAlert v-if="listError" type="warning" class="mb-3">成果列表加载失败，请点击“刷新列表”重试。</NAlert>
-          <NEmpty
-            v-if="!items.length && !loadingList && !listError"
-            description="尚无可访问成果，可新建报告或在对话中生成并保存"
-          />
-          <div v-for="item in items" :key="item.id" class="artifact-item">
-            <NButton
-              text
-              :type="report?.id === item.id ? 'primary' : 'default'"
-              class="max-w-full text-left"
-              @click="select(item.id)"
-            >
-              <span class="whitespace-normal break-all">{{ item.title }}</span>
-            </NButton>
-            <div class="mt-2 flex flex-wrap gap-2 text-12px text-gray-500">
-              <span>v{{ item.version }}</span>
-              <span>{{ item.sourceCount }} 项来源</span>
-              <span>{{ date(item.updatedAt) }}</span>
-            </div>
-          </div>
-          <NButton v-if="nextOffset !== null" class="mt-4" :loading="loadingList" @click="loadList(true)">
-            加载更多成果
-          </NButton>
-        </NSpin>
-      </NCard>
       <NCard :title="creating ? '新建报告' : report ? report.title : '报告详情'" :bordered="false" class="min-w-0">
         <NSpin :show="loading">
           <NAlert v-if="errorNotice" type="warning" class="mb-4">{{ errorNotice }}</NAlert>
@@ -437,13 +421,13 @@ loadList();
 <style scoped>
 .artifact-layout {
   display: grid;
-  grid-template-columns: minmax(230px, 1fr) minmax(0, 2.5fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   align-items: start;
 }
 .artifact-item {
-  padding: 16px 0;
-  border-bottom: 1px solid rgb(128 128 128 / 15%);
+  padding: 12px;
+  border-radius: 8px;
 }
 .report-body {
   white-space: pre-wrap;

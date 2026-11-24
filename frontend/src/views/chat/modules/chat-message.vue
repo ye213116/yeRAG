@@ -3,7 +3,6 @@
 import { nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { VueMarkdownIt } from 'vue-markdown-shiki';
-import { formatDate } from '@/utils/common';
 import ChatPlan from './chat-plan.vue';
 defineOptions({ name: 'ChatMessage' });
 
@@ -12,14 +11,11 @@ const props = defineProps<{
   sessionId?: string;
 }>();
 
-const authStore = useAuthStore();
-
 function handleCopy(content: string) {
   navigator.clipboard.writeText(content);
   window.$message?.success('已复制');
 }
 
-const chatStore = useChatStore();
 const router = useRouter();
 
 const artifactIds = computed(() => {
@@ -57,7 +53,6 @@ function processSourceLinks(text: string): string {
 }
 
 const content = computed(() => {
-  chatStore.scrollToBottom?.();
   const rawContent = props.msg.content ?? '';
 
   // 只对助手消息处理来源链接
@@ -149,70 +144,111 @@ async function handleSourceFileClick(fileInfo: { fileName: string; referenceNumb
 </script>
 
 <template>
-  <div class="mb-8 flex-col gap-2">
-    <div v-if="msg.role === 'user'" class="flex items-center gap-4">
-      <NAvatar class="bg-success">
-        <SvgIcon icon="ph:user-circle" class="text-icon-large color-white" />
-      </NAvatar>
-      <div class="flex-col gap-1">
-        <NText class="text-4 font-bold">{{ authStore.userInfo.username }}</NText>
-        <NText class="text-3 color-gray-500">{{ formatDate(msg.timestamp) }}</NText>
+  <article class="chat-message" :class="msg.role">
+    <div v-if="msg.role === 'user'" class="user-bubble">{{ content }}</div>
+    <template v-else>
+      <ChatPlan v-if="msg.planTasks?.length" :tasks="msg.planTasks" />
+      <div v-if="msg.status === 'pending'" class="thinking">
+        <span class="thinking-dot"></span>
+        {{ msg.agentStatus || '正在思考' }}
       </div>
-    </div>
-    <div v-else class="flex items-center gap-4">
-      <NAvatar class="bg-primary">
-        <SystemLogo class="text-6 text-white" />
-      </NAvatar>
-      <div class="flex-col gap-1">
-        <NText class="text-4 font-bold">yeRAG</NText>
-        <NText class="text-3 color-gray-500">{{ formatDate(msg.timestamp) }}</NText>
+      <div v-else-if="msg.status === 'error'" class="answer-error">{{ msg.content || '本轮回答未完成，请重试' }}</div>
+      <div v-else class="assistant-content" @click="handleContentClick"><VueMarkdownIt :content="content" /></div>
+      <div v-if="artifactIds.length" class="mt-3 flex flex-wrap gap-2">
+        <NButton
+          v-for="id in artifactIds"
+          :key="id"
+          size="small"
+          @click="router.push({ name: 'artifacts', query: { id } })"
+        >
+          {{ artifactIds.length === 1 ? '打开报告' : `打开报告 ${artifactIds.indexOf(id) + 1}` }}
+        </NButton>
       </div>
-    </div>
-    <ChatPlan v-if="msg.role === 'assistant' && msg.planTasks?.length" :tasks="msg.planTasks" />
-    <NText v-if="msg.status === 'pending'">
-      <icon-eos-icons:three-dots-loading class="ml-12 mt-2 text-8" />
-      <span class="ml-12 text-14px">{{ msg.agentStatus || '正在思考' }}</span>
-    </NText>
-    <NText v-else-if="msg.status === 'error'" class="ml-12 mt-2 italic">
-      {{ msg.content || '服务器繁忙，请稍后再试' }}
-    </NText>
-    <div v-else-if="msg.role === 'assistant'" class="assistant-content mt-2 pl-12" @click="handleContentClick">
-      <VueMarkdownIt :content="content" />
-    </div>
-    <div v-else-if="msg.role === 'user'" class="ml-12 mt-2">
-      <div class="user-bubble text-4">{{ content }}</div>
-    </div>
-    <div v-if="msg.role === 'assistant' && artifactIds.length" class="ml-12 flex flex-wrap gap-2">
-      <NButton v-for="id in artifactIds" :key="id" @click="router.push({ name: 'artifacts', query: { id } })">
-        {{ artifactIds.length === 1 ? '打开报告' : `打开报告 ${artifactIds.indexOf(id) + 1}` }}
-      </NButton>
-    </div>
-    <NDivider class="ml-12 w-[calc(100%-3rem)] opacity-40 mb-0! mt-2!" />
-    <div class="ml-12 flex gap-4">
-      <NButton quaternary @click="handleCopy(msg.content)">
-        <template #icon>
-          <icon-mynaui:copy />
-        </template>
-      </NButton>
-    </div>
-  </div>
+      <div v-if="msg.status !== 'pending'" class="answer-actions">
+        <button class="icon-control" aria-label="复制回答" @click="handleCopy(msg.content)">
+          <SvgIcon icon="lucide:copy" />
+        </button>
+        <span v-if="msg.status === 'loading'">{{ msg.agentStatus || '正在生成…' }}</span>
+      </div>
+    </template>
+  </article>
 </template>
 
 <style scoped lang="scss">
-.user-bubble {
-  width: fit-content;
-  max-width: 82%;
-  padding: 8px 14px;
-  border-radius: 16px;
-  border-top-left-radius: 4px;
-  background-color: rgb(var(--primary-color) / 0.1);
-  line-height: 1.7;
-  white-space: pre-wrap;
-  word-break: break-word;
+.chat-message {
+  margin-bottom: 30px;
+  min-width: 0;
 }
-
+.chat-message.user {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 32px;
+}
+.user-bubble {
+  max-width: 84%;
+  padding: 11px 18px;
+  border-radius: 20px;
+  background: var(--shell-hover);
+  font-size: 15px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .assistant-content {
-  line-height: 1.75;
+  font-size: 15px;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+}
+.assistant-content :deep(pre) {
+  font-size: 13px;
+  border-radius: 10px;
+  overflow: auto;
+}
+.assistant-content :deep(table) {
+  display: block;
+  overflow: auto;
+}
+.answer-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--shell-muted);
+  font-size: 11px;
+  margin-top: 8px;
+}
+.answer-actions .icon-control {
+  font-size: 15px;
+}
+.thinking {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--shell-muted);
+  font-size: 14px;
+  padding: 8px 0;
+}
+.thinking-dot {
+  width: 9px;
+  height: 9px;
+  background: var(--shell-text);
+  border-radius: 50%;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+.answer-error {
+  font-size: 14px;
+  color: var(--shell-muted);
+  line-height: 1.8;
+}
+.assistant-content :deep(h1) {
+  font-size: 23px;
+}
+.assistant-content :deep(h2) {
+  font-size: 20px;
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.25;
+  }
 }
 
 :deep(.source-file-link) {

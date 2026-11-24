@@ -132,8 +132,8 @@ def snapshot():
 def command(argv, cwd, seconds, max_log):
     if not isinstance(argv, list) or not argv or len(argv) > 64 or any(not isinstance(x, str) or '\0' in x or len(x) > 8192 for x in argv):
         raise ValueError('invalid_command')
-    env = {'PATH': '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/share/maven/bin',
-           'HOME': '/tmp', 'LANG': 'C.UTF-8', 'MAVEN_OPTS': '-Xmx2048m'}
+    env = {'PATH': '/opt/java/openjdk/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/share/maven/bin',
+           'JAVA_HOME': '/opt/java/openjdk', 'HOME': '/tmp', 'LANG': 'C.UTF-8', 'MAVEN_OPTS': '-Xmx2048m'}
     proc = subprocess.Popen(argv, cwd=cwd, env=env, stdin=subprocess.DEVNULL,
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, start_new_session=True)
     selector = selectors.DefaultSelector()
@@ -263,10 +263,10 @@ def apply_patch(args):
         if line.startswith(('GIT binary patch', 'rename from ', 'rename to ', 'new file mode 120000', 'new file mode 160000', 'new mode 120000', 'new mode 160000')):
             raise ValueError('unsupported_patch')
     if not headers:
-        raise ValueError('empty_patch')
+        raise ValueError('unified_diff_required')
     # --no-add is deliberately not used: newly created text files are part of the deliverable.
     for check in (True, False):
-        argv = ['git', '-c', 'core.hooksPath=/dev/null', 'apply', '--whitespace=nowarn']
+        argv = ['git', '-c', 'core.hooksPath=/dev/null', 'apply', '--recount', '--whitespace=nowarn']
         if check:
             argv.append('--check')
         result = subprocess.run(argv + ['-'], cwd=ROOT, input=patch.encode(), stdout=subprocess.DEVNULL,
@@ -338,4 +338,8 @@ if __name__ == '__main__':
     except Exception as failure:
         safe = str(failure) if isinstance(failure, ValueError) and re.fullmatch('[a-z_]+', str(failure)) else 'sandbox_operation_failed'
         result = {'ok': False, 'error': safe}
+        if safe == 'unified_diff_required':
+            result['hint'] = ('Use a standard git unified diff, not *** Begin Patch syntax. Include --- a/path, '
+                              '+++ b/path, numbered @@ -oldStart,oldCount +newStart,newCount @@ hunks and a trailing newline. '
+                              'Example: --- a/Example.txt\n+++ b/Example.txt\n@@ -1 +1,2 @@\n original\n+added\n')
     sys.stdout.write(json.dumps(result, ensure_ascii=False))

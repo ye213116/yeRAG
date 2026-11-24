@@ -136,7 +136,8 @@ public class DockerSandboxExecutor implements SandboxExecutor {
         host.put("LogConfig",Map.of("Type","json-file","Config",Map.of("max-size","4m","max-file","1")));
         host.put("Mounts",List.of(Map.of("Type","volume","Source",prefix+"-work","Target","/workspace","ReadOnly",!writable),
                 Map.of("Type","volume","Source",prefix+"-base","Target","/base","ReadOnly",!baseWritable)));
-        return Map.of("Image",config.getImage(),"User","10001:10001","WorkingDir","/workspace","Cmd",command,"Env",env,
+        // Bypass inherited image startup scripts: stdout is exclusively the helper's JSON protocol.
+        return Map.of("Image",config.getImage(),"User","10001:10001","WorkingDir","/workspace","Entrypoint",command,"Cmd",List.of(),"Env",env,
                 "Labels",Map.of("yerag.workspace",workspace),"HostConfig",host);
     }
     @Override public void stop(String workspace) {

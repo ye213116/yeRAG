@@ -67,7 +67,7 @@ before(async () => {
   server = createServer(async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-Request-Id');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
     if (req.method === 'OPTIONS') {
       res.writeHead(204).end();
       return;
@@ -127,6 +127,36 @@ before(async () => {
       return;
     }
     const owned = sessions(owner);
+    const running = path.match(/^\/api\/v1\/memory\/sessions\/([^/]+)\/run$/);
+    if (running) {
+      const session = owned.find(item => item.id === running[1]);
+      send(session?.run || { state: 'IDLE', seq: 0 }, session ? 200 : 404);
+      return;
+    }
+    const stop = path.match(/^\/api\/v1\/memory\/sessions\/([^/]+)\/runs\/([^/]+)\/stop$/);
+    if (stop) {
+      const session = owned.find(item => item.id === stop[1]);
+      if (!session || session.run?.requestId !== stop[2]) {
+        send(null, 404);
+        return;
+      }
+      session.run.state = 'CANCELLED';
+      state.stopped += 1;
+      emit(owner, session, { type: 'completion', status: 'cancelled' });
+      send({ stopped: true });
+      return;
+    }
+    const rename = path.match(/^\/api\/v1\/memory\/sessions\/([^/]+)$/);
+    if (rename && req.method === 'PATCH') {
+      const session = owned.find(item => item.id === rename[1]);
+      if (!session) {
+        send(null, 404);
+        return;
+      }
+      session.title = JSON.parse(body).title;
+      send({ updated: true });
+      return;
+    }
     if (path === '/api/v1/memory/sessions/current') {
       let current = owned.find(s => s.status === 'OPEN');
       if (!current) {
@@ -202,36 +232,32 @@ before(async () => {
     const owner = req.url.split('/').at(-1).replace('token-', '');
     state.sockets.set(owner, socket);
     socket.send(JSON.stringify({ type: 'connection', sessionId: `socket-${owner}` }));
-    let cancelled = false;
     socket.on('message', async raw => {
       const message = JSON.parse(raw);
-      if (message.type === 'stop') {
-        cancelled = true;
-        state.stopped += 1;
-        return;
-      }
       if (message.type !== 'chat') return;
+      const session = sessions(owner).find(item => item.id === message.conversationId);
+      if (!session) return;
       state.requests.set(owner, message);
-      cancelled = false;
-      const send = value =>
-        socket.readyState === 1 &&
-        socket.send(JSON.stringify({ requestId: message.requestId, conversationId: message.conversationId, ...value }));
+      session.title ||= message.message;
+      session.run = {
+        requestId: message.requestId,
+        conversationId: session.id,
+        question: message.message,
+        text: '',
+        state: 'RUNNING',
+        seq: 0
+      };
+      emit(owner, session, { type: 'run_started', question: message.message });
       if (message.message === 'plan') {
-        send(planEvent());
+        emit(owner, session, planEvent());
         return;
       }
-      send({ type: 'agent_status', message: '正在回答' });
-      send({ type: 'chunk', chunk: `${owner} answer: ` });
+      emit(owner, session, { type: 'agent_status', message: '正在回答' });
+      emit(owner, session, { type: 'chunk', chunk: `${owner} answer: ` });
       await delay(message.message === 'slow' ? 2000 : 100);
-      if (cancelled || socket.readyState !== 1) return;
-      send({ type: 'chunk', chunk: message.message });
-      const session = sessions(owner).find(s => s.id === message.conversationId);
-      if (session.status === 'OPEN')
-        session.messages.push(
-          { role: 'user', content: message.message },
-          { role: 'assistant', content: `${owner} answer: ${message.message}`, status: 'finished' }
-        );
-      send({ type: 'completion', status: 'finished' });
+      if (session.run.requestId !== message.requestId || session.run.state !== 'RUNNING') return;
+      emit(owner, session, { type: 'chunk', chunk: message.message });
+      emit(owner, session, { type: 'completion', status: 'finished' });
     });
   });
   vite = spawn(
@@ -299,13 +325,14 @@ async function login(page, username = 'admin', navigate = true) {
   await page.click('button.n-button--primary-type.n-button--large-type');
   await page.waitForFunction(() => location.pathname === '/chat');
   await page.waitForFunction(() =>
-    [...document.querySelectorAll('button')].some(button => button.textContent.includes('新建对话') && !button.disabled)
+    [...document.querySelectorAll('button')].some(button => button.textContent.includes('新聊天') && !button.disabled)
   );
 }
 
 async function newPage() {
   const context = await browser.createBrowserContext();
   const page = await context.newPage();
+  await page.setViewport({ width: 1440, height: 1000 });
   await page.setRequestInterception(true);
   page.on('request', request =>
     ['127.0.0.1', 'localhost'].includes(new URL(request.url()).hostname) ? request.continue() : request.abort()
@@ -341,10 +368,29 @@ function planEvent(statuses = ['running', 'pending', 'pending']) {
   };
 }
 
+function emit(owner, session, payload) {
+  const run = session.run;
+  if (run.state === 'RUNNING') {
+    if (payload.chunk) run.text += payload.chunk;
+    if (payload.type === 'agent_status' && payload.status === 'plan_updated') run.planTasks = payload.details.tasks;
+    if (payload.type === 'completion') {
+      run.state = payload.status === 'finished' ? 'COMPLETED' : 'CANCELLED';
+      if (run.state === 'COMPLETED')
+        session.messages.push(
+          { role: 'user', content: run.question, requestId: run.requestId },
+          { role: 'assistant', content: run.text, status: 'finished', requestId: run.requestId }
+        );
+    }
+    if (payload.type === 'error') run.state = 'FAILED';
+  }
+  run.seq += 1;
+  const socket = state.sockets.get(owner);
+  if (socket?.readyState === 1)
+    socket.send(JSON.stringify({ requestId: run.requestId, conversationId: session.id, seq: run.seq, ...payload }));
+}
 function reply(owner, payload, request = state.requests.get(owner)) {
-  state.sockets
-    .get(owner)
-    .send(JSON.stringify({ requestId: request.requestId, conversationId: request.conversationId, ...payload }));
+  const session = sessions(owner).find(s => s.id === request.conversationId);
+  if (session?.run?.requestId === request.requestId) emit(owner, session, payload);
 }
 
 test('plan tasks render before the answer, update during streaming and reject late events', async () => {
@@ -369,7 +415,7 @@ test('plan tasks render before the answer, update during streaming and reject la
     await delay(100);
     assert.equal(await page.$$eval('[aria-label="任务列表"] [data-task-status="completed"]', nodes => nodes.length), 3);
     const oldRequest = state.requests.get('admin');
-    await clickText(page, '新建对话');
+    await clickText(page, '新聊天');
     reply('admin', planEvent(), oldRequest);
     await delay(100);
     assert.equal(await page.$$eval('[aria-label="任务列表"]', nodes => nodes.length), 0);
@@ -445,12 +491,12 @@ test('streams, persists, reconnects, isolates a new conversation and ignores lat
     await page.waitForFunction(() => document.body.textContent.includes('admin answer: remember fixture'));
     await sendMessage(page, 'slow');
     await page.waitForSelector('button[aria-label="停止生成"]');
-    await clickText(page, '新建对话');
+    await clickText(page, '新聊天');
     await delay(2300);
-    assert.doesNotMatch(await page.$eval('body', element => element.textContent), /admin answer: slow/);
+    assert.doesNotMatch(await page.$eval('.work-chat', element => element.textContent), /admin answer: slow/);
     await sendMessage(page, 'new session');
     await page.waitForFunction(() => document.body.textContent.includes('admin answer: new session'));
-    assert.doesNotMatch(await page.$eval('body', element => element.textContent), /remember fixture/);
+    assert.doesNotMatch(await page.$eval('.work-chat', element => element.textContent), /remember fixture/);
   } finally {
     await page.browserContext().close();
   }
@@ -527,6 +573,130 @@ test('resumes an old conversation, pages through history, continues chatting and
     await sendMessage(page, 'after deletion');
     await page.waitForFunction(() => document.body.textContent.includes('admin answer: after deletion'));
     assert.notEqual(state.requests.get('admin').conversationId, old.id);
+  } finally {
+    await page.browserContext().close();
+  }
+});
+
+test('background answers survive switching, concurrent work and a closed browser page without duplicate chunks', async () => {
+  let page = await newPage();
+  const context = page.browserContext();
+  try {
+    await login(page);
+    await sendMessage(page, 'slow');
+    await page.waitForSelector('[aria-label="停止生成"]');
+    const first = { ...state.requests.get('admin') };
+    await clickText(page, '新聊天');
+    await page.waitForFunction(
+      id =>
+        document.querySelector('.work-chat')?.dataset.conversationId !== id &&
+        document.querySelector('.work-chat')?.dataset.ready === 'true',
+      {},
+      first.conversationId
+    );
+    await sendMessage(page, 'parallel B');
+    await page.waitForFunction(() => document.body.textContent.includes('admin answer: parallel B'));
+    await delay(2100);
+    await page.click(`.thread-row[data-conversation-id="${first.conversationId}"] .thread-select`);
+    await page.waitForFunction(() => document.body.textContent.includes('admin answer: slow'));
+    await sendMessage(page, 'slow');
+    await page.waitForSelector('[aria-label="停止生成"]');
+    const active = { ...state.requests.get('admin') };
+    await page.close();
+    page = await context.newPage();
+    await page.setViewport({ width: 1440, height: 1000 });
+    await page.goto(`${origin}/chat?conversation=${active.conversationId}`);
+    await page.waitForSelector('.work-chat[data-ready="true"]');
+    await page.waitForFunction(
+      () =>
+        [...document.querySelectorAll('.assistant-content')].filter(el => el.textContent.includes('admin answer: slow'))
+          .length === 2
+    );
+    const session = sessions('admin').find(s => s.id === active.conversationId);
+    state.sockets.get('admin').send(JSON.stringify({ ...active, seq: session.run.seq, chunk: 'DUPLICATE_SENTINEL' }));
+    await delay(100);
+    assert.equal(await page.evaluate(() => document.body.textContent.includes('DUPLICATE_SENTINEL')), false);
+  } finally {
+    await context.close();
+  }
+});
+
+test('workbench rail, thread rename, dark appearance and narrow sidebar remain usable', async () => {
+  const page = await newPage();
+  try {
+    await login(page);
+    assert.equal(await page.$eval('.primary-rail', el => Math.round(el.getBoundingClientRect().width)), 64);
+    assert.equal(await page.$eval('.feature-sidebar', el => Math.round(el.getBoundingClientRect().width)), 280);
+    await page.click('[aria-label="展开主导航"]');
+    await page.waitForFunction(() => document.querySelector('.primary-rail').getBoundingClientRect().width === 200);
+    await page.click('button[aria-label="聊天"]');
+    await page.waitForFunction(() => document.querySelector('.primary-rail').getBoundingClientRect().width === 64);
+    await clickText(page, '新聊天');
+    await page.waitForSelector('.work-chat[data-ready="true"]');
+    await sendMessage(page, 'rename target');
+    await page.waitForFunction(() => document.body.textContent.includes('admin answer: rename target'));
+    await page.evaluate(async () => {
+      const { useChatStore } = await import('/src/store/modules/chat/index.ts');
+      const c = useChatStore();
+      await c.renameConversation(c.conversationId, '我的工作会话');
+    });
+    await page.waitForFunction(() => document.body.textContent.includes('我的工作会话'));
+    await page.evaluate(async () => {
+      const { useThemeStore } = await import('/src/store/modules/theme/index.ts');
+      useThemeStore().setThemeScheme('dark');
+    });
+    await page.waitForFunction(() => document.documentElement.classList.contains('dark'));
+    await page.setViewport({ width: 390, height: 844 });
+    await page.waitForFunction(() => document.querySelector('.feature-sidebar').getBoundingClientRect().width === 0);
+    // The login toast overlaps the header after narrowing the viewport.
+    await page.waitForFunction(() => !document.querySelector('.n-notification'));
+    await page.click('[aria-label="展开副栏"]');
+    await page.waitForFunction(() => document.querySelector('.feature-sidebar').getBoundingClientRect().width === 280);
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= 390));
+    await page.click('[aria-label="收起副栏"]');
+  } finally {
+    await page.browserContext().close();
+  }
+});
+
+test('switching conversations restores each draft and reading position', async () => {
+  const page = await newPage();
+  try {
+    for (const suffix of ['a', 'b']) {
+      sessions('admin').push({
+        id: `admin-scroll-${suffix}`,
+        title: `阅读位置 ${suffix}`,
+        status: 'CLOSED',
+        last_activity_at: '2026-11-23T01:00:00',
+        messages: Array.from({ length: 30 }, (_, i) => [
+          { role: 'user', content: `reading-${suffix}-${i}`, turnId: 5000 + i },
+          {
+            role: 'assistant',
+            content: `${suffix}-${i}\n\n${'阅读正文与证据说明。\n\n'.repeat(4)}`,
+            turnId: 5000 + i,
+            status: 'finished'
+          }
+        ]).flat()
+      });
+    }
+    await login(page);
+    await page.waitForSelector('[data-conversation-id="admin-scroll-a"] .thread-select');
+    await page.click('[data-conversation-id="admin-scroll-a"] .thread-select');
+    await page.waitForFunction(() => document.querySelectorAll('.assistant-content p').length === 150);
+    await page.$eval('.message-viewport', el => {
+      el.scrollTop = 150;
+    });
+    await page.waitForFunction(() => Math.abs(document.querySelector('.message-viewport').scrollTop - 150) < 5);
+    await page.type('textarea', 'A 的未发送草稿');
+    await page.click('[data-conversation-id="admin-scroll-b"] .thread-select');
+    await page.waitForFunction(() => document.querySelector('.work-chat')?.dataset.conversationId === 'admin-scroll-b');
+    await page.waitForFunction(() => document.querySelector('textarea').value === '');
+    await page.type('textarea', 'B 的未发送草稿');
+    await page.click('[data-conversation-id="admin-scroll-a"] .thread-select');
+    await page.waitForFunction(() => document.querySelector('textarea').value === 'A 的未发送草稿');
+    await page.waitForFunction(() => Math.abs(document.querySelector('.message-viewport').scrollTop - 150) < 5);
+    await page.click('[data-conversation-id="admin-scroll-b"] .thread-select');
+    await page.waitForFunction(() => document.querySelector('textarea').value === 'B 的未发送草稿');
   } finally {
     await page.browserContext().close();
   }

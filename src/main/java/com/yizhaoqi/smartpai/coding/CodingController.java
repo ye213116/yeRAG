@@ -45,7 +45,7 @@ public class CodingController {
     @PatchMapping("/workspaces/{id}/permissions") public Map<String,Object> permissions(Principal p,@PathVariable String id,@RequestBody Permissions request) {
         tasks.permissions(user(p),id,request.permissions());return result(Map.of("updated",true));
     }
-    @GetMapping("/tasks") public Map<String,Object> list(Principal p) { long owner=user(p);return result(store.list(owner).stream().filter(row -> {
+    @GetMapping("/tasks") public Map<String,Object> list(Principal p,@RequestParam(required=false) String repositoryId) { long owner=user(p);return result(store.list(owner,repositoryId).stream().filter(row -> {
         try { properties.repository(store.workspace(owner,(String)row.get("workspace_id")).repositoryId(),owner);return true; }
         catch(ResponseStatusException denied) { return false; }
     }).toList()); }

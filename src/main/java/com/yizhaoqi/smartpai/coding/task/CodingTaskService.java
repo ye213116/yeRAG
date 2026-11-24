@@ -83,7 +83,7 @@ public class CodingTaskService {
         Workspace workspace=store.workspace(owner,task.workspaceId());
         properties.repository(workspace.repositoryId(),owner);
         var view=new LinkedHashMap<String,Object>();
-        view.put("id",id);view.put("workspaceId",task.workspaceId());view.put("status",task.status());view.put("summary",task.summary());
+        view.put("id",id);view.put("workspaceId",task.workspaceId());view.put("status",task.status());view.put("summary",task.summary());view.put("message",task.message());
         view.put("baseSha",workspace.baseSha());view.put("result",task.result());view.put("runId",task.runId());
         view.put("publishState",task.publishState());view.put("prUrl",task.prUrl());view.put("events",store.events(id));
         return view;

@@ -23,6 +23,9 @@ let websocket;
 let vite;
 let browser;
 let logs = '';
+let capabilitiesEnabled = true;
+let capabilitiesStatus = 200;
+let workspaceReads = 0;
 
 function chromePath() {
   if (process.env.BROWSER_EXECUTABLE_PATH) return process.env.BROWSER_EXECUTABLE_PATH;
@@ -84,7 +87,15 @@ before(async () => {
       return;
     }
     if (path === '/api/v1/memory/sessions') {
-      send([{ id: owner, status: 'OPEN', last_activity_at: '2026-11-19T01:00:00Z' }]);
+      send(
+        req.method === 'POST'
+          ? { conversationId: owner }
+          : [{ id: owner, title: '新对话', status: 'OPEN', last_activity_at: '2026-11-19T01:00:00Z' }]
+      );
+      return;
+    }
+    if (/\/memory\/sessions\/[^/]+\/run$/.test(path)) {
+      send({ state: 'IDLE', seq: 0 });
       return;
     }
     if (/\/memory\/sessions\/[^/]+\/messages$/.test(path)) {
@@ -92,7 +103,7 @@ before(async () => {
       return;
     }
     if (path.endsWith('/coding/capabilities')) {
-      send({ enabled: true });
+      send({ enabled: capabilitiesEnabled }, capabilitiesStatus);
       return;
     }
     if (path.endsWith('/coding/repositories')) {
@@ -100,6 +111,7 @@ before(async () => {
       return;
     }
     if (path.endsWith('/coding/workspaces')) {
+      workspaceReads += 1;
       if (req.method === 'POST') {
         const input = JSON.parse(body);
         const workspace = {
@@ -119,7 +131,15 @@ before(async () => {
     }
     if (path.endsWith('/coding/tasks')) {
       send(
-        tasks.filter(t => t.owner === owner).map(t => ({ id: t.id, workspace_id: t.workspaceId, status: t.status }))
+        tasks
+          .filter(t => t.owner === owner)
+          .map(t => ({
+            id: t.id,
+            workspace_id: t.workspaceId,
+            status: t.status,
+            repository_id: 'demo',
+            title: t.message
+          }))
       );
       return;
     }
@@ -157,6 +177,7 @@ before(async () => {
         workspaceId: workspace.id,
         status: 'RUNNING',
         summary: null,
+        message: request.message,
         result: null,
         baseSha: workspace.baseSha,
         events: [],
@@ -221,6 +242,7 @@ async function login(owner) {
   const context = await browser.createBrowserContext();
   const page = await context.newPage();
   await page.setViewport({ width: 1440, height: 1000 });
+  await page.setViewport({ width: 1440, height: 1000 });
   await page.setRequestInterception(true);
   page.on('request', request =>
     ['127.0.0.1', 'localhost'].includes(new URL(request.url()).hostname) ? request.continue() : request.abort()
@@ -242,35 +264,30 @@ async function clickText(page, text) {
   );
 }
 
+async function openCodingEntry(page) {
+  await page.waitForSelector('button[aria-label="Coding"]');
+  await page.click('button[aria-label="Coding"]');
+  await page.waitForFunction(() => location.pathname === '/coding');
+}
 async function coding(page) {
-  await page.waitForSelector('[aria-label="工作模式"]');
-  await page.click('[aria-label="工作模式"]');
-  await page.waitForSelector('.n-base-select-option');
-  await page.evaluate(() =>
-    [...document.querySelectorAll('.n-base-select-option')].find(el => el.textContent.trim() === 'Coding').click()
+  await openCodingEntry(page);
+  await page.waitForFunction(
+    () =>
+      document.body.textContent.includes('在项目中开始一个任务') || document.body.textContent.includes('还没有可用项目')
   );
-  await page.waitForFunction(() => document.body.textContent.includes('委托开发任务'));
 }
 
 test('cloud task survives leaving the page, displays safe Diff and publishes only after confirmation', async () => {
   let page = await login('alice');
   await coding(page);
-  await waitFor(
-    async () =>
-      page.evaluate(() =>
-        [...document.querySelectorAll('button')].some(b => b.textContent.trim() === '新建 Workspace' && !b.disabled)
-      ),
-    'repository ready'
-  );
-  await clickText(page, '新建 Workspace');
+  await page.waitForSelector('textarea[aria-label="开发任务描述"]');
+  await page.type('textarea[aria-label="开发任务描述"]', '修复计算错误并运行测试');
+  await page.keyboard.press('Enter');
   await waitFor(() => workspaces.length === 1, 'workspace');
   assert.deepEqual(workspaces[0].permissions.sort(), ['EXECUTE', 'READ', 'WRITE']);
-  await page.waitForFunction(() => document.body.textContent.includes('Workspace 已创建'));
-  await page.type('textarea', '修复计算错误并运行测试');
-  await page.keyboard.press('Enter');
   await waitFor(() => submissions.length === 1, 'task submission');
   assert.equal(submissions[0].sourceMode, 'auto');
-  await page.waitForFunction(() => document.body.textContent.includes('Coding 任务已提交'));
+  await page.waitForFunction(() => document.body.textContent.includes('任务已提交'));
   await page.close();
   assert.equal(tasks[0].status, 'RUNNING');
   tasks[0].status = 'REVIEW_READY';
@@ -284,24 +301,12 @@ test('cloud task survives leaving the page, displays safe Diff and publishes onl
   workspaces[0].activeTaskId = null;
   page = await login('alice');
   await coding(page);
-  await page.waitForFunction(() => document.body.textContent.includes('后台任务（1）'));
-  await page.locator('[aria-label="开发任务"] .n-base-selection-label').click();
-  await page.waitForFunction(
-    prefix => [...document.querySelectorAll('.n-base-select-option')].some(el => el.textContent.includes(prefix)),
-    { timeout: 8000 },
-    tasks[0].id.slice(0, 8)
-  );
-  await page.evaluate(
-    prefix =>
-      [...document.querySelectorAll('.n-base-select-option')].find(el => el.textContent.includes(prefix)).click(),
-    tasks[0].id.slice(0, 8)
-  );
+  await page.waitForSelector('.project-task');
+  await page.click('.project-task');
   await page.waitForFunction(() => document.body.textContent.includes('修复完成，测试通过'));
-  await page.evaluate(() =>
-    [...document.querySelectorAll('.n-collapse-item__header-main')]
-      .find(el => el.textContent.includes('审核 Diff'))
-      .click()
-  );
+  await page.reload();
+  await page.waitForFunction(() => document.body.textContent.includes('修复完成，测试通过'));
+  assert.equal(await page.evaluate(() => location.pathname), '/coding');
   await page.waitForFunction(() => document.body.textContent.includes('window.pwned=true'));
   assert.equal(await page.evaluate(() => window.pwned), undefined);
   assert.equal(publications.length, 0);
@@ -319,6 +324,31 @@ test('cloud task survives leaving the page, displays safe Diff and publishes onl
   await page.close();
   page = await login('bob');
   await coding(page);
+  await page.waitForFunction(() => document.body.textContent.includes('当前账号没有可用仓库'));
   assert.equal(await page.evaluate(() => document.body.textContent.includes('修复完成，测试通过')), false);
+  assert.equal(await page.$('[aria-label="提交 Coding 任务"]'), null);
+  await page.close();
+});
+
+test('Coding entry remains visible when disabled, retries capability failures and returns to Work', async () => {
+  capabilitiesEnabled = false;
+  const page = await login('alice');
+  const reads = workspaceReads;
+  await openCodingEntry(page);
+  await page.waitForFunction(() => document.body.textContent.includes('当前服务尚未启用 Coding'));
+  assert.equal(await page.$('textarea'), null);
+  assert.equal(workspaceReads, reads);
+  capabilitiesStatus = 503;
+  await clickText(page, '重新检查');
+  await page.waitForFunction(() => document.body.textContent.includes('无法连接 Coding 服务'));
+  capabilitiesStatus = 200;
+  capabilitiesEnabled = true;
+  await clickText(page, '重新检查');
+  await page.waitForFunction(() => document.body.textContent.includes('在项目中开始一个任务'));
+  await page.click('button[aria-label="聊天"]');
+  await page.waitForFunction(
+    () => location.pathname === '/chat' && !document.body.textContent.includes('在项目中开始一个任务')
+  );
+  assert.match(await page.$eval('textarea', el => el.placeholder), /向 yeRAG 提问/);
   await page.close();
 });

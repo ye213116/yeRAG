@@ -184,6 +184,8 @@ declare namespace Api {
     }
 
     interface Message {
+      requestId?: string;
+      turnId?: number | string;
       role: 'user' | 'assistant';
       content: string;
       status?: 'pending' | 'loading' | 'finished' | 'error';

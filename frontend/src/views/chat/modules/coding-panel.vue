@@ -25,7 +25,7 @@ const tasks = ref<CodingTaskSummary[]>([]);
 const repositoryId = ref('');
 const branch = ref('');
 const preset = ref<'read' | 'edit'>('edit');
-const selectedTask = ref<string | null>(null);
+const selectedTask = ref<string | null>(chat.lastCodingTaskId || null);
 const eventOutput = ref('');
 const reviewOpen = ref(false);
 const reviewedSnapshot = ref<{
@@ -48,7 +48,10 @@ const statusLabels: Record<string, string> = {
 const verificationLabels: Record<string, string> = { PASSED: '通过', FAILED: '失败', NOT_VERIFIED: '未验证' };
 const task = ref<CodingTask | null>(null);
 const notice = ref('');
+const loadError = ref('');
+const repositoriesLoading = ref(true);
 const busy = ref(false);
+chat.codingWorkspaceReady = false;
 let alive = true;
 let revision = 0;
 let polling = false;
@@ -93,19 +96,23 @@ watch(
     if (w) preset.value = w.permissions.includes('EXECUTE') ? 'edit' : 'read';
   }
 );
-watch(selectedTask, async id => {
-  reviewOpen.value = false;
-  reviewedSnapshot.value = null;
-  eventOutput.value = '';
-  revision += 1;
-  const current = revision;
-  task.value = null;
-  if (!id) return;
-  const result = await fetchCodingTask(id);
-  if (!alive || current !== revision) return;
-  if (result.error) notice.value = '无法读取任务，请重新加载';
-  else task.value = result.data;
-});
+watch(
+  selectedTask,
+  async id => {
+    reviewOpen.value = false;
+    reviewedSnapshot.value = null;
+    eventOutput.value = '';
+    revision += 1;
+    const current = revision;
+    task.value = null;
+    if (!id) return;
+    const result = await fetchCodingTask(id);
+    if (!alive || current !== revision) return;
+    if (result.error) notice.value = '无法读取任务，请重新加载';
+    else task.value = result.data;
+  },
+  { immediate: true }
+);
 watch(
   () => chat.lastCodingTaskId,
   id => {
@@ -132,9 +139,13 @@ async function refresh() {
       const w = ws.data.find(item => item.id === chat.codingWorkspaceId);
       chat.codingWorkspaceReady = Boolean(w && ['NEW', 'READY'].includes(w.status) && !w.activeTaskId);
     }
-    if (!list.error) tasks.value = list.data;
+    if (!list.error) {
+      tasks.value = list.data;
+      if (!selectedTask.value) selectedTask.value = list.data[0]?.id || null;
+    }
     if (detail && !detail.error) task.value = detail.data;
-    if (ws.error || list.error || detail?.error) notice.value = '任务状态加载失败，正在重试';
+    if (ws.error) chat.codingWorkspaceReady = false;
+    loadError.value = ws.error || list.error || detail?.error ? '任务状态加载失败，请刷新重试' : '';
   } finally {
     polling = false;
   }
@@ -216,19 +227,26 @@ async function publish() {
     busy.value = false;
   }
 }
-onMounted(async () => {
+async function loadRepositories() {
+  repositoriesLoading.value = true;
   const result = await fetchCodingRepositories();
   if (!alive) return;
+  repositoriesLoading.value = false;
   if (result.error) notice.value = '无法加载已授权仓库';
   else {
     repositories.value = result.data;
-    repositoryId.value = result.data[0]?.id || '';
+    if (!result.data.some(r => r.id === repositoryId.value)) repositoryId.value = result.data[0]?.id || '';
+    notice.value = '';
   }
+}
+onMounted(async () => {
+  await loadRepositories();
   await refresh();
 });
 const timer = window.setInterval(refresh, 2000);
 onUnmounted(() => {
   alive = false;
+  chat.codingWorkspaceReady = false;
   revision += 1;
   window.clearInterval(timer);
 });
@@ -237,8 +255,19 @@ onUnmounted(() => {
 <template>
   <NCard title="委托开发任务" size="small">
     <NText depth="3">选择仓库和权限，在下方对话中提交任务；云端完成修改和验证后，在此审核 Diff 并创建 PR。</NText>
+    <NAlert v-if="!repositoriesLoading && !repositories.length" class="mt-3" type="info">
+      当前账号没有可用仓库，请联系管理员授权 GitHub 仓库和基准分支。
+      <NButton size="small" class="ml-3" @click="loadRepositories">重新加载仓库</NButton>
+    </NAlert>
     <div class="mt-3 flex flex-wrap gap-2">
-      <NSelect v-model:value="repositoryId" class="w-64" :options="repositoryOptions" placeholder="授权 GitHub 仓库" />
+      <NSelect
+        v-model:value="repositoryId"
+        class="w-64"
+        :options="repositoryOptions"
+        :loading="repositoriesLoading"
+        placeholder="授权 GitHub 仓库"
+        aria-label="授权 GitHub 仓库"
+      />
       <NSelect v-model:value="branch" class="w-36" :options="branchOptions" placeholder="基准分支" />
       <NSelect v-model:value="preset" class="w-56" :options="permissionOptions" aria-label="Coding 权限" />
       <NButton :loading="busy" :disabled="!repositoryId || !branch" @click="createWorkspace">新建 Workspace</NButton>
@@ -249,12 +278,14 @@ onUnmounted(() => {
         class="min-w-72 flex-1"
         :options="workspaceOptions"
         placeholder="选择 Workspace"
+        aria-label="开发 Workspace"
         @update:value="chat.codingWorkspaceId = $event"
       />
       <NButton :disabled="!chat.codingWorkspaceId" @click="savePermissions">保存权限</NButton>
       <NButton @click="refresh">刷新任务</NButton>
     </div>
     <NAlert v-if="notice" class="mt-3" type="info">{{ notice }}</NAlert>
+    <NAlert v-if="loadError" class="mt-3" type="error">{{ loadError }}</NAlert>
     <NText class="mt-3 block" depth="3">后台任务（{{ tasks.length }}）</NText>
     <NSelect
       v-model:value="selectedTask"

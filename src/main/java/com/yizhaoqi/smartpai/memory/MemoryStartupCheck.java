@@ -11,7 +11,7 @@ public class MemoryStartupCheck implements ApplicationRunner {
     private final MemoryStore store;
     public MemoryStartupCheck(MemoryStore store) { this.store=store; }
     @Override public void run(ApplicationArguments args) {
-        try { store.verifySchema(); }
+        try { store.verifySchema(); store.recoverWorkRuns(); }
         catch (Exception e) { throw new IllegalStateException("Apply the yeRAG memory schema before starting", e); }
     }
 }

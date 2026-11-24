@@ -102,6 +102,8 @@ CREATE TABLE document_vectors (
 CREATE TABLE chat_session (
     id CHAR(36) NOT NULL COMMENT 'Session UUID',
     user_id BIGINT NOT NULL COMMENT 'Session owner',
+    title VARCHAR(200) NULL COMMENT 'First question title or owner-selected name',
+    kind VARCHAR(16) NOT NULL DEFAULT 'WORK' COMMENT 'WORK or internal CODING task conversation',
     status VARCHAR(20) NOT NULL COMMENT 'OPEN, CLOSED or DELETED tombstone',
     last_activity_at DATETIME(6) NOT NULL COMMENT 'Last accepted activity',
     context_expires_at DATETIME(6) NULL COMMENT 'Retired expiration field; no longer controls retention',
@@ -133,6 +135,7 @@ CREATE TABLE chat_turn (
     request_hash CHAR(64) NOT NULL COMMENT 'SHA-256 of the original question',
     question MEDIUMTEXT NULL COMMENT 'Original user question; retained until user deletion',
     answer MEDIUMTEXT NULL COMMENT 'Assistant answer; retained until user deletion',
+    failure_code VARCHAR(40) NULL COMMENT 'Terminal failure reason, including SERVER_RESTARTED',
     status VARCHAR(20) NOT NULL COMMENT 'RUNNING, COMPLETED, CANCELLED or FAILED',
     context_sync_status VARCHAR(20) NOT NULL DEFAULT 'NONE'
         COMMENT 'NONE, PENDING, SYNCED or EXPIRED',
@@ -322,6 +325,7 @@ CREATE TABLE coding_task (
     publish_state VARCHAR(24) NOT NULL,
     pr_url VARCHAR(2048) NULL,
     created_at DATETIME(6) NOT NULL,
+    -- Written and expired using the database clock; never compare with a bound JVM Timestamp.
     heartbeat_at DATETIME(6) NOT NULL,
     UNIQUE KEY uk_coding_task_request(owner_id,request_id),
     KEY ix_coding_task_queue(status,created_at),

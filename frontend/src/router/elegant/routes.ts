@@ -74,6 +74,17 @@ export const generatedRoutes: GeneratedRoute[] = [
     }
   },
   {
+    name: 'coding',
+    path: '/coding',
+    component: 'layout.base$view.coding',
+    meta: {
+      title: 'coding',
+      i18nKey: 'route.coding',
+      icon: 'solar:code-square-linear',
+      order: 1.5
+    }
+  },
+  {
     name: 'iframe-page',
     path: '/iframe-page/:url',
     component: 'layout.base$view.iframe-page',

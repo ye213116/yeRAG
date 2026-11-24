@@ -6,12 +6,10 @@
 import type { RouteComponent } from "vue-router";
 import type { LastLevelRouteKey, RouteLayout } from "@elegant-router/types";
 
-import BaseLayout from "@/layouts/base-layout/index.vue";
-import BlankLayout from "@/layouts/blank-layout/index.vue";
 
 export const layouts: Record<RouteLayout, RouteComponent | (() => Promise<RouteComponent>)> = {
-  base: BaseLayout,
-  blank: BlankLayout,
+  base: () => import("@/layouts/base-layout/index.vue"),
+  blank: () => import("@/layouts/blank-layout/index.vue"),
 };
 
 export const views: Record<LastLevelRouteKey, RouteComponent | (() => Promise<RouteComponent>)> = {
@@ -23,6 +21,7 @@ export const views: Record<LastLevelRouteKey, RouteComponent | (() => Promise<Ro
   artifacts: () => import("@/views/artifacts/index.vue"),
   "chat-history": () => import("@/views/chat-history/index.vue"),
   chat: () => import("@/views/chat/index.vue"),
+  coding: () => import("@/views/coding/index.vue"),
   "knowledge-base": () => import("@/views/knowledge-base/index.vue"),
   "org-tag": () => import("@/views/org-tag/index.vue"),
   "personal-center": () => import("@/views/personal-center/index.vue"),

@@ -135,6 +135,46 @@ and `tasks/{id}/pull-request`. List/detail/output/publication enforce ownership 
 current repository authorization. Workspace and task identities never come from LLM
 arguments. Existing Work REST/WebSocket contracts and source selectors remain supported.
 
+## Frontend entry and task recovery
+
+The shared shell has a 64px icon rail and a contextual sidebar. Chat/Work uses one
+conversation per row, with title search, rename, delete and pagination. Knowledge and
+Artifacts keep the same navigation structure. Coding at `/coding` shows registered
+repositories as project folders, with independent tasks nested below each project.
+The entry remains visible when the service is disabled or repository authorization
+is missing, with explicit retry and service-state feedback.
+
+Selecting a project opens a task composer. Submitting automatically creates a fresh,
+branch-pinned workspace and an internal CODING session; the user does not manage
+workspace IDs. Drafts survive failed submissions in the current page. Ambiguous
+submission retries reconcile accepted tasks before reusing their request ID. Every
+task has its own isolated filesystem; a new task starts from its selected registered
+branch, without carrying a prior task's files forward.
+
+Task links use `/coding?project=<repositoryId>&task=<taskId>`. Opening or refreshing
+a link restores that task. The main pane shows the request, progress and Markdown
+summary; the optional results pane shows changed files, colored escaped Diff, tests,
+audit logs and the explicit PR confirmation. Narrow displays use a drawer. Closing
+a browser, switching projects or visiting Work does not stop accepted tasks.
+
+Work answers are also server-owned background runs. Switching threads preserves
+execution, per-thread drafts and scroll; reconnecting merges an owner-scoped snapshot
+with sequenced events. Defaults are three concurrent Work runs per user, sixteen
+globally, with a bounded 2 MiB active-answer snapshot. Stop targets the conversation
+and request. Startup marks interrupted Work runs without automatically rerunning
+them. See the database workbench migration and single-instance constraint in
+`docs/databases/database-design.md`.
+
+`apply_patch` accepts standard Git unified diffs, including file headers and numbered
+hunks. Its schema and helper errors explain that contract; `*** Begin Patch` syntax
+is rejected with an actionable `unified_diff_required` response. Existing file hashes
+remain mandatory. Git recounts model-generated hunk lengths, while exact file hashes
+and matching context still prevent stale or conflicting writes. Commands run without
+a `.git` directory; use `git_diff` for changes and `execute_command(test=true)` for
+network-enabled Maven verification. The executor overrides inherited image entrypoints to keep stdout
+exclusive to the helper JSON protocol, and command environments retain the fixed
+image's Java 17 installation without forwarding credentials.
+
 ## Optional real-runner check
 
 Set `CODING_DOCKER_TEST_URL`, `CODING_DOCKER_TEST_TRUST_STORE`,
@@ -152,7 +192,7 @@ Local checks: `python3 -m unittest discover -s deploy/coding -p 'test_*.py'`,
 container or live-model validation; report the latter only when explicitly executed.
 
 
-## Final local validation (2026-11-23)
+## Pre-runner local validation (2026-11-23)
 
 - Full backend `mvn -B -Dstyle.color=never test`: 371 tests, 0 failures/errors,
   15 skipped (13 opt-in MySQL, 1 Elasticsearch, 1 real Docker runner).
@@ -170,3 +210,100 @@ container or live-model validation; report the latter only when explicitly execu
   no running Docker Engine or configured isolated runner/test repository was available.
   Coding remains disabled by default. Apply the migration, register the repository,
   supply local credentials and run the real-runner suite before enabling it.
+
+## Frontend and Docker integration (2026-11-23)
+
+The subsequent Docker Desktop session built the helper and both proxies, applied the
+Coding migration after a local database backup, and enabled the local backend through
+an ignored configuration overlay. The repository default remains disabled. This is
+a local development setup; production still uses the dedicated execution-node topology
+described above. Certificate stores, private configuration, logs and browser artifacts
+remain under the ignored `.codex/integration/coding-runner/` directory.
+
+Checks executed in this session:
+
+- Full backend suite with `CODING_MYSQL_TEST_*` configured: 373 tests, 0 failures/errors,
+  15 environment-gated skips. Both real MySQL timezone regressions executed and passed;
+  the other memory MySQL suite was not enabled.
+- The opt-in `CodingDockerIntegrationTest` executed against the actual mTLS runner and
+  passed, including non-root execution, missing socket/clone credentials, blocked metadata
+  networking, bounded storage and real Maven verification. The public fixture was pinned
+  to `jenkins-docs/simple-java-maven-app@bba641c3a0ff1be4fb4262bcef008bb437480032`.
+- Real proxy CONNECT checks allowed github.com on the clone network and
+  repo.maven.apache.org on the build network. Both rejected the other destination,
+  example.com and 169.254.169.254 with HTTP 403.
+- Helper contracts: 7 passed, including model hunk recounting while mismatched context
+  leaves files unchanged. Frontend: 3 unit tests, 13 browser scenarios, typecheck and
+  production build passed. Full lint completed with 0 errors and 18 existing warnings.
+
+Real startup uncovered and corrected unquoted Compose tmpfs options, inherited Maven
+entrypoint output corrupting helper JSON, a missing JDK path in sanitized command
+environments, and mixed JDBC/database clocks prematurely stopping fresh tasks. Live
+model calls also established the need for an explicit unified-diff schema, actionable
+format errors and Git hunk recounting. Rebuild the helper image when deploying these
+helper changes; the clock correction requires no additional SQL migration.
+
+The real-model browser check `node --env-file=.env frontend/tests/live/coding.mjs`
+also passed. Task `7913f1d4-4f76-40c0-b18c-e54372520bda` added `App.greet(String)`
+and four tests while preserving the existing two tests and `pom.xml`. Maven executed
+6 tests with 0 failures/errors/skips. The final verification fingerprint matches the
+persisted Diff; `cleanupPending=false`, and no task containers or volumes remained.
+Navigation away from Coding did not stop the task; revisiting and refreshing restored
+the completed result and Diff without browser errors. The successful task remains in
+the local admin account for review; intermediate diagnostic tasks and their own test
+sessions were removed. The private report and screenshot are
+`.codex/integration/coding-runner/live-coding-report.json` and `live-coding.png`.
+
+No real GitHub PR was created. Confirmation and fingerprint binding were covered by
+browser/API fixtures; the local fixture repository has no publishing credential.
+
+
+## Agent workbench integration (2026-11-24)
+
+The shared icon rail and contextual sidebars are now used by Work, Coding, knowledge
+and artifacts, including dark appearance and a mobile sidebar drawer. Coding uses
+project folders and independent task rows, a task conversation pane, and an optional
+results inspector. Icons are compiled locally. Layouts load lazily to avoid router/store
+initialization cycles when reopening an authenticated browser directly on a task link.
+
+After backing up the local database and stopping the previous backend, the workbench
+migration was applied. Work executions now belong to user/conversation/request IDs,
+rather than WebSocket connections. The local process is still a single backend instance.
+
+Executed against real services:
+
+- `frontend/tests/live/workbench.mjs` started two real Work requests in separate
+  conversations, verified the first still ran while viewing Coding and submitting the
+  second, then closed the entire browser. Both completed durably. Reopening the browser
+  and refreshing a conversation link restored exactly one complete answer matching the
+  stored text. Desktop, dark and narrow-screen checks passed without browser errors.
+- `frontend/tests/live/coding.mjs` submitted task
+  `58ece1f2-cd96-4695-9025-4c66227396ad` from the project composer, which automatically
+  created its independent workspace. After the browser page closed, the real model
+  added `greet(String)` and three tests in the isolated Docker runner. Maven ran 5 tests
+  with 0 failures/errors/skips. Refreshing its task link restored the summary, changed
+  file list and colored Diff without browser errors. The persisted change fingerprint
+  matches verification; cleanup completed, and no task containers or volumes remained.
+- The full backend suite with both `CODING_MYSQL_TEST_*` and
+  `WORKBENCH_MYSQL_TEST_*` configured passed: 384 tests, 0 failures/errors, 15
+  environment-gated skips. The four Workbench and two Coding MySQL contracts executed
+  and passed. Seven helper contract tests also passed.
+
+The successful conversations and Coding task remain in the local admin account for
+review. Private evidence is in `.codex/integration/workbench/`: `live-work-report.json`,
+`live-coding-report.json`, `work-home.png`, `work-conversation.png`, `work-dark.png`,
+`work-mobile.png` and `live-coding.png`. No real PR was published; publishing still
+requires an explicitly confirmed Diff and a configured repository credential.
+
+Final frontend checks for this workbench: `pnpm typecheck`, `pnpm lint`,
+`pnpm build`, 3 unit tests and all 16 browser scenarios passed. Lint reported
+0 errors and the same 18 existing warnings. Browser coverage includes per-thread
+drafts and reading position, background reconnect/deduplication, task deep links,
+explicit publication confirmation, revoked access and cross-account isolation.
+
+The additional opt-in `MemoryDocumentMySqlTest` also ran against real MySQL:
+13 tests passed with no skips, including two-connection claims, same-user ordering
+and deletion racing extraction. Together with the four Workbench and two Coding
+checks, 19 MySQL contract tests executed. A final browser smoke check against the
+restarted local services covered Work, Coding inspector tabs, knowledge, artifacts,
+dark appearance and mobile layout without browser errors.

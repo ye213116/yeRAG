@@ -79,6 +79,17 @@ class HelperTest(unittest.TestCase):
         self.assertNotIn('build.log', paths)
         self.assertEqual(snapshot['changeSetHash'], self.request('SNAPSHOT')['changeSetHash'])
 
+    def test_patch_recounts_hunk_lengths_and_still_rejects_wrong_context(self):
+        initial = (helper.ROOT / 'Example.java').read_bytes()
+        expected = {'Example.java': hashlib.sha256(initial).hexdigest()}
+        patch = '--- a/Example.java\n+++ b/Example.java\n@@ -1,99 +1,99 @@\n class Example {\n-  int value = 1;\n+  int value = 2;\n }\n'
+        wrong = patch.replace('int value = 1', 'int value = 9')
+        with self.assertRaises(ValueError):
+            self.request('PATCH', {'patch': wrong, 'expectedHashes': expected})
+        self.assertEqual(initial, (helper.ROOT / 'Example.java').read_bytes())
+        self.assertTrue(self.request('PATCH', {'patch': patch, 'expectedHashes': expected})['ok'])
+        self.assertIn('int value = 2;', (helper.ROOT / 'Example.java').read_text())
+
     def test_unchanged_large_binary_assets_do_not_block_text_edits(self):
         payload = b'\0' * (2 * 1024 * 1024)
         (helper.BASE / 'asset.bin').write_bytes(payload)

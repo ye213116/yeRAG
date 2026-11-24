@@ -33,10 +33,23 @@ public class MemoryController {
         return result(Map.of("conversationId",id));
     }
     @PostMapping("/sessions")
-    public Map<String,Object> create(Principal p) {
-        long uid=user(p); String id=store.current(uid,true); chat.cancelClosedMemoryRuns(uid);
-        context.cacheCurrent(uid,id);
+    public Map<String,Object> create(Principal p,@RequestBody(required=false) CreateSession request) {
+        long uid=user(p);String kind=request==null || request.kind()==null?"WORK":request.kind().toUpperCase(Locale.ROOT);
+        String id=store.current(uid,true,kind);
+        if("WORK".equals(kind)) context.cacheCurrent(uid,id);
         return result(Map.of("conversationId",id));
+    }
+    public record CreateSession(String kind) {}
+    public record RenameSession(String title) {}
+    @PatchMapping("/sessions/{id}")
+    public Map<String,Object> rename(Principal p,@PathVariable String id,@RequestBody RenameSession request) {
+        store.renameSession(user(p),id,request.title());return result(Map.of("updated",true));
+    }
+    @GetMapping("/sessions/{id}/run")
+    public Map<String,Object> run(Principal p,@PathVariable String id) { return result(chat.snapshot(user(p),id)); }
+    @PostMapping("/sessions/{id}/runs/{requestId}/stop")
+    public Map<String,Object> stop(Principal p,@PathVariable String id,@PathVariable String requestId) {
+        chat.stop(user(p),id,requestId);return result(Map.of("stopped",true));
     }
     @PostMapping("/sessions/{id}/resume")
     public Map<String,Object> resume(Principal p, @PathVariable String id) {
@@ -49,13 +62,16 @@ public class MemoryController {
         return result(Map.of("deleted",true));
     }
     @GetMapping("/sessions")
-    public Map<String,Object> list(Principal p) { return result(store.sessions(user(p))); }
+    public Map<String,Object> list(Principal p,@RequestParam(required=false) String kind,
+            @RequestParam(defaultValue="") String q,@RequestParam(defaultValue="0") int offset,@RequestParam(defaultValue="100") int limit) {
+        return result(store.sessions(user(p),kind==null?null:kind.toUpperCase(Locale.ROOT),q,offset,limit));
+    }
     @GetMapping("/sessions/{id}/messages")
     public Map<String,Object> history(Principal p, @PathVariable String id, @RequestParam(defaultValue="9223372036854775807") long before) {
         List<Map<String,Object>> messages = new ArrayList<>();
         for (var t : store.historyBefore(user(p),id,before)) {
-            messages.add(Map.of("role","user","content",t.question(),"timestamp",t.createdAt().toString(),"turnId",t.id()));
-            messages.add(Map.of("role","assistant","content",t.answer(),"timestamp",t.createdAt().toString(),"turnId",t.id(),"status","finished"));
+            messages.add(Map.of("role","user","content",t.question(),"timestamp",t.createdAt().toString(),"turnId",t.id(),"requestId",t.requestId()));
+            messages.add(Map.of("role","assistant","content",t.answer(),"timestamp",t.createdAt().toString(),"turnId",t.id(),"requestId",t.requestId(),"status","finished"));
         }
         return result(messages);
     }

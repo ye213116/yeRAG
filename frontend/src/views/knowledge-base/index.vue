@@ -253,6 +253,16 @@ function handleSearch() {
 }
 // #endregion
 
+const route = useRoute();
+watch(
+  () => route.query.action,
+  action => {
+    if (action === 'upload') uploadVisible.value = true;
+    if (action === 'search') searchVisible.value = true;
+  },
+  { immediate: true }
+);
+
 // 渲染上传状态
 function renderStatus(status: UploadStatus, percentage: number) {
   if (status === UploadStatus.Completed) return <NTag type="success">已完成</NTag>;

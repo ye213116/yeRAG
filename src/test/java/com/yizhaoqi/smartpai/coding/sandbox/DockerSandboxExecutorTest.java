@@ -47,7 +47,10 @@ class DockerSandboxExecutorTest {
         executor.preflight();
         var result=executor.execute(workspace,Operation.READ,Map.of("path","Example.java"),Duration.ofSeconds(3),() -> {});
         assertEquals("fixture text",result.path("content").asText());
-        assertEquals(List.of("python3","/opt/yerag/helper.py"),json.convertValue(container.path("Cmd"),List.class));
+        // The Maven base image's entrypoint writes startup messages to stdout, corrupting the JSON protocol.
+        assertEquals(List.of("python3","/opt/yerag/helper.py"),json.convertValue(container.path("Entrypoint"),List.class));
+        assertTrue(container.path("Cmd").isArray());
+        assertTrue(container.path("Cmd").isEmpty());
         assertEquals("10001:10001",container.path("User").asText());
         JsonNode host=container.path("HostConfig");assertTrue(host.path("ReadonlyRootfs").asBoolean());
         assertEquals("none",host.path("NetworkMode").asText());

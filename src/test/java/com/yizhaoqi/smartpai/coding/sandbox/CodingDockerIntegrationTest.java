@@ -33,6 +33,8 @@ class CodingDockerIntegrationTest {
             var check=sandbox.execute(workspace,Operation.COMMAND,Map.of("argv",List.of("python3","-c",
                     "import os, pathlib, socket, shutil; assert os.getuid()!=0; assert not pathlib.Path('/var/run/docker.sock').exists(); assert 'YERAG_CLONE_TOKEN' not in os.environ; assert shutil.disk_usage('/workspace').total<=268439552; s=socket.socket(); s.settimeout(1); assert s.connect_ex(('169.254.169.254',80))!=0")),Duration.ofSeconds(10),() -> {});
             assertTrue(check.path("ok").asBoolean(),check.toString());
+            var maven=sandbox.execute(workspace,Operation.COMMAND,Map.of("argv",List.of("mvn","--version")),Duration.ofSeconds(10),() -> {});
+            assertTrue(maven.path("ok").asBoolean(),maven.toString());
             var verification=sandbox.execute(workspace,Operation.TEST,Map.of(),Duration.ofSeconds(120),() -> {});
             assertEquals("PASSED",verification.path("verification").path("status").asText(),verification.toString());
             var snapshot=sandbox.execute(workspace,Operation.SNAPSHOT,Map.of(),Duration.ofSeconds(20),() -> {});

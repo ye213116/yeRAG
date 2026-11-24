@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, useAttrs } from 'vue';
 import { Icon } from '@iconify/vue';
+import { workbenchIcons } from './workbench-icons';
 
 defineOptions({ name: 'SvgIcon', inheritAttrs: false });
 
@@ -20,6 +21,7 @@ interface Props {
 const props = defineProps<Props>();
 
 const attrs = useAttrs();
+const bundledIcon = computed(() => workbenchIcons[props.icon || '']);
 
 const bindAttrs = computed<{ class: string; style: string }>(() => ({
   class: (attrs.class as string) || '',
@@ -47,7 +49,8 @@ const renderLocalIcon = computed(() => props.localIcon || !props.icon);
     </svg>
   </template>
   <template v-else>
-    <Icon v-if="icon" :icon="icon" v-bind="bindAttrs" />
+    <component :is="bundledIcon" v-if="bundledIcon" v-bind="bindAttrs" />
+    <Icon v-else-if="icon" :icon="icon" v-bind="bindAttrs" />
   </template>
 </template>
 

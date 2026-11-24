@@ -54,6 +54,8 @@ public class MemoryStore {
             return null;
         });
         db.queryForList("SELECT active_turn_id,context_expires_at,context_summary,summary_covered_turn_seq,summary_revision FROM chat_session WHERE 1=0");
+        db.queryForList("SELECT title,kind FROM chat_session WHERE 1=0");
+        db.queryForList("SELECT failure_code FROM chat_turn WHERE 1=0");
         db.queryForList("SELECT user_turn_seq,request_hash,context_sync_status FROM chat_turn WHERE 1=0");
         db.queryForList("SELECT lease_token,lease_until,failure_stage FROM memory_extraction_task WHERE 1=0");
         db.queryForList("SELECT user_id,memory_type,content,version,created_at,updated_at FROM memory_document WHERE 1=0");
@@ -102,34 +104,57 @@ public class MemoryStore {
         return rows.get(0);
     }
     public List<Map<String, Object>> sessions(long user) {
-        return db.queryForList("SELECT id,status,last_activity_at FROM chat_session WHERE user_id=? AND status<>'DELETED' ORDER BY last_activity_at DESC,id DESC LIMIT 100", user);
+        return sessions(user,null,"",0,100);
+    }
+    public List<Map<String,Object>> sessions(long user,String kind,String query,int offset,int limit) {
+        if(kind!=null && !Set.of("WORK","CODING").contains(kind)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"无效会话类型");
+        String pattern="%"+Objects.toString(query,"").replace("!","!!").replace("%","!%").replace("_","!_")+"%";
+        return db.queryForList("""
+            SELECT s.id,s.status,s.title,s.kind,s.last_activity_at,t.request_id AS active_request_id,
+              CASE WHEN t.status='RUNNING' THEN 'RUNNING' ELSE 'IDLE' END AS run_status
+            FROM chat_session s LEFT JOIN chat_turn t ON t.id=s.active_turn_id
+            WHERE s.user_id=? AND s.status<>'DELETED' AND (? IS NULL OR s.kind=?)
+              AND COALESCE(s.title,'新对话') LIKE ? ESCAPE '!'
+            ORDER BY s.last_activity_at DESC,s.id DESC LIMIT ? OFFSET ?
+            """,user,kind,kind,pattern,Math.max(1,Math.min(100,limit)),Math.max(0,offset));
+    }
+    public void renameSession(long user,String id,String title) {
+        if(title==null || title.isBlank() || title.codePointCount(0,title.length())>100)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"标题需要 1–100 个字符");
+        session(user,id);
+        db.update("UPDATE chat_session SET title=? WHERE id=? AND user_id=? AND status<>'DELETED'",title.strip(),id,user);
     }
     public String current(long user, boolean forceNew) {
-        return tx.execute(s -> { lockUser(user); return currentLocked(user, forceNew, Instant.now()); });
+        return current(user,forceNew,"WORK");
+    }
+    public String current(long user,boolean forceNew,String kind) {
+        if(!Set.of("WORK","CODING").contains(kind)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"无效会话类型");
+        return tx.execute(s -> { lockUser(user); return currentLocked(user,forceNew,Instant.now(),kind); });
     }
     private String currentLocked(long user, boolean forceNew, Instant now) {
-        var rows = db.queryForList("SELECT * FROM chat_session WHERE user_id=? AND status='OPEN' ORDER BY created_at DESC", user);
+        return currentLocked(user,forceNew,now,"WORK");
+    }
+    private String currentLocked(long user, boolean forceNew, Instant now,String kind) {
+        var rows = db.queryForList("SELECT * FROM chat_session WHERE user_id=? AND kind=? AND status='OPEN' ORDER BY created_at DESC", user,kind);
         if (!rows.isEmpty()) {
             var row = rows.get(0);
             if (!forceNew) return (String) row.get("id");
             for (var old : rows) {
-                db.update("UPDATE chat_turn SET status='CANCELLED' WHERE session_id=? AND status='RUNNING'", old.get("id"));
-                db.update("UPDATE chat_session SET status='CLOSED',closed_at=?,active_turn_id=NULL,revision=revision+1 WHERE id=?", time(now), old.get("id"));
+                db.update("UPDATE chat_session SET status='CLOSED',closed_at=?,revision=revision+1 WHERE id=?", time(now), old.get("id"));
             }
         }
         String id = UUID.randomUUID().toString();
-        db.update("INSERT INTO chat_session(id,user_id,status,last_activity_at,context_expires_at,created_at,revision) VALUES (?,?,'OPEN',?,?,?,0)",
-                id, user, time(now), null, time(now));
+        db.update("INSERT INTO chat_session(id,user_id,kind,status,last_activity_at,context_expires_at,created_at,revision) VALUES (?,?,?,'OPEN',?,?,?,0)",
+                id, user, kind, time(now), null, time(now));
         return id;
     }
     /** Explicit selection resumes an existing conversation, preserving its history and summary. */
     public String resume(long user, String id) {
         return tx.execute(s -> {
             lockUser(user);
-            session(user,id);
+            var selected=session(user,id);
             Instant now = Instant.now();
-            db.update("UPDATE chat_turn SET status='CANCELLED' WHERE user_id=? AND session_id<>? AND status='RUNNING'",user,id);
-            db.update("UPDATE chat_session SET status='CLOSED',closed_at=?,active_turn_id=NULL,revision=revision+1 WHERE user_id=? AND id<>? AND status='OPEN'",time(now),user,id);
+            db.update("UPDATE chat_session SET status='CLOSED',closed_at=?,revision=revision+1 WHERE user_id=? AND id<>? AND kind=? AND status='OPEN'",time(now),user,id,selected.get("kind"));
             db.update("UPDATE chat_session SET status='OPEN',closed_at=NULL,last_activity_at=?,revision=revision+1 WHERE id=? AND user_id=?",time(now),id,user);
             return id;
         });
@@ -165,7 +190,6 @@ public class MemoryStore {
             }
             if (requestedSession != null) {
                 var selected = session(user, requestedSession);
-                if (!"OPEN".equals(selected.get("status"))) throw new ResponseStatusException(HttpStatus.CONFLICT, "请切换到当前会话");
             }
             Instant now = Instant.now();
             String id = requestedSession == null ? currentLocked(user, false, now) : requestedSession;
@@ -176,6 +200,9 @@ public class MemoryStore {
             db.update("UPDATE chat_turn SET user_turn_seq=? WHERE id=?", turn, turn);
             db.update("UPDATE chat_session SET active_turn_id=?,last_activity_at=?,revision=revision+1 WHERE id=?",
                     turn, time(now), id);
+            String normalized=question.strip().replaceAll("\\s+"," ");
+            String title=normalized.substring(0,normalized.offsetByCodePoints(0,Math.min(100,normalized.codePointCount(0,normalized.length()))));
+            db.update("UPDATE chat_session SET title=? WHERE id=? AND title IS NULL",title,id);
             return new Begin(new Turn(turn, user, id, requestId, question, null, "RUNNING", now), true,
                     requestedSession != null && !id.equals(requestedSession));
         });
@@ -187,7 +214,7 @@ public class MemoryStore {
     }
     public Turn turn(long id) { return turn(db.queryForMap("SELECT * FROM chat_turn WHERE id=?", id)); }
     public boolean running(Turn t) {
-        return db.queryForObject("SELECT COUNT(*) FROM chat_turn t JOIN chat_session s ON s.id=t.session_id WHERE t.id=? AND t.status='RUNNING' AND s.active_turn_id=t.id AND s.status='OPEN'", Long.class, t.id()) == 1;
+        return db.queryForObject("SELECT COUNT(*) FROM chat_turn t JOIN chat_session s ON s.id=t.session_id WHERE t.id=? AND t.status='RUNNING' AND s.active_turn_id=t.id AND s.status<>'DELETED'", Long.class, t.id()) == 1;
     }
     public boolean complete(Turn t, String answer) {
         return Boolean.TRUE.equals(tx.execute(s -> {
@@ -208,6 +235,29 @@ public class MemoryStore {
             lockUser(t.userId());
             db.update("UPDATE chat_turn SET status=? WHERE id=? AND status='RUNNING'", status, t.id());
             db.update("UPDATE chat_session SET active_turn_id=NULL,revision=revision+1 WHERE id=? AND active_turn_id=?", t.sessionId(), t.id());
+        });
+    }
+    public void failureCode(Turn t,String code) {
+        db.update("UPDATE chat_turn SET failure_code=? WHERE id=? AND user_id=? AND status='FAILED'",code,t.id(),t.userId());
+    }
+    public void requireWorkSession(long user,String id) {
+        if(!"WORK".equals(session(user,id).get("kind"))) throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"请选择 Work 会话");
+    }
+    public Map<String,Object> latestRun(long user,String id) {
+        session(user,id);
+        var rows=db.queryForList("SELECT id,request_id,question,answer,status,failure_code FROM chat_turn WHERE session_id=? AND user_id=? ORDER BY id DESC LIMIT 1",id,user);
+        if(rows.isEmpty()) return Map.of("state","IDLE","conversationId",id,"seq",0);
+        var row=rows.get(0);var snapshot=new HashMap<String,Object>();
+        snapshot.put("conversationId",id);snapshot.put("requestId",row.get("request_id"));snapshot.put("turnId",row.get("id").toString());
+        snapshot.put("question",Objects.toString(row.get("question"),""));snapshot.put("text",Objects.toString(row.get("answer"),""));
+        snapshot.put("state",row.get("status"));snapshot.put("seq",0);snapshot.put("failureCode",Objects.toString(row.get("failure_code"),""));
+        return snapshot;
+    }
+    /** One execution instance: a new process never resumes an old provider request. */
+    public void recoverWorkRuns() {
+        tx.executeWithoutResult(s -> {
+            db.update("UPDATE chat_turn SET status='FAILED',failure_code='SERVER_RESTARTED' WHERE status='RUNNING' AND session_id IN (SELECT id FROM chat_session WHERE kind='WORK')");
+            db.update("UPDATE chat_session SET active_turn_id=NULL WHERE kind='WORK' AND active_turn_id IN (SELECT id FROM chat_turn WHERE status='FAILED')");
         });
     }
     public List<Turn> history(long user, String session) {
@@ -549,6 +599,9 @@ public class MemoryStore {
                 JOIN chat_turn turn_row ON turn_row.id=task.turn_id
                 WHERE task.attempts<? AND ((task.status='PENDING' AND task.next_attempt_at<=?)
                     OR (task.status='RUNNING' AND task.lease_until<?))
+                AND NOT EXISTS (
+                    SELECT 1 FROM chat_turn earlier_run WHERE earlier_run.user_id=turn_row.user_id
+                    AND earlier_run.user_turn_seq<turn_row.user_turn_seq AND earlier_run.status='RUNNING')
                 AND NOT EXISTS (
                     SELECT 1 FROM memory_extraction_task earlier_task
                     JOIN chat_turn earlier_turn ON earlier_turn.id=earlier_task.turn_id

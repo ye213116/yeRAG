@@ -10,7 +10,7 @@ services:
     pids_limit: 64
     mem_limit: 128m
     cpus: 0.5
-    tmpfs: [/tmp:rw,nosuid,nodev,size=16777216]
+    tmpfs: ["/tmp:rw,nosuid,nodev,size=16777216"]
     volumes: [./proxy/clone.conf.example:/etc/squid/yerag.conf:ro]
     networks:
       clone:
@@ -26,7 +26,7 @@ services:
     pids_limit: 64
     mem_limit: 128m
     cpus: 0.5
-    tmpfs: [/tmp:rw,nosuid,nodev,size=16777216]
+    tmpfs: ["/tmp:rw,nosuid,nodev,size=16777216"]
     volumes: [./proxy/build.conf.example:/etc/squid/yerag.conf:ro]
     networks:
       build:

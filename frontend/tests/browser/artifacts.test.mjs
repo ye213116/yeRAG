@@ -99,6 +99,10 @@ before(async () => {
       send([{ id: owner, status: 'OPEN', last_activity_at: '2026-11-19T01:00:00Z' }]);
       return;
     }
+    if (/\/memory\/sessions\/[^/]+\/run$/.test(path)) {
+      send({ state: 'IDLE', seq: 0 });
+      return;
+    }
     if (/\/memory\/sessions\/[^/]+\/messages$/.test(path)) {
       send([]);
       return;
@@ -222,6 +226,7 @@ after(async () => {
 async function login(owner) {
   const context = await browser.createBrowserContext();
   const page = await context.newPage();
+  await page.setViewport({ width: 1440, height: 1000 });
   await page.setRequestInterception(true);
   page.on('request', request =>
     ['127.0.0.1', 'localhost'].includes(new URL(request.url()).hostname) ? request.continue() : request.abort()
@@ -403,7 +408,7 @@ test('chat report links and plain-path actions navigate without reloading the ap
       await router.push('/chat');
     });
     await page.waitForFunction(() =>
-      [...document.querySelectorAll('button')].some(b => b.textContent.trim() === '新建对话' && !b.disabled)
+      [...document.querySelectorAll('button')].some(b => b.textContent.trim() === '新聊天' && !b.disabled)
     );
     await page.evaluate(async content => {
       const { useChatStore } = await import('/src/store/modules/chat/index.ts');

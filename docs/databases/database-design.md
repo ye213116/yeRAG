@@ -158,6 +158,8 @@ Memory 只保存两类长期记忆：
 | --- | --- | --- | --- |
 | `id` | `CHAR(36)` | 非空 | UUID 主键 |
 | `user_id` | `BIGINT` | 非空 | 外键到 `users.id` |
+| `title` | `VARCHAR(200)` | 可空 | 首个问题自动生成，所有者可改名为 1–100 个字符 |
+| `kind` | `VARCHAR(16)` | 默认 `WORK` | `WORK` / `CODING`，区分聊天列表和任务内部会话 |
 | `status` | `VARCHAR(20)` | 非空 | `OPEN`、`CLOSED`、`DELETED` |
 | `last_activity_at` | `DATETIME(6)` | 非空 | 最近一次被接受的活动时间 |
 | `context_expires_at` | `DATETIME(6)` | 可空 | 退役兼容字段；不再控制摘要或会话生命周期，新数据为 NULL |
@@ -169,7 +171,7 @@ Memory 只保存两类长期记忆：
 | `summary_revision` | `BIGINT` | 默认 `0` | 摘要条件更新版本 |
 | `active_turn_id` | `BIGINT` | 可空 | 当前执行中的回合 ID |
 
-`active_turn_id` 不设置循环外键：`chat_turn` 本身已经引用 `chat_session`，当前回合一致性由锁定 `users.id` 的事务维护。一个用户同时只应有一个可写的 `OPEN` 会话。
+`active_turn_id` 不设置循环外键：`chat_turn` 本身已经引用 `chat_session`，当前回合一致性由锁定 `users.id` 的事务维护。每种 kind 保留一个表示当前选择的 `OPEN` 会话；`CLOSED` 表示未选中，仍可完成后台执行。每个会话只允许一个活动回合，不同会话可并行。
 
 ### 6.2 `chat_turn`
 
@@ -184,6 +186,7 @@ Memory 只保存两类长期记忆：
 | `question` | `MEDIUMTEXT` | 可空 | 原始问题，保留至用户删除会话 |
 | `answer` | `MEDIUMTEXT` | 可空 | 完整回答，保留至用户删除会话 |
 | `status` | `VARCHAR(20)` | 非空 | `RUNNING`、`COMPLETED`、`CANCELLED`、`FAILED` |
+| `failure_code` | `VARCHAR(40)` | 可空 | 如 `SERVER_RESTARTED`；供刷新后解释中断，不存服务凭据 |
 | `context_sync_status` | `VARCHAR(20)` | 默认 `NONE` | `NONE`、`PENDING`、`SYNCED`、`EXPIRED` |
 | `context_sync_attempts` | `INT` | 默认 `0` | 短期上下文同步尝试次数 |
 | `context_next_attempt_at` | `DATETIME(6)` | 可空 | 下次同步时间 |
@@ -296,14 +299,14 @@ COMPLETED turn -> durable task / per-user ordered lease
 - MySQL 是 session、turn、滚动摘要、task 和长期 Markdown 文档的权威来源。
 - Redis 的 `memory:user:{uid}:current` 与 `memory:session:{sid}:context` 只是有 TTL 的短期缓存；缓存丢失后从 MySQL 恢复。
 - 原始问答与滚动摘要默认不自动到期。`context_expires_at`、`content_expires_at` 退役，仅保留兼容列；旧的到期时间不再限制读取、幂等重放、摘要或长期提取。缓存 TTL 默认仍是 7 天。
-- 空闲不切换会话。用户显式创建新会话或调用 `POST /api/v1/memory/sessions/{id}/resume` 恢复旧会话；保持一个 OPEN 会话，切换时取消旧会话活动回合。
+- 空闲不切换会话。用户显式创建新会话或调用 `POST /api/v1/memory/sessions/{id}/resume` 恢复旧会话；仅更新同 kind 的选择状态，不取消旧会话活动回合。WebSocket 是订阅者，断开也不取消执行。
 - `DELETE /api/v1/memory/sessions/{id}` 锁定用户后删除关联提取任务和所有回合、清空摘要，仅保留不含正文的 DELETED 会话标记，防止旧 Redis 迁移重建原 UUID。列表和所有访问接口排除此标记。此前已提取的跨会话长期 Markdown 记忆保持其原有生命周期。
 - 完成回合与删除都锁定 `users.id`；长期 patch 提交按 user → task → document 顺序加锁并重读任务。任务删除后迟到 patch 不执行，迟到回答完成返回 false，迟到摘要条件更新失败。
 - Redis 缓存写入使用 Lua 检查删除标记，删除时原子写入短期删除标记并清理缓存。读取始终先验证 MySQL 所有权和会话版本；即使 Redis 在删除期间不可用，旧缓存也不能用于恢复会话。
 - 已完成的长期记忆 section 不随问答正文过期；删除通过 tombstone 表示。
 - 模型调用发生在数据库事务外；最终 patch 应用与任务完成状态在同一事务内提交。
 - 下一轮直接从 MySQL 读取已完成问答，不等待 Worker；缓存的会话版本、摘要版本、预算版本必须匹配。Worker 只刷新缓存与异步提取长期 Markdown 记忆，不生成短期摘要。
-- 会话写入先锁定 `users.id`，避免同一用户并发创建多个活动回合。
+- 会话写入先锁定 `users.id`，维护请求幂等和每会话一个活动回合；模型执行在锁外，可并行处理不同会话。长期提取按同用户 `user_turn_seq` 排序，较早回合仍运行或其提取任务仍待处理时，后面的提取不能越过。
 - 所有用户级查询必须带认证后的数据库 `user_id`，不能使用 WebSocket 连接 ID 代替所有者身份。
 
 ## 9. 初始化与校验
@@ -368,6 +371,12 @@ conversation_id is a provenance identifier, not a cascading foreign key. Only ta
 owners can read execution history or publish results.
 
 Workers claim QUEUED rows under a transaction; PREPARING / RUNNING rows have a heartbeat.
+Heartbeat writes and the 60-second execution / 300-second publishing expiry checks
+all use the database clock (`CURRENT_TIMESTAMP` / `TIMESTAMPADD`). The stored DATETIME
+has no timezone; comparing it with a JVM-bound Timestamp can prematurely expire a
+fresh task when JDBC and the MySQL session use different timezones. The opt-in
+`CodingTaskMySqlTest` covers fresh and expired rows with JDBC in Asia/Shanghai and
+the database session in UTC. No schema migration is needed for this clock correction.
 The first version supports one backend execution instance and bounded concurrency.
 Stale work is stopped and marked INTERRUPTED, never automatically replayed. Cancellation
 requests remain separate until container termination and result collection complete.
@@ -389,3 +398,16 @@ release a workspace owned by a newly claimed task. Publishing uses the existing 
 as its retry timeout and never resumes external mutations without another confirmation.
 Repository configuration can narrow the owner-selected permission snapshot at runtime;
 revocation is rechecked during tool execution and before GitHub writes.
+
+
+### 2026-11-23 工作台与后台聊天迁移
+
+已有 Coding 表的环境停止旧后端并备份后，执行 [20261123_agent_workbench.sql](migrations/20261123_agent_workbench.sql)。若尚未部署 Coding 表，先执行 [20261123_coding_tasks.sql](migrations/20261123_coding_tasks.sql)。空库直接执行完整 DDL，不能再重复执行增量 ALTER。迁移从首个问题回填标题，只把完全由 Coding 提交构成的会话归为 CODING，混合历史保留在 WORK。
+
+`GET /api/v1/memory/sessions` 保持数组响应，增加 `kind/q/offset/limit` 参数及标题、活动请求状态；查询与改名均限定认证所有者。`PATCH /sessions/{id}` 修改标题；`GET /sessions/{id}/run` 返回原会话当前运行的累计文本、状态及单调 `seq`，或数据库终态。`POST /sessions/{id}/runs/{requestId}/stop` 仅停止指定请求。以上相对路径均位于 `/api/v1/memory`。
+
+Work 运行由单个后端进程托管，默认每用户 3 路、全局 16 路，活动回答快照上限 2 MiB；对应 `ai.chat.max-concurrent-runs-per-user`、`max-concurrent-runs`、`max-buffer-bytes`。事件同时携带原始 conversationId、requestId、turnId、seq，客户端合并快照与事件并去重。仅完整回答写入 COMPLETED；取消、失败和删除均不能保存部分答案为完成。进程重启把遗留 RUNNING Work 回合标记 FAILED / SERVER_RESTARTED，不自动重新调用模型。该版本不支持多实例 Work 调度。
+
+本次执行：`MemoryWorkbenchTest` 的生命周期、检索标题、越权、提取顺序和重启恢复用例在 H2 与启用 `WORKBENCH_MYSQL_TEST_*` 的真实 MySQL 各通过 4 项。MySQL 用例创建并删除自己的随机测试库。
+
+本次还启用并执行现有 `MemoryDocumentMySqlTest`：13 项全部通过（无跳过），含不同连接领取任务、同用户顺序及删除与提取竞争保护。配合 Workbench 4 项与 Coding 2 项，共执行 19 项真实 MySQL 契约；未把 H2 或默认跳过的用例当作 MySQL 证据。

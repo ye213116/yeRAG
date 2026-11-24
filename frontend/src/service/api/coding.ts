@@ -20,17 +20,24 @@ export interface CodingTaskSummary {
   workspace_id: string;
   status: string;
   summary?: string;
+  repository_id?: string;
+  branch?: string;
+  title?: string;
+  created_at?: string;
+  request_id?: string;
 }
 export interface CodingTask {
   id: string;
   workspaceId: string;
   status: string;
   summary: string | null;
+  message?: string;
   baseSha: string;
   publishState: string;
   prUrl: string | null;
   result: {
     diff?: string;
+    changes?: Array<{ path: string; content: string | null; mode: string }>;
     changeSetHash?: string;
     verification?: { id?: string; status: string; tests?: number; failures?: number; errors?: number };
     cleanupPending?: boolean;
@@ -47,7 +54,8 @@ export const createCodingWorkspace = (data: {
 }) => request<CodingWorkspace>({ url: '/coding/workspaces', method: 'post', data });
 export const updateCodingPermissions = (id: string, permissions: WorkspacePermission[]) =>
   request({ url: `/coding/workspaces/${encodeURIComponent(id)}/permissions`, method: 'patch', data: { permissions } });
-export const fetchCodingTasks = () => request<CodingTaskSummary[]>({ url: '/coding/tasks' });
+export const fetchCodingTasks = (repositoryId?: string) =>
+  request<CodingTaskSummary[]>({ url: '/coding/tasks', params: { repositoryId } });
 export const fetchCodingTask = (id: string) => request<CodingTask>({ url: `/coding/tasks/${encodeURIComponent(id)}` });
 export const cancelCodingTask = (id: string) =>
   request({ url: `/coding/tasks/${encodeURIComponent(id)}/cancel`, method: 'post' });

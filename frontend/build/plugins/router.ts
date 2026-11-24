@@ -4,6 +4,8 @@ import type { RouteKey } from '@elegant-router/types';
 
 export function setupElegantRouter() {
   return ElegantVueRouter({
+    // Keep layout/store dependencies outside the router bootstrap cycle.
+    layoutLazyImport: () => true,
     layouts: {
       base: 'src/layouts/base-layout/index.vue',
       blank: 'src/layouts/blank-layout/index.vue'

@@ -10,15 +10,6 @@ defineOptions({
   name: 'GlobalContent'
 });
 
-interface Props {
-  /** Show padding for content */
-  showPadding?: boolean;
-}
-
-withDefaults(defineProps<Props>(), {
-  showPadding: true
-});
-
 const appStore = useAppStore();
 const themeStore = useThemeStore();
 const routeStore = useRouteStore();
@@ -47,8 +38,7 @@ function resetScroll() {
           :is="Component"
           v-if="appStore.reloadFlag"
           :key="tabStore.getTabIdByRoute(route)"
-          :class="{ 'p-[32px_16px_16px_32px]': showPadding }"
-          class="flex-grow bg-layout transition-300"
+          :class="['chat', 'coding'].includes(String(route.name)) ? 'workspace-page' : 'business-page'"
         />
       </KeepAlive>
     </Transition>

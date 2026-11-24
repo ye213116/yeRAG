@@ -1,58 +1,94 @@
 <script setup lang="ts">
-import { fetchCodingCapabilities } from '@/service/api/coding';
+import { useRoute } from 'vue-router';
 import ChatList from './modules/chat-list.vue';
 import InputBox from './modules/input-box.vue';
-import CodingPanel from './modules/coding-panel.vue';
-const codingEnabled = ref(false);
-onMounted(async () => {
-  const result = await fetchCodingCapabilities();
-  if (!result.error) codingEnabled.value = result.data.enabled;
-});
-const modeOptions = computed(() => [
-  { label: 'Work', value: 'work' },
-  ...(codingEnabled.value ? [{ label: 'Coding', value: 'coding' }] : [])
-]);
-const chatStore = useChatStore();
+const chat = useChatStore();
+const route = useRoute();
+watch(
+  () => route.query.conversation,
+  async id => {
+    if (typeof id === 'string') await chat.viewConversation(id);
+    else if (!chat.conversationId) await chat.loadCurrentConversation();
+  },
+  { immediate: true }
+);
 </script>
 
 <template>
-  <div class="mx-auto max-w-1080px w-full flex-col gap-4">
-    <div class="flex items-center gap-4">
-      <NSelect
-        v-model:value="chatStore.agentMode"
-        class="w-32"
-        :options="modeOptions"
-        :disabled="['loading', 'pending'].includes(chatStore.list.at(-1)?.status || '')"
-        aria-label="工作模式"
-      />
-      <NButton @click="$router.push('/artifacts')">成果库</NButton>
-      <NButton :disabled="!chatStore.memoryReady" @click="chatStore.newConversation">新建对话</NButton>
-      <NPopconfirm @positive-click="chatStore.deleteConversation">
-        <template #trigger>
-          <NButton :disabled="!chatStore.memoryReady || !chatStore.conversationId" type="error" quaternary>
-            删除对话
-          </NButton>
-        </template>
-        删除此会话及全部原始问答？此操作无法撤销。
-      </NPopconfirm>
-      <NSelect
-        class="w-72"
-        :value="chatStore.conversationId"
-        :options="chatStore.sessionOptions"
-        :disabled="!chatStore.memoryReady || ['loading', 'pending'].includes(chatStore.list.at(-1)?.status || '')"
-        @update:value="chatStore.viewConversation"
-      />
-      <NButton v-if="!chatStore.memoryReady" @click="chatStore.loadCurrentConversation()">重新加载会话</NButton>
-      <NText depth="3">本轮上下文按会话隔离，个人记忆可跨会话使用</NText>
+  <section
+    class="work-chat"
+    :class="{ 'is-empty': !chat.list.length }"
+    aria-label="Work 聊天"
+    :data-ready="chat.memoryReady"
+    :data-conversation-id="chat.conversationId"
+  >
+    <div v-if="!chat.list.length" class="chat-welcome">
+      <div class="welcome-mark">y</div>
+      <h1>今天想完成什么？</h1>
+      <p>问问题、查资料，或把想法变成成果。</p>
     </div>
-    <NAlert v-if="chatStore.memoryNotice" type="info">{{ chatStore.memoryNotice }}</NAlert>
-    <NButton v-if="chatStore.hasOlderMessages" :loading="chatStore.historyLoading" @click="chatStore.loadOlderMessages">
-      加载更早消息
-    </NButton>
-    <CodingPanel v-if="chatStore.agentMode === 'coding'" />
-    <ChatList />
-    <InputBox />
-  </div>
+    <ChatList v-else :key="chat.conversationId" />
+    <div class="composer-region">
+      <NAlert v-if="chat.memoryNotice" type="warning" class="mb-3">
+        {{ chat.memoryNotice }}
+        <NButton text @click="chat.viewConversation(chat.conversationId)">重新加载</NButton>
+      </NAlert>
+      <InputBox />
+      <p class="composer-caption">yeRAG 可能会出错，重要信息请结合来源核对。</p>
+    </div>
+  </section>
 </template>
 
-<style scoped></style>
+<style scoped>
+.work-chat {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+.work-chat.is-empty {
+  justify-content: center;
+  padding-bottom: 12vh;
+}
+.chat-welcome {
+  text-align: center;
+  margin: 0 0 30px;
+}
+.welcome-mark {
+  font-size: 38px;
+  font-weight: 750;
+  color: #16966d;
+  letter-spacing: -4px;
+  margin-bottom: 15px;
+}
+.chat-welcome h1 {
+  font-size: 30px;
+  font-weight: 550;
+  letter-spacing: -1px;
+}
+.chat-welcome p {
+  font-size: 14px;
+  color: var(--shell-muted);
+  margin-top: 10px;
+}
+.composer-region {
+  width: min(800px, calc(100% - 56px));
+  margin: 0 auto;
+  padding: 14px 0 12px;
+  flex: none;
+}
+.composer-caption {
+  font-size: 11px;
+  text-align: center;
+  color: var(--shell-muted);
+  margin-top: 10px;
+}
+@media (max-width: 899px) {
+  .composer-region {
+    width: calc(100% - 28px);
+  }
+  .chat-welcome h1 {
+    font-size: 25px;
+  }
+}
+</style>
