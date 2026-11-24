@@ -2,6 +2,7 @@ package com.yizhaoqi.smartpai.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yizhaoqi.smartpai.agent.*;
+import com.yizhaoqi.smartpai.agent.plan.*;
 import com.yizhaoqi.smartpai.agent.model.AgentMessage;
 import com.yizhaoqi.smartpai.config.AiProperties;
 import com.yizhaoqi.smartpai.config.ChatRuntimeProperties;
@@ -39,6 +40,9 @@ public class ChatHandler {
     });
     private ChatRuntimeProperties limits=new ChatRuntimeProperties();
     private boolean closing;
+    private PlanStore plans;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void configurePlans(PlanStore value) { plans = value; }
     private com.yizhaoqi.smartpai.rag.trace.QuestionTelemetry telemetry;
     @org.springframework.beans.factory.annotation.Autowired public void configureRuntime(ChatRuntimeProperties value) { limits=value; }
     @org.springframework.beans.factory.annotation.Autowired public void configureTelemetry(com.yizhaoqi.smartpai.rag.trace.QuestionTelemetry value) { telemetry=value; }
@@ -50,6 +54,8 @@ public class ChatHandler {
         final Disposable.Composite subscriptions=Disposables.composite();
         final StringBuilder text=new StringBuilder();
         Turn turn;
+        PlanJournal journal;
+        SourceMode source;
         long seq;
         int bytes;
         String state="RUNNING",message="正在思考",question,runId="";
@@ -95,15 +101,21 @@ public class ChatHandler {
         attachSession(user,session);
         Run existing=activeRuns.get(key(user,request));
         if(existing!=null) {
-            if(!existing.conversation.equals(conversation) || !existing.question.equals(question)) reject(session,conversation,request,"请求标识已用于其他内容");
+            if(!existing.conversation.equals(conversation) || !existing.question.equals(question) || existing.source != source) reject(session,conversation,request,"请求标识已用于其他内容");
             else {var snapshot=new HashMap<>(existing.snapshot());snapshot.put("type","run_snapshot");sendJson(session,snapshot);}return;
         }
         Run run=new Run(user,conversation,request,session.getId(),question);
         if(!admit(run)) {reject(session,conversation,request,"后台回答已达并发上限，请等待完成或停止其他回答");return;}
-        var subscription=Mono.fromCallable(() -> {
+        run.source = source;
+        launch(run, session, () -> {
             memoryStore.requireWorkSession(Long.parseLong(user),conversation);
             return memoryStore.begin(Long.parseLong(user),conversation,request,question);
-        }).subscribeOn(Schedulers.boundedElastic()).flatMap(begin -> {
+        }, false);
+    }
+    private void launch(Run run, WebSocketSession session, java.util.function.Supplier<MemoryTypes.Begin> beginWork, boolean resumed) {
+        String user = run.user, conversation = run.conversation, request = run.request, question = run.question;
+        SourceMode source = run.source;
+        var subscription=Mono.fromCallable(beginWork::get).subscribeOn(Schedulers.boundedElastic()).flatMap(begin -> {
             synchronized(run) {
                 run.turn=begin.turn();
                 if(!begin.fresh()) {
@@ -115,7 +127,8 @@ public class ChatHandler {
                     return Mono.<AgentRunResult>empty();
                 }
                 if(run.subscriptions.isDisposed()) { memoryStore.cancel(run.turn,"CANCELLED");return Mono.empty(); }
-                emit(run,Map.of("type","run_started","question",question));
+                if (plans != null && run.journal == null) run.journal = new PlanJournal(plans, run.turn, source);
+                emit(run,Map.of("type",resumed ? "run_resumed" : "run_started","question",question));
                 emit(run,Map.of("type","conversation","switched",begin.switched()));
             }
             MemoryTypes.Context context;
@@ -127,6 +140,7 @@ public class ChatHandler {
                 public void onStatus(String status,String message,Map<String,Object> details) {
                     synchronized(run) {
                         if(!"RUNNING".equals(run.state)) return;
+                        if (run.journal != null && run.journal.created()) run.journal.requireCurrent();
                         run.message=message;
                         if("plan_updated".equals(status) && details.containsKey("tasks")) run.planTasks=details.get("tasks");
                         emit(run,Map.of("type","agent_status","status",status,"message",message,"details",details));
@@ -135,6 +149,7 @@ public class ChatHandler {
                 public void onChunk(String chunk) {
                     synchronized(run) {
                         if(!"RUNNING".equals(run.state)) return;
+                        if (run.journal != null && run.journal.created()) run.journal.requireCurrent();
                         run.bytes+=chunk.getBytes(StandardCharsets.UTF_8).length;
                         if(run.bytes>limits.getMaxBufferBytes()) throw new IllegalStateException("Answer exceeds snapshot budget");
                         run.text.append(chunk);emit(run,Map.of("chunk",chunk));
@@ -146,8 +161,9 @@ public class ChatHandler {
                 if(agentConfig.isEnabled()) answer=Mono.defer(() -> agentService.run(user,question,history,source,conversation,listener));
                 else if(source==SourceMode.KNOWLEDGE) answer=Mono.defer(() -> fallbackService.answer(user,question,history,listener));
                 else answer=Mono.error(new IllegalStateException("Agent unavailable"));
+                if (run.journal != null) answer = answer.contextWrite(ctx -> ctx.put(PlanJournal.CONTEXT_KEY, run.journal));
                 return answer.onErrorResume(error -> {
-                    if(source==SourceMode.KNOWLEDGE && agentConfig.isEnabled() && agentConfig.isFallbackEnabled() && run.text.isEmpty() && mayFallback(error))
+                    if(source==SourceMode.KNOWLEDGE && agentConfig.isEnabled() && agentConfig.isFallbackEnabled() && run.text.isEmpty() && (run.journal == null || !run.journal.created()) && mayFallback(error))
                         return fallbackService.answer(user,question,history,listener);
                     return Mono.error(error);
                 });
@@ -157,7 +173,7 @@ public class ChatHandler {
                 synchronized(run) {
                     if(!"RUNNING".equals(run.state) || run.subscriptions.isDisposed()) return;
                     try {
-                        if(!memoryStore.complete(run.turn,result.answer())) {persisted(result,user,false);fail(run,"本轮未能保存完整回答","SAVE_FAILED");return;}
+                        if(!(run.journal != null ? run.journal.complete(result, memoryStore) : memoryStore.complete(run.turn,result.answer()))) {persisted(result,user,false);fail(run,"本轮未能保存完整回答","SAVE_FAILED");return;}
                         persisted(result,user,true);run.state="COMPLETED";run.text.setLength(0);run.text.append(result.answer());
                         references.put(conversation,result.references());
                         emit(run,Map.of("type","completion","status","finished","sources",result.sources(),"runId",Objects.toString(result.runId(),"")));
@@ -166,21 +182,36 @@ public class ChatHandler {
             },error -> {
                 synchronized(run) {
                     if(!"RUNNING".equals(run.state)) return;
-                    if(run.turn==null) reject(session,conversation,request,error instanceof ResponseStatusException r?Objects.toString(r.getReason(),"请求被拒绝"):"无法开始本轮问答");
-                    else fail(run,"本轮未完成，服务暂不可用，可重试或选择仅知识库模式","PROVIDER_FAILED");
+                    if(run.turn==null && session != null) reject(session,conversation,request,error instanceof ResponseStatusException r?Objects.toString(r.getReason(),"请求被拒绝"):"无法开始本轮问答");
+                    else fail(run,"本轮未完成，可查看计划恢复状态", "PROVIDER_FAILED", !(error instanceof SecurityException));
                 }
             });
         run.subscriptions.add(subscription);
     }
-    private void fail(Run run,String message,String code) {
+    private void fail(Run run,String message,String code) { fail(run, message, code, true); }
+    private void fail(Run run,String message,String code,boolean recoverable) {
         run.state="FAILED";run.message=message;
-        if(run.turn!=null) {try {memoryStore.cancel(run.turn,"FAILED");memoryStore.failureCode(run.turn,code);} catch(Exception error) {logger.warn("Cannot mark failed turn={}",run.turn.id());}}
-        emit(run,Map.of("type","error","error",message));
+        if(run.turn!=null) {
+            try {
+                if (run.journal != null && run.journal.created()) run.journal.stop(false, message, recoverable);
+                else { memoryStore.cancel(run.turn,"FAILED"); memoryStore.failureCode(run.turn,code); }
+            } catch(Exception error) { logger.warn("Cannot mark failed turn={}",run.turn.id()); }
+        }
+        var payload = new HashMap<String,Object>(); payload.put("type", "error"); payload.put("error", message);
+        if (plans != null && run.journal != null && run.journal.created()) {
+            try { payload.putAll(plans.enrich(Long.parseLong(run.user), run.conversation, run.snapshot())); }
+            catch (Exception unavailable) { /* Lease expiry can recover a failed durable write. */ }
+        }
+        emit(run,payload);
     }
     private void emit(Run run,Map<String,?> payload) {
         synchronized(run) {
             var event=new HashMap<String,Object>(payload);event.put("conversationId",run.conversation);event.put("requestId",run.request);
             if(run.turn!=null) event.put("turnId",Long.toString(run.turn.id()));event.put("seq",++run.seq);
+            if (run.journal != null && run.journal.created()) {
+                event.put("planAttempt", run.journal.execution().attempt());
+                if (!event.containsKey("planVersion")) event.put("planVersion", run.journal.execution().version());
+            }
             var sockets=subscribers.get(run.user);if(sockets!=null) sockets.values().forEach(socket -> sendJson(socket,event));
         }
     }
@@ -193,8 +224,10 @@ public class ChatHandler {
     }
     public Map<String,Object> snapshot(long user,String conversation) {
         memoryStore.session(user,conversation);
-        for(Run run:activeRuns.values()) if(run.user.equals(Long.toString(user)) && run.conversation.equals(conversation)) return run.snapshot();
-        return memoryStore.latestRun(user,conversation);
+        for(Run run:activeRuns.values()) if(run.user.equals(Long.toString(user)) && run.conversation.equals(conversation))
+            return plans == null ? run.snapshot() : plans.enrich(user, conversation, run.snapshot());
+        var snapshot = memoryStore.latestRun(user,conversation);
+        return plans == null ? snapshot : plans.enrich(user, conversation, snapshot);
     }
     public void stop(long user,String conversation,String request) {
         memoryStore.session(user,conversation);
@@ -203,17 +236,51 @@ public class ChatHandler {
         else {
             var latest=memoryStore.latestRun(user,conversation);
             if(!request.equals(latest.get("requestId"))) throw new ResponseStatusException(HttpStatus.NOT_FOUND,"运行不存在");
+            if (plans != null) plans.find(user, conversation, request).ifPresent(plan -> plans.stop(plan, true, "用户已停止", false));
+        }
+    }
+    public Map<String, Object> resume(long user, String conversation, String request, long expectedVersion) {
+        if (plans == null || !agentConfig.isEnabled() || !agentConfig.getPlanning().isEnabled())
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "计划恢复未启用");
+        memoryStore.requireWorkSession(user, conversation);
+        Run run = new Run(Long.toString(user), conversation, request, "resume", "");
+        if (!admit(run)) throw new ResponseStatusException(HttpStatus.CONFLICT, "任务正在执行或已达并发上限");
+        try {
+            var execution = plans.resume(user, conversation, request, expectedVersion);
+            run.turn = memoryStore.turn(execution.turnId()); run.question = run.turn.question(); run.source = execution.mode();
+            run.journal = new PlanJournal(plans, run.turn, execution);
+            launch(run, null, () -> new MemoryTypes.Begin(run.turn, true, false), true);
+            return snapshot(user, conversation);
+        } catch (RuntimeException error) { activeRuns.remove(key(run.user, request), run); throw error; }
+    }
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 10000)
+    public void heartbeatPlans() {
+        for (Run run : activeRuns.values()) {
+            if (run.journal == null || !run.journal.created()) continue;
+            try { run.journal.heartbeat(); }
+            catch (Exception lost) {
+                synchronized (run) {
+                    fail(run, "执行租约失效，请刷新任务状态", "LEASE_LOST");
+                    run.subscriptions.dispose();
+                }
+            }
         }
     }
     private void cancel(Run run,boolean restarting) {
         synchronized(run) {
             if(!"RUNNING".equals(run.state)) return;
-            run.state=restarting?"FAILED":"CANCELLED";
-            if(run.turn!=null) {
-                memoryStore.cancel(run.turn,run.state);
-                if(restarting) memoryStore.failureCode(run.turn,"SERVER_RESTARTED");
+            try {
+                if(run.turn!=null) {
+                    if (run.journal != null && run.journal.created()) run.journal.stop(!restarting, restarting ? "服务重启，执行中断" : "用户已停止", restarting);
+                    else {
+                        memoryStore.cancel(run.turn,restarting ? "FAILED" : "CANCELLED");
+                        if(restarting) memoryStore.failureCode(run.turn,"SERVER_RESTARTED");
+                    }
+                }
+            } finally {
+                run.state=restarting?"FAILED":"CANCELLED";
+                run.subscriptions.dispose();activeRuns.remove(key(run.user,run.request),run);
             }
-            run.subscriptions.dispose();activeRuns.remove(key(run.user,run.request),run);
             emit(run,Map.of("type","completion","status",restarting?"interrupted":"cancelled"));
         }
     }

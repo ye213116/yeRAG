@@ -7,7 +7,8 @@ const labels: Record<Api.Chat.PlanTaskStatus, string> = {
   completed: '已完成',
   failed: '未完成',
   skipped: '已跳过',
-  cancelled: '已停止'
+  cancelled: '已停止',
+  interrupted: '已中断'
 };
 </script>
 
@@ -30,6 +31,9 @@ const labels: Record<Api.Chat.PlanTaskStatus, string> = {
             <span class="task-status text-12px">{{ labels[task.status] }}</span>
           </div>
           <p v-if="task.message" class="m-0 mt-1 text-12px opacity-60">{{ task.message }}</p>
+          <p v-if="task.attempts && task.attempts > 1" class="m-0 mt-1 text-12px opacity-60">
+            第 {{ task.attempts }} 次尝试
+          </p>
         </div>
       </li>
     </ol>

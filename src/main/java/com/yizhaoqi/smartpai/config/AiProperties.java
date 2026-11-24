@@ -101,5 +101,9 @@ public class AiProperties {
         /** Includes the final synthesis task; bounded to 3–6 at runtime. */
         private int maxSteps = 4;
         private Duration timeout = Duration.ofSeconds(5);
+        /** Includes the original execution; resume never resets tool/decision budgets. */
+        private int maxAttempts = 3;
+        private Duration leaseDuration = Duration.ofSeconds(90);
+        private Duration recoveryTtl = Duration.ofHours(24);
     }
 }

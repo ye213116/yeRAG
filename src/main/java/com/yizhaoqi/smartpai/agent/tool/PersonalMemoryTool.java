@@ -12,6 +12,7 @@ import java.util.*;
 
 /** User-scoped tools. The server supplies identity; cursors never carry authority. */
 public abstract class PersonalMemoryTool implements AgentTool {
+    @Override public boolean replaySafe() { return true; }
     protected final MemoryStore store;
     protected final ObjectMapper json;
     protected final MemoryProperties config;

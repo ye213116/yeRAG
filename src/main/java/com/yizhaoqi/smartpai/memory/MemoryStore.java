@@ -57,6 +57,8 @@ public class MemoryStore {
         db.queryForList("SELECT title,kind FROM chat_session WHERE 1=0");
         db.queryForList("SELECT failure_code FROM chat_turn WHERE 1=0");
         db.queryForList("SELECT user_turn_seq,request_hash,context_sync_status FROM chat_turn WHERE 1=0");
+        db.queryForList("SELECT checkpoint_json,attempt,version,lease_until FROM agent_plan_run WHERE 1=0");
+        db.queryForList("SELECT run_id,step_id,attempt,result_json FROM agent_plan_step WHERE 1=0");
         db.queryForList("SELECT lease_token,lease_until,failure_stage FROM memory_extraction_task WHERE 1=0");
         db.queryForList("SELECT user_id,memory_type,content,version,created_at,updated_at FROM memory_document WHERE 1=0");
         db.queryForList("SELECT id,document_id,heading,description,section_version,last_applied_turn_seq,deleted,created_at,updated_at FROM memory_document_section WHERE 1=0");
@@ -213,6 +215,23 @@ public class MemoryStore {
                 (String) r.get("answer"), (String) r.get("status"), instant(r.get("created_at")));
     }
     public Turn turn(long id) { return turn(db.queryForMap("SELECT * FROM chat_turn WHERE id=?", id)); }
+    /** A recoverable plan may reopen only its original, latest turn in an idle Work session. */
+    public Turn resumeWorkTurn(long user, String session, String request) {
+        return tx.execute(s -> {
+            lockUser(user);
+            requireWorkSession(user, session);
+            var meta = session(user, session);
+            var rows = db.queryForList("SELECT * FROM chat_turn WHERE user_id=? AND session_id=? AND request_id=?", user, session, request);
+            if (rows.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "回合不存在");
+            Turn original = turn(rows.get(0));
+            if (!"FAILED".equals(original.status()) || original.question() == null || meta.get("active_turn_id") != null
+                    || !db.queryForList("SELECT id FROM chat_turn WHERE session_id=? AND id>?", session, original.id()).isEmpty())
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "只能恢复空闲会话中最近一次中断的计划");
+            db.update("UPDATE chat_turn SET status='RUNNING',failure_code=NULL,answer=NULL,completed_at=NULL WHERE id=?", original.id());
+            db.update("UPDATE chat_session SET active_turn_id=?,revision=revision+1,last_activity_at=CURRENT_TIMESTAMP WHERE id=?", original.id(), session);
+            return turn(original.id());
+        });
+    }
     public boolean running(Turn t) {
         return db.queryForObject("SELECT COUNT(*) FROM chat_turn t JOIN chat_session s ON s.id=t.session_id WHERE t.id=? AND t.status='RUNNING' AND s.active_turn_id=t.id AND s.status<>'DELETED'", Long.class, t.id()) == 1;
     }
@@ -256,7 +275,11 @@ public class MemoryStore {
     /** One execution instance: a new process never resumes an old provider request. */
     public void recoverWorkRuns() {
         tx.executeWithoutResult(s -> {
-            db.update("UPDATE chat_turn SET status='FAILED',failure_code='SERVER_RESTARTED' WHERE status='RUNNING' AND session_id IN (SELECT id FROM chat_session WHERE kind='WORK')");
+            db.update("""
+                UPDATE chat_turn SET status='FAILED',failure_code='SERVER_RESTARTED'
+                WHERE status='RUNNING' AND session_id IN (SELECT id FROM chat_session WHERE kind='WORK')
+                  AND id NOT IN (SELECT turn_id FROM agent_plan_run WHERE phase IN ('RUNNING','SYNTHESIZING'))
+                """);
             db.update("UPDATE chat_session SET active_turn_id=NULL WHERE kind='WORK' AND active_turn_id IN (SELECT id FROM chat_turn WHERE status='FAILED')");
         });
     }

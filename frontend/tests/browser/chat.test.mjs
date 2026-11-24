@@ -147,6 +147,31 @@ before(async () => {
       return;
     }
     const rename = path.match(/^\/api\/v1\/memory\/sessions\/([^/]+)$/);
+    const resumeRun = path.match(/^\/api\/v1\/memory\/sessions\/([^/]+)\/runs\/([^/]+)\/resume$/);
+    if (resumeRun && req.method === 'POST') {
+      const session = owned.find(item => item.id === resumeRun[1]);
+      if (!session || session.run?.requestId !== resumeRun[2]) {
+        send(null, 404);
+        return;
+      }
+      const run = session.run;
+      if (!run.resumable || JSON.parse(body).expectedVersion !== run.planVersion) {
+        send(null, 409);
+        return;
+      }
+      Object.assign(run, {
+        state: 'RUNNING',
+        text: '',
+        seq: 0,
+        resumable: false,
+        planAttempt: run.planAttempt + 1,
+        planVersion: run.planVersion + 1,
+        planTasks: planEvent(['completed', 'running', 'pending']).details.tasks
+      });
+      emit(owner, session, { type: 'run_resumed' });
+      send(run);
+      return;
+    }
     if (rename && req.method === 'PATCH') {
       const session = owned.find(item => item.id === rename[1]);
       if (!session) {
@@ -386,7 +411,16 @@ function emit(owner, session, payload) {
   run.seq += 1;
   const socket = state.sockets.get(owner);
   if (socket?.readyState === 1)
-    socket.send(JSON.stringify({ requestId: run.requestId, conversationId: session.id, seq: run.seq, ...payload }));
+    socket.send(
+      JSON.stringify({
+        requestId: run.requestId,
+        conversationId: session.id,
+        seq: run.seq,
+        planAttempt: run.planAttempt,
+        planVersion: run.planVersion,
+        ...payload
+      })
+    );
 }
 function reply(owner, payload, request = state.requests.get(owner)) {
   const session = sessions(owner).find(s => s.id === request.conversationId);
@@ -422,6 +456,48 @@ test('plan tasks render before the answer, update during streaming and reject la
     await sendMessage(page, 'simple');
     await page.waitForFunction(() => document.body.textContent.includes('admin answer: simple'));
     assert.equal(await page.$$eval('[aria-label="任务列表"]', nodes => nodes.length), 0);
+  } finally {
+    await page.browserContext().close();
+  }
+});
+
+test('resuming a plan replaces partial output and rejects a late frame from the previous attempt', async () => {
+  const page = await newPage();
+  try {
+    await login(page, 'recover');
+    await sendMessage(page, 'plan');
+    await page.waitForSelector('[aria-label="任务列表"]');
+    const request = state.requests.get('recover');
+    const session = sessions('recover').find(item => item.id === request.conversationId);
+    Object.assign(session.run, { planAttempt: 1, planVersion: 9, resumable: true });
+    reply('recover', planEvent(['completed', 'running', 'pending']));
+    reply('recover', { type: 'chunk', chunk: 'old partial output' });
+    session.run.planTasks = planEvent(['completed', 'interrupted', 'pending']).details.tasks;
+    reply('recover', { type: 'error', error: '执行中断', resumable: true, planTasks: session.run.planTasks });
+    await page.waitForFunction(() =>
+      [...document.querySelectorAll('button')].some(button => button.textContent.includes('从检查点继续'))
+    );
+    await clickText(page, '从检查点继续');
+    await waitFor(() => session.run.planAttempt === 2, 'resume request');
+    await page.waitForFunction(() => !document.body.textContent.includes('从检查点继续'));
+    state.sockets.get('recover').send(
+      JSON.stringify({
+        type: 'chunk',
+        requestId: request.requestId,
+        conversationId: session.id,
+        planAttempt: 1,
+        seq: 10000,
+        chunk: 'stale previous attempt'
+      })
+    );
+    reply('recover', { type: 'chunk', chunk: 'resumed final output' });
+    reply('recover', planEvent(['completed', 'completed', 'completed']));
+    reply('recover', { type: 'completion', status: 'finished' });
+    await page.waitForFunction(() => document.body.textContent.includes('resumed final output'));
+    const text = await page.$eval('body', node => node.textContent);
+    assert.equal(text.includes('old partial output'), false);
+    assert.equal(text.includes('stale previous attempt'), false);
+    assert.equal(await page.$$eval('[data-task-status="completed"]', nodes => nodes.length), 3);
   } finally {
     await page.browserContext().close();
   }

@@ -192,15 +192,21 @@ declare namespace Api {
       timestamp?: string;
       agentStatus?: string;
       planTasks?: PlanTask[];
+      planAttempt?: number;
+      planVersion?: number;
+      resumable?: boolean;
+      recoveryReason?: string;
     }
 
-    type PlanTaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped' | 'cancelled';
+    type PlanTaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped' | 'cancelled' | 'interrupted';
 
     interface PlanTask {
       id: string;
       title: string;
       status: PlanTaskStatus;
       message: string;
+      attempts?: number;
+      outcome?: string;
     }
 
     interface Token {

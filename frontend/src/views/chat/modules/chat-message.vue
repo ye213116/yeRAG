@@ -17,6 +17,7 @@ function handleCopy(content: string) {
 }
 
 const router = useRouter();
+const chat = useChatStore();
 
 const artifactIds = computed(() => {
   if (props.msg.role !== 'assistant') return [];
@@ -154,6 +155,21 @@ async function handleSourceFileClick(fileInfo: { fileName: string; referenceNumb
       </div>
       <div v-else-if="msg.status === 'error'" class="answer-error">{{ msg.content || '本轮回答未完成，请重试' }}</div>
       <div v-else class="assistant-content" @click="handleContentClick"><VueMarkdownIt :content="content" /></div>
+      <div
+        v-if="msg.status === 'error' && msg.resumable && msg.planVersion && msg.requestId === chat.activeRequestId"
+        class="ml-12 mt-3"
+      >
+        <NButton
+          size="small"
+          :disabled="chat.historyLoading || chat.wsStatus !== 'OPEN'"
+          @click="chat.resumeRun(msg.requestId!, msg.planVersion!)"
+        >
+          从检查点继续
+        </NButton>
+      </div>
+      <p v-else-if="msg.status === 'error' && msg.recoveryReason" class="ml-12 mt-2 text-12px opacity-65">
+        {{ msg.recoveryReason }}
+      </p>
       <div v-if="artifactIds.length" class="mt-3 flex flex-wrap gap-2">
         <NButton
           v-for="id in artifactIds"

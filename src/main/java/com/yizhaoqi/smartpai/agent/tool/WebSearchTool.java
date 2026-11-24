@@ -17,6 +17,7 @@ import java.util.Set;
 @Component
 @ConditionalOnProperty(prefix = "ai.web", name = "enabled", havingValue = "true")
 public class WebSearchTool implements AgentTool {
+    @Override public boolean replaySafe() { return true; }
     public static final String NAME = "search_web";
     private final WebResearchClient client;
     private final WebProperties web;

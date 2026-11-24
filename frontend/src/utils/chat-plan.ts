@@ -1,4 +1,4 @@
-const taskStatuses = new Set(['pending', 'running', 'completed', 'failed', 'skipped', 'cancelled']);
+const taskStatuses = new Set(['pending', 'running', 'completed', 'failed', 'skipped', 'cancelled', 'interrupted']);
 
 /** Accept only bounded display data from the status event. Titles render as plain text. */
 export function parsePlanTasks(value: unknown): Api.Chat.PlanTask[] | undefined {
@@ -18,9 +18,30 @@ export function parsePlanTasks(value: unknown): Api.Chat.PlanTask[] | undefined 
       task.message.length > 200
     )
       return undefined;
-    tasks.push({ id: task.id, title: task.title, status: task.status, message: task.message });
+    const parsed: Api.Chat.PlanTask = { id: task.id, title: task.title, status: task.status, message: task.message };
+    if (Number.isInteger(task.attempts) && task.attempts >= 0) parsed.attempts = task.attempts;
+    if (typeof task.outcome === 'string' && task.outcome.length < 40) parsed.outcome = task.outcome;
+    tasks.push(parsed);
   }
   return new Set(tasks.map(task => task.id)).size === tasks.length ? tasks : undefined;
+}
+
+/** A resumed attempt replaces partial output; older attempts cannot append to it. */
+export function acceptPlanAttempt(message: Api.Chat.Message, attempt: unknown): boolean {
+  if (attempt === undefined) return !message.planAttempt;
+  if (!Number.isInteger(attempt) || (attempt as number) < 1) return false;
+  const next = attempt as number;
+  const current = message.planAttempt || 0;
+  if (next < current) return false;
+  if (next > current) {
+    if (current > 0 || next > 1) {
+      message.content = '';
+      message.status = 'pending';
+      message.resumable = false;
+    }
+    message.planAttempt = next;
+  }
+  return true;
 }
 
 export function interruptPlan(message: Api.Chat.Message, status: 'failed' | 'cancelled' | 'skipped') {

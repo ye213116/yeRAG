@@ -10,6 +10,7 @@ import java.util.Map;
 
 /** Shared authentication and serialized-output budget for current-conversation history tools. */
 public abstract class ConversationHistoryTool implements AgentTool {
+    @Override public boolean replaySafe() { return true; }
     protected final MemoryStore store;
     protected final ObjectMapper json;
     protected final MemoryProperties config;

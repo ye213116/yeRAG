@@ -9,6 +9,7 @@ import java.util.*;
 
 @Component
 public class ListArtifactsTool extends ArtifactTool {
+    @Override public boolean replaySafe() { return true; }
     public ListArtifactsTool(ArtifactService service, ObjectMapper json, AiProperties properties) { super(service, json, properties); }
     @Override public String name() { return "list_artifacts"; }
     @Override protected Set<String> fields() { return Set.of("offset"); }

@@ -79,7 +79,11 @@ Agent 入口是 `KnowledgeAgentService`，模型客户端通过 `AgentLlmClient`
 
 默认开启。先用本地规则筛选复杂比较和跨文档综合候选（支持中英文，以及带指代的后续提问）；普通问答、单篇摘要和简单概念比较不增加规划模型调用。候选再通过一次无工具的模型调用确认，输出 2～3 个证据任务，服务端追加“综合证据并生成回答”。模型认为无需计划、返回非法结构、规划超时或失败时回到原有 Loop。规则筛选是启发式判断，可能漏掉未覆盖的表达，漏选问题仍由原有 Loop 处理。
 
-每个证据任务串行复用现有工具 Loop；整轮共享来源模式、认证身份、工具调用预算、引用编号和总超时，不为每个任务重置预算。中间记录留作最终综合的上下文，不作为用户答案输出或持久化，也不作为独立证据。只有最终综合通过 `chunk` 输出并由现有 Memory 路径保存完整回答。工具失败会标记任务未完成；预算耗尽会标记当前任务未完成、后续任务跳过，最终综合说明证据缺口。执行异常与取消沿用原有失败/fallback 和取消持久化规则。
+每个独立证据任务串行复用现有工具 Loop；整轮共享来源模式、认证身份、工具调用预算、引用编号和总超时，不为每个任务重置预算。步骤状态、结果和模型上下文在步骤边界写入 MySQL 检查点，中间记录不作为用户答案或独立证据。只有最终综合通过 `chunk` 输出，并在同一事务内保存完整回答及计划完成状态。步骤结果区分取得证据、没有证据、部分失败和执行失败；预算耗尽统一收束到一次最终综合。有效计划开始后发生异常时保留检查点，不再隐式切换固定 RAG；规划尚未开始时仍可按原条件 fallback。
+
+执行中断后，可在最近一次计划消息点击“从检查点继续”：复用已完成步骤和来源编号，重新尝试当前未完成步骤，累计工具/决策预算不重置。综合阶段中断会重新生成完整回答，替换旧的部分输出。恢复前重新校验上下文、工具配置、内部证据权限以及记忆/历史/成果读取内容；发生变化时要求重新发起任务。用户取消、已产生非幂等副作用、超过恢复窗口或尝试上限的计划不可恢复。Coding 任务继续走独立 Worker，不启用此恢复路径。
+
+已有数据库须先应用 [Plan 恢复迁移](docs/databases/migrations/20261124_agent_plan_recovery.sql)，详细状态、不变量和限制见 [数据库设计](docs/databases/database-design.md#2026-11-24-work-plan-状态与恢复)。进程异常退出后默认等待租约到期（90 秒）再将任务转为可恢复，正常关闭会立即保留检查点。
 
 整轮输入采用当前实际模型 `deepseek-flash` 对应的官方 BPE tokenizer，默认上下文 1,048,576 tokens、回答预留 8,192 tokens、安全预留 4,096 tokens；只在达到剩余容量的 95% 时裁剪工具正文。Memory 默认按 token 预算保留完整回合，用户输入和工具结果同步放宽，HTTP JSON 转义不当作模型正文重复计量。公开覆盖配置在 [config/application.properties](config/application.properties)，计量口径、资源上限和换模型步骤见 [Pipeline 输入预算](docs/rag-pipeline.md#配置)。
 
@@ -90,9 +94,12 @@ ai:
       enabled: true  # false：所有问题直接进入原有 Loop
       max-steps: 4   # 含最终综合，运行时限制在 3～6
       timeout: 5s    # 单次规划上限，且受 llm-timeout 和 total-timeout 限制
+      max-attempts: 3       # 含首次执行；恢复不补充工具/决策预算
+      lease-duration: 90s  # 每 10 秒续租/检查一次
+      recovery-ttl: 24h    # 可恢复窗口，不是数据自动删除时间
 ```
 
-前端在助手消息中展示任务列表；`pending`、`running`、`completed`、`failed`、`skipped`、`cancelled` 分别对应等待、进行中、完成、未完成、跳过、停止。这里的完成表示任务执行结束，不保证检索一定找到了证据。任务标题按纯文本渲染；列表只属于当前请求，按 `requestId` / `conversationId` 隔离；完成、失败、停止后的迟到进度不再更新。任务列表是本轮实时状态，刷新/历史回放只恢复已保存的回答和来源。
+前端展示 `pending`、`running`、`completed`、`failed`、`skipped`、`cancelled`、`interrupted`，并显示重试次数。完成表示步骤结束，证据结果另行记录，不保证内容充分。任务标题按纯文本渲染；列表按 `requestId` / `conversationId` / `planAttempt` 隔离。运行快照恢复最近一次计划进度、`planVersion` 和 `resumable`；历史完整问答仍以 Memory 为准。恢复接口为 `POST /api/v1/memory/sessions/{id}/runs/{requestId}/resume`，正文 `{expectedVersion}`，旧代次事件不能写入新尝试。
 
 沿用 `agent_status`，新增 `planning` 和 `plan_updated`，后者每次发送完整快照，不改变 `chunk` / `completion` 协议：
 

@@ -1,6 +1,6 @@
 import { useWebSocket } from '@vueuse/core';
 import { getServiceBaseURL } from '@/utils/service';
-import { interruptPlan, parsePlanTasks } from '@/utils/chat-plan';
+import { acceptPlanAttempt, interruptPlan, parsePlanTasks } from '@/utils/chat-plan';
 
 const isWebSocketProxy = import.meta.env.DEV && import.meta.env.VITE_HTTP_PROXY === 'Y';
 const { otherBaseURL } = getServiceBaseURL(import.meta.env, isWebSocketProxy);
@@ -147,19 +147,23 @@ export const useChatStore = defineStore(SetupStoreId.Chat, () => {
   function restoreAssistant(assistant: Api.Chat.Message, snapshot: Record<string, any>) {
     assistant.status = snapshot.state === 'COMPLETED' ? 'finished' : 'error';
     if (snapshot.state === 'RUNNING') assistant.status = assistant.content ? 'loading' : 'pending';
+    assistant.planAttempt = snapshot.planAttempt;
+    assistant.planVersion = snapshot.planVersion;
+    assistant.resumable = snapshot.resumable === true;
+    assistant.recoveryReason = snapshot.recoveryReason;
     assistant.agentStatus = snapshot.agentStatus;
     assistant.planTasks = parsePlanTasks(snapshot.planTasks) || undefined;
     if (snapshot.state === 'CANCELLED') assistant.content ||= '已停止生成';
     if (snapshot.state === 'FAILED')
-      assistant.content ||=
-        snapshot.failureCode === 'SERVER_RESTARTED'
-          ? '服务重启，本轮回答已中断，可重新发送。'
-          : '本轮回答未完成，可重新发送。';
+      assistant.content ||= snapshot.resumable
+        ? '执行已中断，可从检查点继续。'
+        : snapshot.recoveryReason || '本轮回答未完成，可重新发送。';
   }
   function mergeSnapshot(id: string, snapshot: Record<string, any>) {
     if (!snapshot.requestId || snapshot.state === 'IDLE') return;
     const t = thread(id);
     const existing = t.list.find(m => m.role === 'assistant' && m.requestId === snapshot.requestId);
+    if (existing?.planAttempt && (snapshot.planAttempt || 0) < existing.planAttempt) return;
     if (existing?.status === 'finished' && snapshot.state === 'RUNNING') return;
     t.request = snapshot.requestId;
     t.seq = snapshot.seq || 0;
@@ -297,9 +301,16 @@ export const useChatStore = defineStore(SetupStoreId.Chat, () => {
     }
     return false;
   }
+  function updateRecovery(assistant: Api.Chat.Message, data: Record<string, any>) {
+    if (data.planVersion) assistant.planVersion = data.planVersion;
+    if (typeof data.resumable === 'boolean') assistant.resumable = data.resumable;
+    if (data.recoveryReason) assistant.recoveryReason = data.recoveryReason;
+  }
   function updateAssistant(assistant: Api.Chat.Message, data: Record<string, any>) {
+    updateRecovery(assistant, data);
     if (data.type === 'request_rejected' || data.error) {
-      interruptPlan(assistant, 'failed');
+      if (data.planTasks) assistant.planTasks = parsePlanTasks(data.planTasks) || assistant.planTasks;
+      else interruptPlan(assistant, 'failed');
       assistant.status = 'error';
       assistant.content = data.message || data.error;
       refreshSessions();
@@ -310,6 +321,7 @@ export const useChatStore = defineStore(SetupStoreId.Chat, () => {
     } else if (data.type === 'completion') {
       interruptPlan(assistant, data.status === 'cancelled' ? 'cancelled' : 'skipped');
       assistant.status = data.status === 'finished' ? 'finished' : 'error';
+      if (data.status === 'finished' || data.status === 'cancelled') assistant.resumable = false;
       if (data.status !== 'finished') assistant.content ||= data.status === 'cancelled' ? '已停止生成' : '回答已中断';
       refreshSessions();
     } else if (data.chunk) {
@@ -320,7 +332,11 @@ export const useChatStore = defineStore(SetupStoreId.Chat, () => {
   function eventAssistant(t: Thread, data: Record<string, any>) {
     if (data.requestId !== t.request) return null;
     const assistant = t.list.find(m => m.role === 'assistant' && m.requestId === data.requestId);
-    if (!assistant || ['finished', 'error'].includes(assistant.status || '')) return null;
+    if (!assistant) return null;
+    const previousAttempt = assistant.planAttempt;
+    if (!acceptPlanAttempt(assistant, data.planAttempt)) return null;
+    if (assistant.planAttempt !== previousAttempt) t.seq = 0;
+    if (['finished', 'error'].includes(assistant.status || '')) return null;
     if (data.seq && data.seq <= t.seq) return null;
     if (data.seq) t.seq = data.seq;
     return assistant;
@@ -366,6 +382,26 @@ export const useChatStore = defineStore(SetupStoreId.Chat, () => {
       }
     }
   });
+  async function resumeRun(requestId: string, expectedVersion: number) {
+    const id = conversationId.value;
+    const owner = identity;
+    const t = thread(id);
+    if (t.loading || isSending.value || wsStatus.value !== 'OPEN' || requestId !== t.request) return;
+    t.loading = true;
+    try {
+      const result = await request<Record<string, any>>({
+        url: `memory/sessions/${id}/runs/${requestId}/resume`,
+        method: 'post',
+        data: { expectedVersion }
+      });
+      if (owner !== identity) return;
+      if (result.error) window.$message?.error('无法恢复任务，请刷新状态或重新发起任务');
+      await hydrate(id);
+      await refreshSessions();
+    } finally {
+      if (owner === identity) t.loading = false;
+    }
+  }
   function sendMessage() {
     const t = thread();
     if (!t.ready || isSending.value || !t.input.message.trim() || wsStatus.value !== 'OPEN') return;
@@ -482,6 +518,7 @@ export const useChatStore = defineStore(SetupStoreId.Chat, () => {
     deleteConversation,
     loadOlderMessages,
     sendMessage,
+    resumeRun,
     stopResponse,
     submitCoding,
     wsStatus,

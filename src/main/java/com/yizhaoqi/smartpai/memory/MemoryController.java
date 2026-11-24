@@ -51,6 +51,13 @@ public class MemoryController {
     public Map<String,Object> stop(Principal p,@PathVariable String id,@PathVariable String requestId) {
         chat.stop(user(p),id,requestId);return result(Map.of("stopped",true));
     }
+    public record ResumeRun(long expectedVersion) {}
+    @PostMapping("/sessions/{id}/runs/{requestId}/resume")
+    public Map<String,Object> resumeRun(Principal p, @PathVariable String id, @PathVariable String requestId,
+                                      @RequestBody ResumeRun request) {
+        if (request == null || request.expectedVersion() < 1) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "缺少计划版本");
+        return result(chat.resume(user(p), id, requestId, request.expectedVersion()));
+    }
     @PostMapping("/sessions/{id}/resume")
     public Map<String,Object> resume(Principal p, @PathVariable String id) {
         long uid=user(p); store.resume(uid,id); chat.cancelClosedMemoryRuns(uid); context.cacheCurrent(uid,id);

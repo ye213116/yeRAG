@@ -14,6 +14,7 @@ import java.util.Set;
 
 @Component
 public class KnowledgeDocumentTool implements AgentTool {
+    @Override public boolean replaySafe() { return true; }
     public static final String NAME = "read_knowledge_document";
     private final HybridSearchService search;
     private final ObjectMapper mapper;

@@ -25,6 +25,8 @@
 | 文件与知识库 | `document_vectors` | 解析后的文本块及检索权限元数据 |
 | Memory | `chat_session` | 业务会话与滚动摘要 |
 | Memory | `chat_turn` | 长期保留、可恢复的完整问答回合 |
+| Agent | `agent_plan_run` | Work 计划检查点、执行代次、累计预算和租约 |
+| Agent | `agent_plan_step` | 每一步的尝试历史与结构化结果 |
 | Memory | `memory_extraction_task` | 长期记忆异步提取队列 |
 | Memory | `memory_document` | 用户当前 Markdown 长期记忆正文 |
 | Memory | `memory_document_section` | Markdown section 的稳定身份和顺序屏障 |
@@ -388,6 +390,46 @@ GitHub branch and query existing PRs before creating another. Results and task m
 are private application data, separate from expiring RAG evidence and report versions.
 Existing databases must apply `migrations/20261123_coding_tasks.sql` before enabling
 `ai.coding.enabled`. Full DDL includes the same tables for new databases.
+
+### 2026-11-24 Work Plan 状态与恢复
+
+部署前执行 [20261124_agent_plan_recovery.sql](migrations/20261124_agent_plan_recovery.sql)，空库使用完整 DDL。启动检查要求两张新表；迁移不修改已有问答内容。已有库的 `chat_session.id` 可能使用不同排序规则，增量脚本从 information_schema 读取实际字符集/排序规则，仅调整新建 `agent_plan_run.conversation_id` 再建立外键，不修改原表。回滚应用时可保留新表，不应在仍有执行者运行时删除表。
+
+- `agent_plan_run` 绑定认证用户、原 conversation/request/turn 与固定来源模式；唯一键 `(owner_id, request_id)`、`turn_id` 防止一个请求出现多个计划。phase 为 RUNNING、SYNTHESIZING、PAUSED、COMPLETED、FAILED、CANCELLED。规划尚未生成有效步骤时沿用原问答流程，不创建可恢复计划。
+- `checkpoint_json` 是有界的步骤边界快照（最多 8 MiB）：模型消息、结构化步骤结果、证据与来源编号映射、私有读取校验摘要、上下文及执行策略指纹。不会在 assistant/tool-call 批次尚未配对时覆盖检查点。工作数据按不可信内容恢复，当前服务端系统规则重新构造。
+- 工具与模型决策的累计计数独立保存，在实际调用前预扣。当前步骤中断后可重做只读调用，已扣预算不返还；已完成步骤不重复执行。恢复不会重置工具/决策预算。每次尝试仍受当前 total-timeout 限制，暂停等待时间不算一次模型请求的运行时间。
+- `agent_plan_step` 主键 `(run_id, step_id, attempt)` 保留历次尝试；不会把旧失败覆盖成新成功。步骤执行状态与证据结果分开：EVIDENCE_FOUND 仅说明取得了可引用来源，不保证内容足够；NO_EVIDENCE、PARTIAL、FAILED 分别表示未取得证据、部分失败和执行失败。空召回与工具异常不会混为一类。
+- 执行写入受 `attempt + version + lease_until` 校验；心跳只延长尚未到期的当前租约。默认每 10 秒续租/检查一次，租约 90 秒；过期后暂停并把原回合记为 FAILED/PLAN_INTERRUPTED。新进程启动不会直接抢占仍持有有效租约的计划。旧代次不能推进状态、完成回合或覆盖新尝试。
+- 恢复入口为 `POST /api/v1/memory/sessions/{id}/runs/{requestId}/resume`，正文 `{expectedVersion}`。只允许恢复拥有者空闲 Work 会话中最近一条中断回合；新问题已产生、用户已取消、计划已完成/失败、版本冲突、尝试耗尽或超过恢复窗口时拒绝。默认最多 3 次执行尝试（含首次），恢复窗口 24 小时。PAUSED 不是自动续跑承诺，需用户点击继续。
+- 恢复前重新解析工具准入与来源限制、检查上下文/策略指纹，并通过权限感知文档读取核验内部来源。文件 MD5 作为内容身份，原片段不存在或无权限时拒绝复用。记忆、会话历史及成果只读工具重新读取并比较内容摘要，任何变化都要求重新发起任务；不会回退到旧授权。该校验请求不运行新的计划步骤，不消耗模型工具预算，但受本次总超时与读取超时限制。
+- 工具须显式声明 `replaySafe()` 才能在中断后重做，默认 false；副作用调用前置 `unsafe_effect`，该标记不会因缺少返回结果而丢失。一旦执行过未知或非幂等工具，计划暂停后不提供自动恢复，要求先核对已产生的成果。这里只支持安全步骤重试，不提供 exactly-once 副作用保证。可重放工具的部分暂时性错误最多自动重试一次，每次重试都占调用预算；参数、权限、未配置和取消错误不自动重试。
+- 原回合完整回答的保存、Memory 后续任务创建与计划 COMPLETED 在同一数据库事务内完成。流式部分答案不进入检查点或完整历史；综合阶段中断后重生成完整答案。前端按 `planAttempt` 隔离旧帧、重置序号并替换旧的部分文本。
+- 用户删除会话时，删除原回合会级联删除计划和步骤尝试记录；恢复 TTL 只限制续跑，不代表自动删除审计检查点，记录保留到用户删除会话。跨会话长期记忆和成果仍遵循各自生命周期。
+- Coding 仍走独立的 coding_task / Worker，不启用 Work Plan；其副作用、沙箱和人工审核约束保持独立。
+
+核心契约位于 `PlanRecoveryTest`、`ChatPlanRecoveryTest`；`PlanRecoveryMySqlTest`、`ChatPlanRecoveryMySqlTest` 在设置 `PLAN_MYSQL_TEST_URL`、`PLAN_MYSQL_TEST_USER`、`PLAN_MYSQL_TEST_PASSWORD` 后复用这些用例，每例创建并删除随机测试库。JDBC 使用 Asia/Shanghai，数据库连接使用 UTC，验证租约及恢复窗口不依赖两个时区一致。`PlanMigrationMySqlTest` 验证 unicode_ci、bin、0900_ai_ci 三种旧库排序规则的增量迁移。测试不会在业务库创建模拟用户或会话。进程/真实模型与跨实例部署行为不能由这些数据库契约测试直接推断。
+
+#### 2026-11-24 本次验收与业务库迁移
+
+核对分支为 `agent`，改动基线 HEAD 为 `6d3ca29d1ff57d67012e66a5beee3b05900a858c`。以下均为本次执行结果，不是仅根据存在测试代码推断。
+
+| 范围 | 执行方式 | 本次结果 |
+| --- | --- | --- |
+| 后端全量回归 | `mvn test`，通过环境变量启用 PLAN / MEMORY / WORKBENCH / CODING 的 MySQL 套件 | 总计 417，415 通过，失败/错误 0；Docker 沙箱和真实 Elasticsearch 专项各跳过 1 项 |
+| 真实 MySQL | Docker MySQL 8.4.11，各例随机库、结束后删除 | Plan 恢复 13、聊天恢复 2、迁移兼容 3、Memory 文档 13、Workbench 4、Coding 2，共 37 项通过 |
+| 前端 | `pnpm typecheck`、`pnpm test`、`pnpm lint`、`pnpm build` | 全部通过；单元测试 4 项；lint 无错误，保留 18 条原有警告 |
+| 聊天浏览器 | `node --test tests/browser/chat.test.mjs` | 11 项通过，包含点击恢复、替换部分输出及丢弃旧代次帧 |
+| 增量迁移 | `20261124_agent_plan_recovery.sql` | 在本机 `paismart` 执行成功，仅新增两张 Plan 表并调整新表的外键列排序规则 |
+
+迁移于 2026-11-24T13:59:40.607338+08:00 执行。新增表为 `agent_plan_run`、`agent_plan_step`，合计 4 个外键，新表数据均为空；`conversation_id` 使用 `utf8mb4_unicode_ci`，与现有 `chat_session.id` 一致。迁移前后对比原 `users`、`chat_session`、`chat_turn` 的建表结构指纹（忽略自增计数），确认原表结构未改变；应用的 10 条启动 schema SQL 探针本次执行成功。
+
+- 迁移脚本 SHA-256：`ffb0aa3b594ffe78ffee02b5ad2b9ab6f693ab67e4a49c62cb498b90417bad70`。
+- 迁移前完整业务库备份：`/home/zyh/.local/state/yerag/backups/paismart-before-plan-recovery-20261124-135940.sql`，位于仓库外，文件权限 0600。
+- 备份 SHA-256：`a2207723b0de1f0e9c3ff9182e300cb76640977fded0426b8b95dc3b966cb91b`。
+- 本机验收日志与迁移回执：`/home/zyh/.local/state/yerag/acceptance/20261124-plan-recovery/`，不进入版本库，不包含明文连接凭据。
+
+验证范围：真实 MySQL 的并发领取、过期租约、旧执行隔离、原回合提交和迁移兼容性；模型/检索使用测试替身，浏览器使用协议测试后端。本轮没有重启既有后端，也没有将本次提交部署成在线服务；不据此宣称真实模型效果、DAG 并行调度或 Evaluate/Replan 已验收。
+
 
 
 Coding completion persists the result with `cleanupPending=true` before deleting

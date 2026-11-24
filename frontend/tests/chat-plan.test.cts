@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { interruptPlan, parsePlanTasks } from '../src/utils/chat-plan';
+import { acceptPlanAttempt, interruptPlan, parsePlanTasks } from '../src/utils/chat-plan';
 
 const tasks = () => [
   { id: '1', title: '阅读甲文档', status: 'completed', message: '完成' },
@@ -22,6 +22,26 @@ test('plan events accept bounded display data and reject invalid snapshots', () 
     tasks().map(task => ({ ...task, message: undefined }))
   ])
     assert.equal(parsePlanTasks(invalid), undefined);
+});
+
+test('a resumed attempt replaces partial text and ignores late or unversioned frames', () => {
+  const message = {
+    role: 'assistant' as const,
+    content: 'old partial answer',
+    status: 'error' as const,
+    planAttempt: 1,
+    resumable: true
+  };
+  assert.equal(acceptPlanAttempt(message, 2), true);
+  assert.equal(message.content, '');
+  assert.equal(message.status, 'pending');
+  assert.equal(message.resumable, false);
+  message.content = 'new answer';
+  assert.equal(acceptPlanAttempt(message, 1), false);
+  assert.equal(acceptPlanAttempt(message, undefined), false);
+  assert.equal(message.content, 'new answer');
+  assert.equal(acceptPlanAttempt(message, 2), true);
+  assert.equal(message.content, 'new answer');
 });
 
 test('stop and failure settle active tasks while preserving completed work', () => {

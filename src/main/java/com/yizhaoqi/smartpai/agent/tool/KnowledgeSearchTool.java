@@ -16,6 +16,7 @@ import java.util.Map;
 
 @Component
 public class KnowledgeSearchTool implements AgentTool {
+    @Override public boolean replaySafe() { return true; }
     public static final String NAME = "search_knowledge_base";
     private final RagPipeline pipeline;
     private final ObjectMapper objectMapper;
